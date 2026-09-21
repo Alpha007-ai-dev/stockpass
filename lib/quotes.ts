@@ -1,4 +1,5 @@
 ﻿import { USDC_MINT, StockToken } from '../constants/stocks'
+import { getMultipliers } from './multipliers'
 
 const ULTRA_ORDER = 'https://lite-api.jup.ag/ultra/v1/order'
 const CALL_DELAY_MS = 700
@@ -15,14 +16,15 @@ async function orderOut(inputMint: string, outputMint: string, amount: string): 
   return String(json.outAmount)
 }
 
-// Quote only - no transaction, no wallet
+// Quote only - no transaction, no wallet. Prices are PER SHARE (dividend multiplier applied).
 export async function quoteToken(token: StockToken, sizeUsd = 1000): Promise<Quote> {
+  const m = (await getMultipliers())[token.mint] ?? 1
   const tokenRaw = await orderOut(USDC_MINT, token.mint, String(Math.round(sizeUsd * 1e6)))
   await sleep(CALL_DELAY_MS)
-  const units = Number(tokenRaw) / 10 ** token.decimals
+  const shares = (Number(tokenRaw) / 10 ** token.decimals) * m
   const backRaw = await orderOut(token.mint, USDC_MINT, tokenRaw)
   await sleep(CALL_DELAY_MS)
-  return { buy: sizeUsd / units, sell: Number(backRaw) / 1e6 / units }
+  return { buy: sizeUsd / shares, sell: Number(backRaw) / 1e6 / shares }
 }
 
 export function compare(a: Quote, b: Quote) {
