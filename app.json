@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "kit-expo-minimal",
-    "slug": "kit-expo-minimal",
+    "name": "StockPass",
+    "slug": "stockpass",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "expokit",
+    "scheme": "stockpass",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.kit_expo_minimal"
+      "package": "com.alpha007.stockpass"
     },
     "web": {
       "output": "static",
