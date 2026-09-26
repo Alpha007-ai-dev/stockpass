@@ -26,8 +26,10 @@ export default function RootLayout() {
         />
         <Tabs.Screen name="passport" options={{ href: null }} />
         <Tabs.Screen name="buy" options={{ href: null }} />
+        <Tabs.Screen name="compare" options={{ href: null }} />
       </Tabs>
       <StatusBar style="light" />
     </AppProviders>
   )
 }
+

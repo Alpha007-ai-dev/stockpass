@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { ISSUERS } from '../constants/issuers'
 import { num, T } from '../constants/theme'
 import { compact, getStats, History, Latest } from '../lib/stats'
+import { costLabel } from '../lib/cost'
 
 const STATE_LABEL: Record<string, string> = {
   open: 'Market open', pre: 'Pre-market', after: 'After hours', closed: 'Overnight', weekend: 'Weekend',
@@ -68,12 +69,12 @@ export default function PassportScreen() {
       {rawGap !== null && normGap !== null && (
         <View style={s.card}>
           <Text style={s.section}>Compared with {otherSym}</Text>
-          <View style={s.rowTight}>
+          <View style={[s.rowTight, Math.abs(rawGap - normGap) < 3 && { display: 'none' }]}>
             <Text style={s.label}>Raw-price gap</Text>
             <Text style={[s.gapMuted, num]}>{rawGap > 0 ? '+' : ''}{rawGap} bps</Text>
           </View>
           <View style={s.rowTight}>
-            <Text style={s.label}>Normalized gap</Text>
+            <Text style={s.label}>{Math.abs(rawGap - normGap) < 3 ? 'Price gap per share' : 'Normalized gap'}</Text>
             <Text style={[s.gapAccent, num]}>{normGap > 0 ? '+' : ''}{normGap} bps</Text>
           </View>
           <Text style={s.faint}>
@@ -167,3 +168,5 @@ const s = StyleSheet.create({
   value: { color: T.text, fontSize: 14, textAlign: 'right', flexShrink: 1 },
   faint: { color: T.faint, fontSize: 12 },
 })
+
+

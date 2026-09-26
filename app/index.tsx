@@ -5,6 +5,7 @@ import { num, T } from '../constants/theme'
 import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
 import { compact, getStats, History, Latest } from '../lib/stats'
 import { getPairs, Pair } from '../lib/pairs'
+import { costLabel, isUsable } from '../lib/cost'
 
 type Sort = 'diff' | 'cheap' | 'name'
 
@@ -45,7 +46,7 @@ export default function MarketScreen() {
     const withData = pairs.map((p) => {
       const lx = latest[p.x!.symbol]
       const lon = latest[p.on!.symbol]
-      const ready = !!lx && !!lon && !!lx.quotable && !!lon.quotable
+      const ready = isUsable(lx?.entry_bps, lx?.quotable) && isUsable(lon?.entry_bps, lon?.quotable)
       const diff = ready ? Math.abs(lx.entry_bps - lon.entry_bps) : -1
       const cheapest = ready ? Math.min(lx.entry_bps, lon.entry_bps) : 9999
       return { pair: p, lx, lon, ready, diff, cheapest }
@@ -108,7 +109,7 @@ export default function MarketScreen() {
         return (
           <View style={s.card}>
             <View style={s.cardHead}>
-              <Text style={s.ticker}>{pair.ticker}</Text>
+              <Pressable onPress={() => router.push(`/compare?ticker=${pair.ticker}`)}><Text style={s.ticker}>{pair.ticker} ›</Text></Pressable>
               {diff > 0 && <Text style={s.accentSmall}>{diff} bps apart</Text>}
             </View>
 
@@ -186,3 +187,5 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
+
