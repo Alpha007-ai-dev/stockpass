@@ -67,7 +67,7 @@ export default function MarketScreen() {
               const h = hist[t.symbol]
               const unusual = l && h && h.samples >= 5 && l.entry_bps > h.avg_entry * 1.3
               return (
-                <View key={t.symbol} style={s.row}>
+                <Pressable key={t.symbol} style={s.row} onPress={() => router.push(`/passport?symbol=`)}>
                   <View>
                     <Text style={s.label}>{t.symbol}</Text>
                     <Text style={s.tiny}>
@@ -82,7 +82,7 @@ export default function MarketScreen() {
                       {h ? `usual ${h.avg_entry.toFixed(0)} (${h.samples})` : 'no history yet'}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               )
             })}
 
@@ -122,3 +122,4 @@ const s = StyleSheet.create({
   button: { borderWidth: 1, borderColor: '#34342F', borderRadius: 16, padding: 14, alignItems: 'center' },
   buttonText: { color: '#F5F5F1' },
 })
+
