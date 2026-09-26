@@ -91,6 +91,9 @@ export default function MarketScreen() {
                 <Text style={s.good}>Cheaper to enter: {cheaper.symbol} by {diff} bps</Text>
               </View>
             )}
+            <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${stock.ticker}`)}>
+              <Text style={s.buyText}>Buy {stock.ticker}</Text>
+            </Pressable>
           </View>
         )
       })}
@@ -117,9 +120,12 @@ const s = StyleSheet.create({
   warn: { color: '#E9B45A' },
   footer: { borderTopWidth: 1, borderTopColor: '#262624', paddingTop: 8 },
   good: { color: '#D4F25A', fontSize: 13 },
+  buy: { borderWidth: 1, borderColor: '#D4F25A', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
+  buyText: { color: '#D4F25A', fontSize: 14, fontWeight: '600' },
   muted: { color: '#A7A7A0', fontSize: 12 },
   tiny: { color: '#8A8A84', fontSize: 12 },
   button: { borderWidth: 1, borderColor: '#34342F', borderRadius: 16, padding: 14, alignItems: 'center' },
   buttonText: { color: '#F5F5F1' },
 })
+
 
