@@ -2,6 +2,8 @@
 
 export type Latest = {
   symbol: string
+  buy_px: number | null
+  sell_px: number | null
   entry_bps: number
   exit_bps: number
   quotable: number
@@ -70,3 +72,4 @@ export async function getHoldings(owner: string): Promise<HoldingRow[]> {
   if (!res.ok) throw new Error((json as any)?.error ?? `HTTP ${res.status}`)
   return json as HoldingRow[]
 }
+
