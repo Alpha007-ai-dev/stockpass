@@ -73,3 +73,18 @@ export async function getHoldings(owner: string): Promise<HoldingRow[]> {
   return json as HoldingRow[]
 }
 
+
+export type SeriesPoint = {
+  ts: number
+  symbol: string
+  issuer: string
+  entry_bps: number | null
+  quotable: number
+  market_state: string
+}
+
+export async function getSeries(ticker: string, hours = 24): Promise<SeriesPoint[]> {
+  const res = await fetch(`${BASE}/series?ticker=${ticker}&hours=${hours}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return res.json()
+}

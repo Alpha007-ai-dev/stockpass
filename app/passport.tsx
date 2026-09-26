@@ -5,6 +5,7 @@ import { ISSUERS } from '../constants/issuers'
 import { num, T } from '../constants/theme'
 import { compact, getStats, History, Latest } from '../lib/stats'
 import { costLabel } from '../lib/cost'
+import { CostTimeline } from '../components/cost-timeline'
 
 const STATE_LABEL: Record<string, string> = {
   open: 'Market open', pre: 'Pre-market', after: 'After hours', closed: 'Overnight', weekend: 'Weekend',
@@ -83,6 +84,8 @@ export default function PassportScreen() {
           </Text>
         </View>
       )}
+
+      <CostTimeline ticker={ticker} />
 
       <View style={s.card}>
         <View style={s.grid}>
@@ -179,6 +182,7 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   warnLine: { color: T.warn, fontSize: 13, fontWeight: '600' },
 })
+
 
 
 

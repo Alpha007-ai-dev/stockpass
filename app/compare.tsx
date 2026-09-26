@@ -1,11 +1,9 @@
 ﻿import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ISSUERS } from '../constants/issuers'
 import { num, T } from '../constants/theme'
-import { compact, getStats, History, Latest } from '../lib/stats'
-
-const NO_MARKET_BPS = 200
+import { isUsable, NO_MARKET_BPS } from '../lib/cost'
+import { compact, getStats, Latest } from '../lib/stats'
 
 export default function CompareScreen() {
   const router = useRouter()
@@ -13,7 +11,6 @@ export default function CompareScreen() {
   const tk = ticker ?? 'SPY'
   const [x, setX] = useState<Latest | null>(null)
   const [on, setOn] = useState<Latest | null>(null)
-  const [hist, setHist] = useState<History[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -21,46 +18,41 @@ export default function CompareScreen() {
       .then((s) => {
         setX(s.latest.find((r) => r.symbol === `${tk}x`) ?? null)
         setOn(s.latest.find((r) => r.symbol === `${tk}on`) ?? null)
-        setHist(s.history.filter((r) => r.ticker === tk))
       })
       .catch((e) => setError((e as Error).message))
   }, [tk])
 
-  const usable = (l: Latest | null) => !!l && !!l.quotable && (l.entry_bps ?? 999) < NO_MARKET_BPS
-  const bothPriced = x?.buy_px && on?.buy_px
-  const rawGap = bothPriced ? Math.round(((on!.buy_px! * on!.multiplier) / (x!.buy_px! * x!.multiplier) - 1) * 10000) : null
-  const normGap = bothPriced ? Math.round((on!.buy_px! / x!.buy_px! - 1) * 10000) : null
-  const cheaper = usable(x) && usable(on) ? (x!.entry_bps! <= on!.entry_bps! ? 'xStocks' : 'Ondo') : usable(x) ? 'xStocks' : usable(on) ? 'Ondo' : null
-  const diff = usable(x) && usable(on) ? Math.abs(x!.entry_bps! - on!.entry_bps!) : null
+  const xOk = isUsable(x?.entry_bps, x?.quotable)
+  const onOk = isUsable(on?.entry_bps, on?.quotable)
+  const best = xOk && onOk ? (x!.entry_bps! <= on!.entry_bps! ? 'x' : 'on') : xOk ? 'x' : onOk ? 'on' : null
+  const diff = xOk && onOk ? Math.abs(x!.entry_bps! - on!.entry_bps!) : null
+  const maxBps = Math.max(x?.entry_bps ?? 0, on?.entry_bps ?? 0, 1)
+  const multiDiff = x && on ? Math.abs(x.multiplier - on.multiplier) > 0.0002 : false
 
-  const cost = (l: Latest | null) => {
-    if (!l || !l.quotable) return 'no quote'
-    if ((l.entry_bps ?? 0) >= NO_MARKET_BPS) return 'no real market'
-    return `${l.entry_bps} bps`
-  }
-  const usual = (sym: string) => {
-    const rows = hist.filter((h) => h.symbol === sym && h.avg_entry !== null)
-    const total = rows.reduce((n, r) => n + r.samples, 0)
-    if (total === 0) return null
-    return rows.reduce((n, r) => n + (r.avg_entry ?? 0) * r.samples, 0) / total
-  }
-
-  const Col = ({ l, sym, issuer }: { l: Latest | null; sym: string; issuer: 'xStocks' | 'Ondo' }) => {
-    const best = cheaper === issuer
-    const u = usual(sym)
+  const Card = ({ l, symbol, issuer, isBest }: { l: Latest | null; symbol: string; issuer: string; isBest: boolean }) => {
+    const ok = isUsable(l?.entry_bps, l?.quotable)
+    const bar = (v: number | null) => (v === null ? 0 : Math.max(6, Math.round((v / maxBps) * 100)))
     return (
-      <View style={[s.col, best && s.colBest]}>
-        <Text style={s.colTitle}>{sym}</Text>
-        <Text style={s.faint}>{issuer}</Text>
-        <Text style={[s.colCost, num, best && s.accentText]}>{cost(l)}</Text>
-        <Text style={s.faint}>{u ? `usual ${u.toFixed(0)} bps` : 'collecting'}</Text>
-        <View style={s.colLine} />
-        <Text style={s.faint}>Per share</Text>
-        <Text style={[s.colValue, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
-        <Text style={s.faint}>Raw token</Text>
-        <Text style={[s.colValue, num]}>{l?.buy_px ? `$${(l.buy_px * l.multiplier).toFixed(2)}` : '—'}</Text>
-        <Text style={s.faint}>1 token = {l ? l.multiplier.toFixed(5) : '—'} sh</Text>
-        <Text style={s.faint}>Supply {l ? compact(l.supply) : '—'}</Text>
+      <View style={[s.card, isBest && s.cardBest]}>
+        <Text style={s.symbol}>{symbol}</Text>
+        <Text style={s.issuer}>{issuer}</Text>
+
+        <Text style={s.metaLabel}>Per-share price</Text>
+        <Text style={[s.price, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
+
+        <Text style={s.metaLabel}>Entry cost</Text>
+        <Text style={[s.cost, num]}>{ok ? `${l!.entry_bps} bps` : l?.quotable ? 'no real market' : 'no quote'}</Text>
+        <View style={s.track}><View style={[s.fill, { width: `${bar(ok ? l!.entry_bps : null)}%`, backgroundColor: isBest ? T.accent : '#5C8FD6' }]} /></View>
+
+        <Text style={s.metaLabel}>Exit cost</Text>
+        <Text style={[s.cost, num]}>{ok ? `${l!.exit_bps} bps` : '—'}</Text>
+        <View style={s.track}><View style={[s.fill, { width: `${bar(ok ? l!.exit_bps : null)}%`, backgroundColor: isBest ? T.accent : '#5C8FD6' }]} /></View>
+
+        <Text style={s.metaLabel}>Multiplier</Text>
+        <Text style={[s.meta, num]}>{l ? `${l.multiplier.toFixed(4)}x` : '—'}</Text>
+
+        <Text style={s.metaLabel}>Supply</Text>
+        <Text style={[s.meta, num]}>{l ? compact(l.supply) : '—'}</Text>
       </View>
     )
   }
@@ -69,80 +61,49 @@ export default function CompareScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
       <Pressable onPress={() => router.back()} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
 
-      <Text style={s.kicker}>SAME UNDERLYING, DIFFERENT REPRESENTATION</Text>
-      <Text style={s.title}>{tk}</Text>
+      <Text style={s.h1}>Compare</Text>
+      <Text style={s.h2}>Same underlying.{'\n'}Different representation.</Text>
+      <Text style={s.faint}>{tk}</Text>
 
-      <View style={s.cols}>
-        <Col l={x} sym={`${tk}x`} issuer="xStocks" />
-        <Col l={on} sym={`${tk}on`} issuer="Ondo" />
+      <View style={s.cards}>
+        <Card l={x} symbol={`${tk}x`} issuer="xStocks" isBest={best === 'x'} />
+        <Card l={on} symbol={`${tk}on`} issuer="Ondo" isBest={best === 'on'} />
       </View>
 
-      {rawGap !== null && normGap !== null && (
-        <View style={s.card}>
-          {Math.abs(rawGap - normGap) >= 3 ? (
-            <>
-              <View style={s.row}>
-                <Text style={s.label}>Raw-price gap</Text>
-                <Text style={[s.gapMuted, num]}>{rawGap > 0 ? '+' : ''}{rawGap} bps</Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>Normalized gap</Text>
-                <Text style={[s.gapAccent, num]}>{normGap > 0 ? '+' : ''}{normGap} bps</Text>
-              </View>
-              <Text style={s.faint}>
-                The raw prices differ mostly because one token holds more reinvested dividends. Only the normalized gap is real.
-              </Text>
-            </>
-          ) : (
-            <>
-              <View style={s.row}>
-                <Text style={s.label}>Price gap per share</Text>
-                <Text style={[s.gapAccent, num]}>{normGap > 0 ? '+' : ''}{normGap} bps</Text>
-              </View>
-              <Text style={s.faint}>
-                Both issuers use the same multiplier here, so the raw token prices are directly comparable.
-              </Text>
-            </>
-          )}
-        </View>
-      )}
-
-      <View style={s.card}>
-        {cheaper && diff !== null && diff > 0 ? (
+      <View style={s.banner}>
+        {diff !== null && diff > 0 ? (
           <>
-            <Text style={s.headline}>{cheaper} is {diff} bps cheaper to enter</Text>
-            <Text style={s.faint}>About ${((diff / 10000) * 1000).toFixed(2)} on a $1,000 position.</Text>
+            <Text style={s.bannerStrong}>
+              {best === 'x' ? 'xStocks' : 'Ondo'} is {diff} bps cheaper to enter right now for {tk}.
+            </Text>
+            <Text style={s.faint}>${((diff / 10000) * 1000).toFixed(2)} on a $1,000 position, before our fee.</Text>
           </>
-        ) : cheaper ? (
-          <>
-            <Text style={s.headline}>Only {cheaper} is tradable right now</Text>
-            <Text style={s.faint}>The other issuer has no usable quote at $1,000.</Text>
-          </>
+        ) : best ? (
+          <Text style={s.bannerStrong}>Only {best === 'x' ? 'xStocks' : 'Ondo'} has a usable quote right now.</Text>
         ) : (
-          <Text style={s.headline}>No usable quote right now</Text>
+          <Text style={s.bannerStrong}>Neither issuer has a usable quote right now.</Text>
         )}
       </View>
 
-      <View style={s.card}>
-        {[
-          ['Backing', ISSUERS.xStocks.backing, ISSUERS.Ondo.backing],
-          ['Dividends', ISSUERS.xStocks.dividends, ISSUERS.Ondo.dividends],
-          ['Redemption', ISSUERS.xStocks.redemption, ISSUERS.Ondo.redemption],
-          ['Eligibility', ISSUERS.xStocks.eligibility, ISSUERS.Ondo.eligibility],
-        ].map(([k, a, b]) => (
-          <View key={k} style={{ gap: 4 }}>
-            <Text style={s.label}>{k}</Text>
-            <View style={s.cols}>
-              <Text style={[s.small, { flex: 1 }]}>{a}</Text>
-              <Text style={[s.small, { flex: 1 }]}>{b}</Text>
-            </View>
-          </View>
-        ))}
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Why is there a difference?</Text>
+        <Text style={s.body}>
+          Ondo quotes come from RFQ market makers, while xStocks trades in on-chain pools. This can lead to different
+          spreads and liquidity conditions, and it changes with the market session.
+        </Text>
+        {multiDiff && (
+          <Text style={s.body}>
+            The two issuers also apply different multipliers ({x!.multiplier.toFixed(4)}x vs {on!.multiplier.toFixed(4)}x),
+            so their raw token prices are not directly comparable. The prices above are per share.
+          </Text>
+        )}
       </View>
 
-      <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${tk}`)}>
-        <Text style={s.primaryText}>Review route</Text>
-      </Pressable>
+      {best && (
+        <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${tk}`)}>
+          <Text style={s.primaryText}>Buy via {best === 'x' ? 'xStocks' : 'Ondo'}</Text>
+        </Pressable>
+      )}
 
       <Text style={s.faint}>{error ?? (x ? `Last measured ${new Date(x.ts * 1000).toLocaleString()}` : '')}</Text>
     </ScrollView>
@@ -151,28 +112,28 @@ export default function CompareScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
-  content: { padding: 20, paddingBottom: 40, gap: T.gap },
+  content: { padding: 20, paddingBottom: 40, gap: 12 },
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
-  kicker: { color: T.faint, fontSize: 11, letterSpacing: 1.2 },
-  title: { color: T.text, fontSize: 38, fontWeight: '700', letterSpacing: -1 },
-  cols: { flexDirection: 'row', gap: T.gap },
-  col: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 4 },
-  colBest: { borderColor: T.accent },
-  colTitle: { color: T.text, fontSize: 17, fontWeight: '700' },
-  colCost: { color: T.text, fontSize: 26, fontWeight: '700', marginTop: 6 },
-  colValue: { color: T.text, fontSize: 15, fontWeight: '600' },
-  colLine: { height: 1, backgroundColor: T.border, marginVertical: 8 },
-  card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  headline: { color: T.text, fontSize: 18, fontWeight: '700' },
-  label: { color: T.dim, fontSize: 14 },
-  small: { color: T.text, fontSize: 12 },
-  gapMuted: { color: T.faint, fontSize: 18, fontWeight: '600', textDecorationLine: 'line-through' },
-  gapAccent: { color: T.accent, fontSize: 22, fontWeight: '700' },
-  accentText: { color: T.accent },
+  h1: { color: T.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
+  h2: { color: T.text, fontSize: 22, fontWeight: '600', lineHeight: 28, letterSpacing: -0.4 },
+  cards: { flexDirection: 'row', gap: 12 },
+  card: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 3 },
+  cardBest: { borderColor: T.accent, borderWidth: 1.5 },
+  symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
+  issuer: { color: T.dim, fontSize: 13, marginBottom: 8 },
+  metaLabel: { color: T.faint, fontSize: 11, marginTop: 8 },
+  price: { color: T.text, fontSize: 19, fontWeight: '700' },
+  cost: { color: T.text, fontSize: 17, fontWeight: '600' },
+  meta: { color: T.text, fontSize: 14, fontWeight: '500' },
+  track: { height: 5, borderRadius: 3, backgroundColor: T.border, marginTop: 5 },
+  fill: { height: 5, borderRadius: 3 },
+  banner: { backgroundColor: '#1F2A12', borderRadius: 16, padding: 14, gap: 4 },
+  bannerStrong: { color: T.accent, fontSize: 15, fontWeight: '600' },
+  section: { gap: 8, marginTop: 4 },
+  sectionTitle: { color: T.text, fontSize: 16, fontWeight: '600' },
+  body: { color: T.dim, fontSize: 13, lineHeight: 19 },
   faint: { color: T.faint, fontSize: 12 },
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
