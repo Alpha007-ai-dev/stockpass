@@ -1,7 +1,7 @@
-import { getTransactionDecoder } from '@solana/transactions';
+﻿import { getTransactionDecoder } from '@solana/transactions';
 import { getBase64Encoder } from '@solana/codecs-strings';
 
-export const PLATFORM_FEE_BPS = 20;
+export const PLATFORM_FEE_BPS = 5;
 
 export type PayToken = {
   key: string;
@@ -113,3 +113,5 @@ export function fmtAmount(n: number): string {
   if (n >= 0.0001) return n.toFixed(6);
   return n.toExponential(3);
 }
+
+
