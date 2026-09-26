@@ -113,6 +113,16 @@ export default function PassportScreen() {
               <Text style={[s.barValue, num]}>{h.avg_entry.toFixed(0)}</Text>
             </View>
           ))}
+          {(() => {
+            const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < 200)
+            if (valid.length < 2 || !mine) return null
+            const now = valid.find((h) => h.market_state === mine.market_state)
+            const best = valid.reduce((a, b) => (a.avg_entry <= b.avg_entry ? a : b))
+            if (!now || now.market_state === best.market_state) return null
+            const pct = Math.round((now.avg_entry / best.avg_entry - 1) * 100)
+            if (pct < 15) return null
+            return <Text style={s.warnLine}>Entering now costs about {pct}% more than during {best.market_state}.</Text>
+          })()}
           <Text style={s.faint}>
             {samples} measurements{avail !== null ? ` · quote available ${(avail * 100).toFixed(0)}% of the time` : ''}
           </Text>
@@ -167,6 +177,8 @@ const s = StyleSheet.create({
   label: { color: T.dim, fontSize: 14 },
   value: { color: T.text, fontSize: 14, textAlign: 'right', flexShrink: 1 },
   faint: { color: T.faint, fontSize: 12 },
+  warnLine: { color: T.warn, fontSize: 13, fontWeight: '600' },
 })
+
 
 

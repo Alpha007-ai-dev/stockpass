@@ -18,6 +18,7 @@ export default function MarketScreen() {
   const [sort, setSort] = useState<Sort>('diff')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [byState, setByState] = useState<Record<string, { x: number; on: number }>>({})
   const state = getMarketState()
   const market = MARKET_LABEL[state]
 
@@ -33,6 +34,20 @@ export default function MarketScreen() {
       setLatest(l)
       setHist(h)
       setPairs(allPairs.filter((p) => p.x && p.on))
+
+      const acc: Record<string, { xs: number; xn: number; os: number; on: number }> = {}
+      stats.history.forEach((row) => {
+        if (row.avg_entry === null || row.avg_entry >= 200) return
+        const a = acc[row.market_state] ?? { xs: 0, xn: 0, os: 0, on: 0 }
+        if (row.issuer === 'Ondo') { a.os += row.avg_entry * row.samples; a.on += row.samples }
+        else { a.xs += row.avg_entry * row.samples; a.xn += row.samples }
+        acc[row.market_state] = a
+      })
+      const out: Record<string, { x: number; on: number }> = {}
+      Object.entries(acc).forEach(([k, a]) => {
+        if (a.xn > 0 && a.on > 0) out[k] = { x: a.xs / a.xn, on: a.os / a.on }
+      })
+      setByState(out)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -95,6 +110,23 @@ export default function MarketScreen() {
               </Pressable>
             ))}
           </View>
+
+          {(byState[state] ?? byState[Object.keys(byState)[0]]) && (
+            <View style={s.summary}>
+              <Text style={s.summaryTitle}>Average entry cost - {byState[state] ? market.title.toLowerCase() : Object.keys(byState)[0]}</Text>
+              <View style={s.summaryRow}>
+                <Text style={s.summaryLabel}>xStocks</Text>
+                <Text style={[s.summaryValue, num]}>{(byState[state] ?? byState[Object.keys(byState)[0]]).x.toFixed(0)} bps</Text>
+                <Text style={s.summaryLabel}>Ondo</Text>
+                <Text style={[s.summaryValue, num]}>{(byState[state] ?? byState[Object.keys(byState)[0]]).on.toFixed(0)} bps</Text>
+              </View>
+              {Object.keys(byState).filter((k) => k !== state).length > 0 && (
+                <Text style={s.faint}>
+                  {Object.entries(byState).filter(([k]) => k !== state).map(([k, v]) => `${k}: ${v.x.toFixed(0)} / ${v.on.toFixed(0)}`).join(' - ')}
+                </Text>
+              )}
+            </View>
+          )}
 
           {error && <Text style={s.error}>{error}</Text>}
           <Text style={s.faint}>{rows.length} stocks - entry cost at $1,000</Text>
@@ -186,6 +218,16 @@ const s = StyleSheet.create({
   buy: { backgroundColor: T.accent, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
+  summary: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 8 },
+  summaryTitle: { color: T.text, fontSize: 14, fontWeight: '600' },
+  summaryRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  summaryLabel: { color: T.dim, fontSize: 13 },
+  summaryValue: { color: T.accent, fontSize: 20, fontWeight: '700', marginRight: 8 },
 })
+
+
+
+
+
 
 
