@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useLocalSearchParams } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { STOCKS } from '../constants/stocks'
+import { T } from '../constants/theme'
 import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, Quote } from '../lib/swap'
 import { getStats, Latest } from '../lib/stats'
 
@@ -130,11 +131,11 @@ export default function BuyScreen() {
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0E0E0D' },
+  screen: { flex: 1, backgroundColor: T.bg },
   content: { padding: 20, gap: 12 },
   kicker: { color: '#8A8A84', fontSize: 12, letterSpacing: 1 },
-  title: { color: '#F5F5F1', fontSize: 32, fontWeight: '600' },
-  card: { borderWidth: 1, borderColor: '#262624', borderRadius: 16, padding: 16, gap: 10, backgroundColor: '#181817' },
+  title: { color: T.text, fontSize: 34, fontWeight: '700', letterSpacing: -0.8 },
+  card: { borderWidth: 1, borderColor: T.border, borderRadius: 20, padding: 16, gap: 10, backgroundColor: T.surface },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
   label: { color: '#A7A7A0', fontSize: 14 },
   value: { color: '#F5F5F1', fontSize: 14, textAlign: 'right', flexShrink: 1 },
@@ -142,6 +143,7 @@ const s = StyleSheet.create({
   warn: { color: '#E9B45A', fontSize: 16, fontWeight: '600' },
   muted: { color: '#A7A7A0', fontSize: 13 },
   tiny: { color: '#8A8A84', fontSize: 12 },
-  primary: { backgroundColor: '#D4F25A', borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: '#0E0E0D', fontSize: 16, fontWeight: '600' },
 })
+

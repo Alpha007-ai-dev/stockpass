@@ -36,3 +36,37 @@ export function compact(n: number): string {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`
   return n.toFixed(0)
 }
+
+export type TokenRow = {
+  ticker: string
+  symbol: string
+  issuer: string
+  mint: string
+  decimals: number
+}
+
+let tokenCache: TokenRow[] | null = null
+
+export async function getTokens(): Promise<TokenRow[]> {
+  if (tokenCache) return tokenCache
+  const res = await fetch(`${BASE}/tokens`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  tokenCache = (await res.json()) as TokenRow[]
+  return tokenCache
+}
+
+export type HoldingRow = {
+  ticker: string
+  symbol: string
+  issuer: string
+  mint: string
+  decimals: number
+  walletAmount: number
+}
+
+export async function getHoldings(owner: string): Promise<HoldingRow[]> {
+  const res = await fetch(`${BASE}/holdings?owner=${owner}`)
+  const json = await res.json()
+  if (!res.ok) throw new Error((json as any)?.error ?? `HTTP ${res.status}`)
+  return json as HoldingRow[]
+}

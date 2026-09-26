@@ -1,7 +1,8 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { STOCKS } from '../constants/stocks'
+import { getPairs, Pair } from '../lib/pairs'
+import { num, T } from '../constants/theme'
 import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
 import { compact, getStats, History, Latest } from '../lib/stats'
 
@@ -9,9 +10,9 @@ export default function MarketScreen() {
   const router = useRouter()
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [hist, setHist] = useState<Record<string, History>>({})
+  const [pairs, setPairs] = useState<Pair[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
   const state = getMarketState()
   const market = MARKET_LABEL[state]
 
@@ -19,14 +20,14 @@ export default function MarketScreen() {
     setLoading(true)
     setError(null)
     try {
-      const stats = await getStats()
+      const [stats, allPairs] = await Promise.all([getStats(), getPairs()])
+      setPairs(allPairs)
       const l: Record<string, Latest> = {}
       stats.latest.forEach((r) => { l[r.symbol] = r })
       const h: Record<string, History> = {}
       stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
       setLatest(l)
       setHist(h)
-      setUpdatedAt(new Date())
     } catch (e) {
       setError((e as Error).message)
     }
@@ -35,97 +36,118 @@ export default function MarketScreen() {
 
   useEffect(() => { load() }, [load])
 
+  const closed = state !== 'open'
+
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
-      <View style={s.banner}>
-        <Text style={s.bannerTitle}>{market.title}</Text>
-        <Text style={s.bannerSub}>{market.subtitle}</Text>
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={T.dim} />}>
+
+      <View style={s.header}>
+        <View>
+          <Text style={s.brand}>StockPass</Text>
+          <Text style={s.sub}>What you really pay to own a stock on-chain</Text>
+        </View>
       </View>
 
-      <Text style={s.muted}>
-        Cost to enter at $1,000, per share.{' '}
-        {error ? `Error: ${error}` : updatedAt ? `Updated ${updatedAt.toLocaleTimeString()}` : 'Loading...'}
-      </Text>
+      <View style={[s.pill, closed && s.pillWarn]}>
+        <Text style={[s.pillText, closed && s.pillTextWarn]}>{market.title}</Text>
+      </View>
+      <Text style={s.sub}>{market.subtitle}</Text>
 
-      {STOCKS.map((stock) => {
-        const [x, on] = stock.tokens
+      {error && <Text style={s.error}>{error}</Text>}
+
+      {pairs.map((stock) => {
+        const x = stock.x!
+        const on = stock.on!
+        if (!x || !on) return null
         const lx = latest[x.symbol]
         const lon = latest[on.symbol]
-        const cheaper = lx && lon ? (lx.entry_bps <= lon.entry_bps ? x : on) : null
-        const diff = lx && lon ? Math.abs(lx.entry_bps - lon.entry_bps) : 0
+        const ready = lx && lon
+        const cheaper = ready ? (lx.entry_bps <= lon.entry_bps ? x : on) : null
+        const diff = ready ? Math.abs(lx.entry_bps - lon.entry_bps) : 0
 
         return (
           <View key={stock.ticker} style={s.card}>
-            <View style={s.head}>
+            <View style={s.cardHead}>
               <Text style={s.ticker}>{stock.ticker}</Text>
-              <Text style={s.muted}>{stock.name}</Text>
+
             </View>
 
             {[x, on].map((t) => {
               const l = latest[t.symbol]
               const h = hist[t.symbol]
-              const unusual = l && h && h.samples >= 5 && l.entry_bps > h.avg_entry * 1.3
+              const usual = h && h.samples >= 5 ? h.avg_entry : null
+              const unusual = l && usual ? l.entry_bps > usual * 1.3 : false
+              const isBest = cheaper?.symbol === t.symbol && diff > 0
               return (
-                <Pressable key={t.symbol} style={s.row} onPress={() => router.push(`/passport?symbol=`)}>
-                  <View>
-                    <Text style={s.label}>{t.symbol}</Text>
-                    <Text style={s.tiny}>
-                      {t.issuer}{l ? ` - supply ${compact(l.supply)}` : ''}
+                <Pressable key={t.symbol} style={s.tokenRow}
+                  onPress={() => router.push(`/passport?symbol=${t.symbol}`)}>
+                  <View style={s.tokenLeft}>
+                    <Text style={s.tokenSymbol}>{t.symbol}</Text>
+                    <Text style={s.faint}>
+                      {t.issuer}{l ? ` · supply ${compact(l.supply)}` : ''}
                     </Text>
                   </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[s.value, unusual && s.warn]}>
-                      {l ? (l.quotable ? `${l.entry_bps} bps` : 'no quote') : '-'}
+                  <View style={s.tokenRight}>
+                    <Text style={[s.big, num, unusual && s.warnText, isBest && s.accentText]}>
+                      {l ? (l.quotable ? `${l.entry_bps}` : '—') : '··'}
+                      {l?.quotable ? <Text style={s.unit}> bps</Text> : null}
                     </Text>
-                    <Text style={s.tiny}>
-                      {h ? `usual ${h.avg_entry.toFixed(0)} (${h.samples})` : 'no history yet'}
-                    </Text>
+                    <Text style={s.faint}>{usual ? `usual ${usual.toFixed(0)}` : 'collecting'}</Text>
                   </View>
+                  <Text style={s.chevron}>›</Text>
                 </Pressable>
               )
             })}
 
-            {cheaper && diff > 0 && (
-              <View style={s.footer}>
-                <Text style={s.good}>Cheaper to enter: {cheaper.symbol} by {diff} bps</Text>
-              </View>
-            )}
-            <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${stock.ticker}`)}>
-              <Text style={s.buyText}>Buy {stock.ticker}</Text>
-            </Pressable>
+            <View style={s.cardFoot}>
+              <Text style={s.footText}>
+                {diff > 0 ? (
+                  <>
+                    <Text style={s.accentText}>{cheaper?.symbol}</Text> is {diff} bps cheaper to enter
+                  </>
+                ) : ready ? 'Both issuers cost about the same' : 'Loading measurements'}
+              </Text>
+              <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${stock.ticker}`)}>
+                <Text style={s.buyText}>Buy</Text>
+              </Pressable>
+            </View>
           </View>
         )
       })}
 
-      <Pressable style={s.button} onPress={() => router.push('/wallet')}>
-        <Text style={s.buttonText}>Wallet</Text>
-      </Pressable>
+      <Text style={s.faint}>Entry cost at $1,000, measured by StockPass. Tap a token for its passport.</Text>
     </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0E0E0D' },
-  content: { padding: 16, gap: 12 },
-  banner: { borderWidth: 1, borderColor: '#3B6D11', borderRadius: 16, padding: 14 },
-  bannerTitle: { color: '#D4F25A', fontSize: 15, fontWeight: '600' },
-  bannerSub: { color: '#B8B8B0', marginTop: 4, fontSize: 13 },
-  card: { borderWidth: 1, borderColor: '#262624', borderRadius: 16, padding: 14, gap: 8, backgroundColor: '#181817' },
-  head: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  ticker: { color: '#F5F5F1', fontSize: 17, fontWeight: '600' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  label: { color: '#F5F5F1', fontSize: 14, fontWeight: '500' },
-  value: { color: '#F5F5F1', fontSize: 15 },
-  warn: { color: '#E9B45A' },
-  footer: { borderTopWidth: 1, borderTopColor: '#262624', paddingTop: 8 },
-  good: { color: '#D4F25A', fontSize: 13 },
-  buy: { borderWidth: 1, borderColor: '#D4F25A', borderRadius: 12, paddingVertical: 10, alignItems: 'center' },
-  buyText: { color: '#D4F25A', fontSize: 14, fontWeight: '600' },
-  muted: { color: '#A7A7A0', fontSize: 12 },
-  tiny: { color: '#8A8A84', fontSize: 12 },
-  button: { borderWidth: 1, borderColor: '#34342F', borderRadius: 16, padding: 14, alignItems: 'center' },
-  buttonText: { color: '#F5F5F1' },
+  screen: { flex: 1, backgroundColor: T.bg },
+  content: { padding: 20, paddingBottom: 40, gap: T.gap },
+  header: { marginTop: 8 },
+  brand: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+  sub: { color: T.dim, fontSize: 13, marginTop: 4 },
+  pill: { alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1F2A12' },
+  pillWarn: { backgroundColor: '#2A2110' },
+  pillText: { color: T.accent, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 },
+  pillTextWarn: { color: T.warn },
+  card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 4 },
+  cardHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 6 },
+  ticker: { color: T.text, fontSize: 20, fontWeight: '700', letterSpacing: -0.3 },
+  tokenRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: 1, borderTopColor: T.border },
+  tokenLeft: { flex: 1, gap: 2 },
+  tokenRight: { alignItems: 'flex-end', gap: 2 },
+  tokenSymbol: { color: T.text, fontSize: 15, fontWeight: '600' },
+  big: { color: T.text, fontSize: 22, fontWeight: '600' },
+  unit: { fontSize: 13, color: T.dim, fontWeight: '400' },
+  accentText: { color: T.accent },
+  warnText: { color: T.warn },
+  faint: { color: T.faint, fontSize: 12 },
+  chevron: { color: T.faint, fontSize: 22, marginLeft: 2 },
+  cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 12, marginTop: 6 },
+  footText: { color: T.dim, fontSize: 13, flexShrink: 1 },
+  buy: { backgroundColor: T.accent, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
+  buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
+  error: { color: T.warn, fontSize: 13 },
 })
-
 
