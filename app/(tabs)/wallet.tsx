@@ -3,7 +3,10 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { num, T } from '@/constants/theme'
+import { TokenIcon } from '@/components/token-icon'
 import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
+import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
+import { getGroups } from '@/lib/pairs'
 
 type Item = HoldingRow & {
   shares: number
@@ -23,10 +26,21 @@ export default function WalletScreen() {
     setBusy(true)
     setError(null)
     try {
-      const addr = account?.address ?? (await connect())?.address
-      if (!addr) throw new Error('Wallet not connected')
-
-      const [rows, stats] = await Promise.all([getHoldings(String(addr)), getStats()])
+      const demo = await isDemo()
+      let rows: HoldingRow[]
+      let stats = await getStats()
+      if (demo) {
+        const groups = await getGroups()
+        const all = groups.flatMap((g) => g.tokens)
+        rows = DEMO_HOLDINGS.map((d) => {
+          const t = all.find((x) => x.symbol === d.symbol)
+          return t ? { ...t, walletAmount: d.walletAmount } : null
+        }).filter(Boolean) as HoldingRow[]
+      } else {
+        const addr = account?.address ?? (await connect())?.address
+        if (!addr) throw new Error('Wallet not connected')
+        rows = await getHoldings(String(addr))
+      }
       const latest = new Map<string, Latest>(stats.latest.map((l) => [l.symbol, l]))
 
       const list: Item[] = rows.map((r) => {
@@ -74,9 +88,12 @@ export default function WalletScreen() {
         return (
           <Pressable key={i.symbol} style={s.card} onPress={() => router.push(`/passport?symbol=${i.symbol}`)}>
             <View style={s.row}>
-              <View style={{ gap: 2 }}>
-                <Text style={s.symbol}>{i.symbol}</Text>
-                <Text style={s.faint}>{i.issuer}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={36} />
+                <View style={{ gap: 2 }}>
+                  <Text style={s.symbol}>{i.symbol}</Text>
+                  <Text style={s.faint}>{i.issuer}</Text>
+                </View>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 2 }}>
                 <Text style={[s.shares, num]}>{i.shares.toFixed(4)} {i.ticker}</Text>
@@ -110,4 +127,7 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
+
 

@@ -8,6 +8,7 @@ import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
 import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '@/lib/swap'
 import { getStats, Latest, TokenRow } from '@/lib/stats'
+import { isDemo } from '@/lib/demo'
 
 const SIZE_USD = 1000
 const MIN_SAVING_BPS = 5
@@ -63,6 +64,7 @@ export default function BuyScreen() {
     if (!quote || !selected) return
     setBusy(true); setStatus(null)
     try {
+      if (await isDemo()) { setStatus('Demo mode: connect a real wallet to sign a transaction.'); setBusy(false); return }
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
       const b64 = await buildSwapTx(quote, String(addr))
@@ -178,3 +180,4 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+

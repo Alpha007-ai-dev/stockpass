@@ -45,13 +45,14 @@ export type TokenRow = {
   issuer: string
   mint: string
   decimals: number
+  icon?: string | null
 }
 
 let tokenCache: TokenRow[] | null = null
 
 export async function getTokens(): Promise<TokenRow[]> {
   if (tokenCache) return tokenCache
-  const res = await fetch(`${BASE}/tokens`)
+  const res = await fetch(`${BASE}/tokens?v=${Math.floor(Date.now() / 600000)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const data = await res.json()
   tokenCache = Array.isArray(data) ? (data as TokenRow[]) : []
@@ -109,4 +110,6 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+
+
 

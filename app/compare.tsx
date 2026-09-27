@@ -2,6 +2,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { issuerColor, num, T } from '@/constants/theme'
+import { TokenIcon } from '@/components/token-icon'
 import { isUsable } from '@/lib/cost'
 import { getGroups, Group } from '@/lib/pairs'
 import { compact, getStats, Latest } from '@/lib/stats'
@@ -58,9 +59,12 @@ export default function CompareScreen() {
           <Pressable key={token.symbol} style={[s.card, isBest && s.cardBest]}
             onPress={() => router.push(`/passport?symbol=${token.symbol}`)}>
             <View style={s.cardHead}>
-              <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TokenIcon icon={token.icon} symbol={token.symbol} label={token.ticker} issuer={token.issuer} size={36} />
+                <View>
                 <Text style={s.symbol}>{token.symbol}</Text>
                 <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
+                </View>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.cost, num, isBest && s.accent]}>
@@ -143,6 +147,8 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
 
 
 
