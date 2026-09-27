@@ -150,12 +150,13 @@ export default function PassportScreen() {
                   </View>
                 </View>
                 <View style={s.normDivider} />
-                <View style={s.normRow}>
-                  <View style={{ flex: 1 }}>
+                <View style={s.gapRow}>
+                  <View>
                     <Text style={s.faint}>Raw-price gap</Text>
                     <Text style={[s.gapBad, num]}>{Math.abs(rawGap)} bps</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
+                  <Text style={s.arrow}>&#8594;</Text>
+                  <View>
                     <Text style={s.faint}>Normalized gap</Text>
                     <Text style={[s.gapGood, num]}>{Math.abs(normGap)} bps</Text>
                   </View>
@@ -284,7 +285,7 @@ const s = StyleSheet.create({
   subtitle: { color: T.dim, fontSize: 14 },
   badges: { flexDirection: 'row', gap: 8 },
   badge: { backgroundColor: T.border, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 },
-  badgeText: { color: T.text, fontSize: 11, fontWeight: '600' },
+  badgeText: { color: T.text, fontSize: 12, fontWeight: '600' },
   tabs: { flexDirection: 'row', gap: 4, borderBottomWidth: 1, borderBottomColor: T.border },
   tab: { paddingVertical: 10, paddingHorizontal: 10 },
   tabOn: { borderBottomWidth: 2, borderBottomColor: T.accent },
@@ -292,17 +293,19 @@ const s = StyleSheet.create({
   tabTextOn: { color: T.accent, fontWeight: '700' },
   grid2: { flexDirection: 'row', gap: 12 },
   box: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 4 },
-  boxLabel: { color: T.faint, fontSize: 11 },
+  boxLabel: { color: T.faint, fontSize: 12 },
   boxBig: { color: T.text, fontSize: 24, fontWeight: '700' },
   boxMid: { color: T.text, fontSize: 18, fontWeight: '600' },
   normCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1.5, borderColor: T.accent, padding: 16, gap: 10 },
-  normKicker: { color: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  normKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   normRow: { flexDirection: 'row', gap: 12 },
   normSmall: { color: T.dim, fontSize: 18, fontWeight: '600', textDecorationLine: 'line-through' },
   normBig: { color: T.text, fontSize: 24, fontWeight: '700' },
   normDivider: { height: 1, backgroundColor: T.border },
-  gapBad: { color: T.down, fontSize: 22, fontWeight: '700' },
-  gapGood: { color: T.accent, fontSize: 22, fontWeight: '700' },
+  gapRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  arrow: { color: T.faint, fontSize: 22, marginTop: 14 },
+  gapBad: { color: T.down, fontSize: 26, fontWeight: '700', textDecorationLine: 'line-through' },
+  gapGood: { color: T.accent, fontSize: 34, fontWeight: '700', letterSpacing: -1 },
   card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
   section: { color: T.text, fontSize: 15, fontWeight: '600' },
   hero: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
@@ -317,6 +320,8 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 

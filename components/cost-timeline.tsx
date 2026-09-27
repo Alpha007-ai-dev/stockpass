@@ -77,11 +77,11 @@ export function CostTimeline({ ticker }: { ticker: string }) {
           <Line key={i} x1={PAD_L} y1={py(v)} x2={W - 8} y2={py(v)} stroke={T.border} strokeWidth={1} />
         ))}
         {series.map((se) => (
-          <Path key={se.issuer} d={se.d} stroke={se.color} strokeWidth={2} fill="none" />
+          <Path key={se.issuer} d={se.d} stroke={se.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
         ))}
         {series.map((se) =>
           se.pts.slice(-1).map((p) => (
-            <Circle key={se.issuer} cx={px(p.ts)} cy={py(p.entry_bps as number)} r={3.5} fill={se.color} />
+            <Circle key={se.issuer} cx={px(p.ts)} cy={py(p.entry_bps as number)} r={4.5} fill={se.color} />
           )),
         )}
       </Svg>
@@ -113,5 +113,7 @@ const s = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: T.dim, fontSize: 12 },
-  faint: { color: T.faint, fontSize: 11 },
+  faint: { color: T.faint, fontSize: 12 },
 })
+
+

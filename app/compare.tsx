@@ -153,16 +153,16 @@ const s = StyleSheet.create({
   h1: { color: T.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
   h2: { color: T.text, fontSize: 22, fontWeight: '600', lineHeight: 28, letterSpacing: -0.4 },
   race: { flexDirection: 'row', gap: 8 },
-  raceCol: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 12, alignItems: 'center', gap: 2 },
+  raceCol: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, alignItems: 'center', gap: 3 },
   raceBest: { borderColor: T.accent, borderWidth: 1.5 },
-  bestTag: { color: T.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
-  raceIssuer: { fontSize: 12, fontWeight: '700' },
-  raceCost: { color: T.text, fontSize: 26, fontWeight: '700' },
-  barWrap: { height: 74, justifyContent: 'flex-end', marginVertical: 6 },
-  bar: { width: 22, borderRadius: 5 },
-  racePrice: { color: T.text, fontSize: 13, fontWeight: '600' },
+  bestTag: { color: T.bg, backgroundColor: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
+  raceIssuer: { fontSize: 13, fontWeight: '700' },
+  raceCost: { color: T.text, fontSize: 34, fontWeight: '700', letterSpacing: -1 },
+  barWrap: { height: 60, justifyContent: 'flex-end', marginVertical: 8 },
+  bar: { width: 26, borderRadius: 6 },
+  racePrice: { color: T.dim, fontSize: 14, fontWeight: '600' },
   card: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 8 },
-  cardBest: { borderColor: T.accent, borderWidth: 1.5 },
+  cardBest: { borderColor: T.accent, borderWidth: 1.5, backgroundColor: '#161C12' },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
   issuer: { color: T.dim, fontSize: 13 },
@@ -171,7 +171,7 @@ const s = StyleSheet.create({
   track: { height: 6, borderRadius: 3, backgroundColor: T.border },
   fill: { height: 6, borderRadius: 3 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  note: { color: T.faint, fontSize: 11 },
+  note: { color: T.faint, fontSize: 12, lineHeight: 17 },
   banner: { backgroundColor: '#1F2A12', borderRadius: 16, padding: 14, gap: 4 },
   bannerStrong: { color: T.accent, fontSize: 15, fontWeight: '600' },
   section: { gap: 6 },
@@ -181,6 +181,9 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
+
 
 
 

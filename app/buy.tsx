@@ -110,6 +110,25 @@ export default function BuyScreen() {
             <View style={s.row}><Text style={s.labelStrong}>Your total</Text><Text style={[s.valueStrong, num]}>{total} bps</Text></View>
           </View>
 
+          {options!.length > 1 && netSaving !== null && (
+            <View style={worthIt ? s.saveBox : s.sameBox}>
+              {worthIt ? (
+                <>
+                  <Text style={s.saveKicker}>YOU SAVE</Text>
+                  <Text style={[s.saveBig, num]}>{netSaving} bps</Text>
+                  <Text style={s.saveSub}>${((netSaving / 10000) * SIZE_USD).toFixed(2)} on ${SIZE_USD.toLocaleString()}</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.sameKicker}>NEARLY THE SAME COST</Text>
+                  <Text style={s.faint}>
+                    {netSaving} bps apart after the StockPass fee. Choose based on issuer, availability or utility.
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
+
           {options!.length > 1 && (
             <View style={s.card}>
               <Text style={s.label}>Other issuers</Text>
@@ -141,10 +160,10 @@ export default function BuyScreen() {
           ) : (
             <>
               <View style={s.card}>
-                <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.value, num]}>{quote.outUi.toFixed(4)} {selected.token.symbol}</Text></View>
-                <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.value, num]}>{quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
-                <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.value, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
-                <View style={s.row}><Text style={s.label}>Slippage</Text><Text style={[s.value, num]}>{quote.slippageBps} bps</Text></View>
+                <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.valueSmall, num]}>{quote.outUi.toFixed(4)} {selected.token.symbol}</Text></View>
+                <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.valueSmall, num]}>{quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
+                <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.valueSmall, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
+                <View style={s.row}><Text style={s.label}>Slippage</Text><Text style={[s.valueSmall, num]}>{quote.slippageBps} bps</Text></View>
               </View>
               <Pressable style={s.primary} onPress={sign} disabled={busy}>
                 {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Review and sign</Text>}
@@ -165,7 +184,7 @@ const s = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40, gap: 12 },
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
-  kicker: { color: T.faint, fontSize: 11, letterSpacing: 1.4 },
+  kicker: { color: T.faint, fontSize: 12, letterSpacing: 1.4 },
   title: { color: T.text, fontSize: 34, fontWeight: '700', letterSpacing: -0.8 },
   card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
   cardTitle: { color: T.text, fontSize: 16, fontWeight: '600' },
@@ -174,10 +193,20 @@ const s = StyleSheet.create({
   label: { color: T.dim, fontSize: 14 },
   labelStrong: { color: T.text, fontSize: 15, fontWeight: '600' },
   value: { color: T.text, fontSize: 14 },
+  valueSmall: { color: T.dim, fontSize: 13 },
   valueStrong: { color: T.text, fontSize: 18, fontWeight: '700' },
   saving: { color: T.accent, fontSize: 22, fontWeight: '700' },
+  saveBox: { backgroundColor: '#1F2A12', borderRadius: 18, borderWidth: 1.5, borderColor: T.accent, padding: 16, gap: 2, alignItems: 'center' },
+  saveKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  saveBig: { color: T.accent, fontSize: 34, fontWeight: '700' },
+  saveSub: { color: T.text, fontSize: 14 },
+  sameBox: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 6 },
+  sameKicker: { color: T.dim, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   faint: { color: T.faint, fontSize: 12 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
+
 

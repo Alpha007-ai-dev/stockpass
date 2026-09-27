@@ -60,15 +60,15 @@ export function CostMap({
       <View style={s.stats}>
         <View style={s.stat}>
           <Text style={[s.statNum, num, { color: ISSUER_COLOR.xStocks }]}>{counts.xStocks}</Text>
-          <Text style={s.statLabel}>cheapest via xStocks</Text>
+          <Text style={s.statLabel}>xStocks{'\n'}cheapest</Text>
         </View>
         <View style={s.stat}>
           <Text style={[s.statNum, num, { color: ISSUER_COLOR.Ondo }]}>{counts.Ondo}</Text>
-          <Text style={s.statLabel}>via Ondo</Text>
+          <Text style={s.statLabel}>Ondo{'\n'}cheapest</Text>
         </View>
         <View style={s.stat}>
           <Text style={[s.statNum, num, { color: ISSUER_COLOR.Backpack }]}>{counts.Backpack}</Text>
-          <Text style={s.statLabel}>via Backpack</Text>
+          <Text style={s.statLabel}>Backpack{'\n'}cheapest</Text>
         </View>
       </View>
 
@@ -111,23 +111,24 @@ const s = StyleSheet.create({
   sub: { color: T.dim, fontSize: 13, marginTop: 2 },
   stats: { flexDirection: 'row', gap: 8 },
   stat: { flex: 1, backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.border, paddingVertical: 12, alignItems: 'center', gap: 2 },
-  statNum: { color: T.text, fontSize: 24, fontWeight: '700' },
-  statLabel: { color: T.faint, fontSize: 10, textAlign: 'center' },
+  statNum: { color: T.text, fontSize: 26, fontWeight: '700' },
+  statLabel: { color: T.faint, fontSize: 11, textAlign: 'center', lineHeight: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { borderRadius: 16, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, paddingVertical: 7 },
   chipOn: { backgroundColor: T.accent, borderColor: T.accent },
   chipText: { color: T.dim, fontSize: 12 },
   chipTextOn: { color: T.bg, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tile: { width: 62, height: 62, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  tile: { width: 62, height: 66, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   stale: { opacity: 0.5 },
-  tileTicker: { fontSize: 10, fontWeight: '700' },
+  tileTicker: { fontSize: 11, fontWeight: '700' },
   tileCost: { fontSize: 18, fontWeight: '700' },
-  tileUnit: { fontSize: 9 },
+  tileUnit: { fontSize: 10 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { color: T.faint, fontSize: 11 },
-  foot: { color: T.faint, fontSize: 11 },
+  legendText: { color: T.faint, fontSize: 12 },
+  foot: { color: T.faint, fontSize: 12, lineHeight: 17 },
 })
+
 

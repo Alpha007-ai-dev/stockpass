@@ -150,7 +150,7 @@ export default function HomeScreen() {
 
       {demo && (
         <View style={s.demoBar}>
-          <Text style={s.demoText}>DEMO PORTFOLIO · real tokens and prices, sample amounts</Text>
+          <Text style={s.demoText}>&#9679;  DEMO PORTFOLIO · real prices, sample amounts</Text>
           <Pressable onPress={exitDemo}><Text style={s.demoExit}>Exit</Text></Pressable>
         </View>
       )}
@@ -281,8 +281,8 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
   content: { padding: 20, paddingBottom: 40, gap: 10 },
-  demoBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#33290F', borderRadius: 12, padding: 10, marginTop: 8 },
-  demoText: { color: T.warn, fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  demoBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: T.surfaceAlt, borderWidth: 1, borderColor: '#4A3A18', borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14, marginTop: 8 },
+  demoText: { color: T.warn, fontSize: 12, fontWeight: '600', flexShrink: 1 },
   demoExit: { color: T.warn, fontSize: 12, fontWeight: '700', paddingHorizontal: 8 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bell: { color: T.dim, fontSize: 20 },
@@ -293,17 +293,17 @@ const s = StyleSheet.create({
   miniRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   mini: { flex: 1, backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 12, gap: 2, alignItems: 'center' },
   miniNum: { color: T.text, fontSize: 22, fontWeight: '700' },
-  miniLabel: { color: T.faint, fontSize: 10, textAlign: 'center' },
+  miniLabel: { color: T.faint, fontSize: 11, textAlign: 'center' },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   section: { color: T.text, fontSize: 16, fontWeight: '700' },
   chev: { color: T.faint, fontSize: 20 },
-  insight: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14 },
-  insightText: { color: T.dim, fontSize: 13, lineHeight: 18 },
+  insight: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, paddingVertical: 16, paddingHorizontal: 15 },
+  insightText: { color: T.dim, fontSize: 14, lineHeight: 20 },
   avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: T.surfaceAlt },
-  avatarText: { fontSize: 10, fontWeight: '800' },
+  avatarText: { fontSize: 11, fontWeight: '800' },
   card: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 4 },
-  tag: { color: T.accent, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
-  rowTitle: { color: T.text, fontSize: 15, fontWeight: '600' },
+  tag: { color: T.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  rowTitle: { color: T.text, fontSize: 16, fontWeight: '700' },
   rowValue: { color: T.text, fontSize: 16, fontWeight: '700' },
   faint: { color: T.faint, fontSize: 12 },
   warn: { color: T.warn, fontSize: 13 },
@@ -313,6 +313,8 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 

@@ -7,14 +7,16 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: { backgroundColor: T.bg, borderTopColor: T.border },
+        tabBarStyle: { backgroundColor: T.bg, borderTopColor: T.border, height: 76, paddingTop: 8, paddingBottom: 18 },
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarActiveTintColor: T.accent,
         tabBarInactiveTintColor: T.faint,
       }}
     >
-      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⌂</Text> }} />
-      <Tabs.Screen name="index" options={{ title: 'Markets', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▤</Text> }} />
-      <Tabs.Screen name="wallet" options={{ title: 'Wallet', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>◈</Text> }} />
+      <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>⌂</Text> }} />
+      <Tabs.Screen name="index" options={{ title: 'Markets', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>▤</Text> }} />
+      <Tabs.Screen name="wallet" options={{ title: 'Wallet', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>◈</Text> }} />
     </Tabs>
   )
 }
+

@@ -188,7 +188,7 @@ const s = StyleSheet.create({
   brand: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
   pill: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#1F2A12' },
   pillWarn: { backgroundColor: '#2A2110' },
-  pillText: { color: T.accent, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
+  pillText: { color: T.accent, fontSize: 11, fontWeight: '700', letterSpacing: 0.4 },
   pillTextWarn: { color: T.warn },
   toggle: { flexDirection: 'row', backgroundColor: T.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.border },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
@@ -219,6 +219,7 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
 
 
 
