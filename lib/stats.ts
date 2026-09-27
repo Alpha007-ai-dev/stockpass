@@ -88,3 +88,23 @@ export async function getSeries(ticker: string, hours = 24): Promise<SeriesPoint
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }
+
+export type Collateral = {
+  symbol: string
+  mint: string
+  market: string
+  maxLtv: number
+  borrowApy: number
+  supplyApy: number
+  marketUsd: number
+}
+
+let collCache: Collateral[] | null = null
+
+export async function getCollateral(): Promise<Collateral[]> {
+  if (collCache) return collCache
+  const res = await fetch(`${BASE}/collateral`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  collCache = (await res.json()) as Collateral[]
+  return collCache
+}

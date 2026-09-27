@@ -6,6 +6,7 @@ import { num, T } from '../constants/theme'
 import { compact, getStats, History, Latest } from '../lib/stats'
 import { costLabel } from '../lib/cost'
 import { CostTimeline } from '../components/cost-timeline'
+import { CollateralSection } from '../components/collateral-section'
 
 const STATE_LABEL: Record<string, string> = {
   open: 'Market open', pre: 'Pre-market', after: 'After hours', closed: 'Overnight', weekend: 'Weekend',
@@ -86,6 +87,8 @@ export default function PassportScreen() {
       )}
 
       <CostTimeline ticker={ticker} />
+
+      <CollateralSection symbol={sym} otherSymbol={otherSym} />
 
       <View style={s.card}>
         <View style={s.grid}>
@@ -182,6 +185,7 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   warnLine: { color: T.warn, fontSize: 13, fontWeight: '600' },
 })
+
 
 
 
