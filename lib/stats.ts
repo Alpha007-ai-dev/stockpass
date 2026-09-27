@@ -53,7 +53,8 @@ export async function getTokens(): Promise<TokenRow[]> {
   if (tokenCache) return tokenCache
   const res = await fetch(`${BASE}/tokens`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  tokenCache = (await res.json()) as TokenRow[]
+  const data = await res.json()
+  tokenCache = Array.isArray(data) ? (data as TokenRow[]) : []
   return tokenCache
 }
 
@@ -108,3 +109,4 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+

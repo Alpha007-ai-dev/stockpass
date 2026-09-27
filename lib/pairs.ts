@@ -5,7 +5,7 @@ export type Group = { ticker: string; tokens: TokenRow[] }
 const ORDER = ['xStocks', 'Ondo', 'Backpack']
 
 export async function getGroups(): Promise<Group[]> {
-  const rows = await getTokens()
+  const rows = (await getTokens()) ?? []
   const map = new Map<string, TokenRow[]>()
   for (const r of rows) {
     const list = map.get(r.ticker) ?? []
@@ -31,3 +31,4 @@ export async function getPairs(): Promise<Pair[]> {
     on: g.tokens.find((t) => t.issuer === 'Ondo'),
   }))
 }
+

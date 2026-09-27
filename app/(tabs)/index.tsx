@@ -5,8 +5,8 @@ import { CostMap, MapFilter } from '@/components/cost-map'
 import { num, T } from '@/constants/theme'
 import { costLabel, isUsable } from '@/lib/cost'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
-import { getPairs, Pair } from '@/lib/pairs'
-import { compact, getStats, History, Latest } from '@/lib/stats'
+import { getGroups, Group } from '@/lib/pairs'
+import { getStats, History, Latest } from '@/lib/stats'
 
 type Sort = 'diff' | 'cheap' | 'name'
 
@@ -14,7 +14,7 @@ export default function MarketScreen() {
   const router = useRouter()
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [hist, setHist] = useState<Record<string, History>>({})
-  const [pairs, setPairs] = useState<Pair[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>('diff')
   const [view, setView] = useState<'map' | 'list'>('map')
@@ -28,14 +28,14 @@ export default function MarketScreen() {
     setLoading(true)
     setError(null)
     try {
-      const [stats, allPairs] = await Promise.all([getStats(), getPairs()])
+      const [stats, allGroups] = await Promise.all([getStats(), getGroups()])
       const l: Record<string, Latest> = {}
       stats.latest.forEach((r) => { l[r.symbol] = r })
       const h: Record<string, History> = {}
       stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
       setLatest(l)
       setHist(h)
-      setPairs(allPairs.filter((p) => p.x && p.on))
+      setGroups(allGroups)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -46,21 +46,23 @@ export default function MarketScreen() {
 
   const rows = useMemo(() => {
     const q = query.trim().toUpperCase()
-    const withData = pairs.map((p) => {
-      const lx = latest[p.x!.symbol]
-      const lon = latest[p.on!.symbol]
-      const ready = isUsable(lx?.entry_bps, lx?.quotable) && isUsable(lon?.entry_bps, lon?.quotable)
-      const diff = ready ? Math.abs(lx.entry_bps! - lon.entry_bps!) : -1
-      const cheapest = ready ? Math.min(lx.entry_bps!, lon.entry_bps!) : 9999
-      return { pair: p, lx, lon, ready, diff, cheapest }
+    const withData = groups.map((g) => {
+      const usable = g.tokens
+        .map((t) => latest[t.symbol])
+        .filter((l) => l && isUsable(l.entry_bps, l.quotable)) as Latest[]
+      const costs = usable.map((l) => l.entry_bps as number)
+      const diff = costs.length > 1 ? Math.max(...costs) - Math.min(...costs) : -1
+      const cheapest = costs.length ? Math.min(...costs) : 9999
+      const best = usable.length ? usable.reduce((a, b) => ((a.entry_bps as number) <= (b.entry_bps as number) ? a : b)) : null
+      return { group: g, usable, best, diff, cheapest }
     })
-    const filtered = q ? withData.filter((r) => r.pair.ticker.includes(q)) : withData
+    const filtered = q ? withData.filter((r) => r.group.ticker.includes(q)) : withData
     const sorted = [...filtered]
     if (sort === 'diff') sorted.sort((a, b) => b.diff - a.diff)
     if (sort === 'cheap') sorted.sort((a, b) => a.cheapest - b.cheapest)
-    if (sort === 'name') sorted.sort((a, b) => a.pair.ticker.localeCompare(b.pair.ticker))
+    if (sort === 'name') sorted.sort((a, b) => a.group.ticker.localeCompare(b.group.ticker))
     return sorted
-  }, [pairs, latest, query, sort])
+  }, [groups, latest, query, sort])
 
   const closed = state !== 'open'
 
@@ -69,7 +71,7 @@ export default function MarketScreen() {
       style={s.screen}
       contentContainerStyle={s.content}
       data={view === 'map' ? [] : rows}
-      keyExtractor={(r) => r.pair.ticker}
+      keyExtractor={(r) => r.group.ticker}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={T.dim} />}
       ListHeaderComponent={
         <View style={{ gap: T.gap }}>
@@ -91,7 +93,7 @@ export default function MarketScreen() {
           {error && <Text style={s.error}>{error}</Text>}
 
           {view === 'map' ? (
-            <CostMap pairs={pairs} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
+            <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
           ) : (
             <View style={{ gap: T.gap }}>
               <TextInput
@@ -103,7 +105,7 @@ export default function MarketScreen() {
                 style={s.search}
               />
               <View style={s.sorts}>
-                {([['diff', 'Biggest gap'], ['cheap', 'Cheapest'], ['name', 'A-Z']] as [Sort, string][]).map(([key, label]) => (
+                {([['diff', 'Biggest spread'], ['cheap', 'Cheapest'], ['name', 'A-Z']] as [Sort, string][]).map(([key, label]) => (
                   <Pressable key={key} onPress={() => setSort(key)} style={[s.sortBtn, sort === key && s.sortActive]}>
                     <Text style={[s.sortText, sort === key && s.sortTextActive]}>{label}</Text>
                   </Pressable>
@@ -115,37 +117,31 @@ export default function MarketScreen() {
         </View>
       }
       renderItem={({ item }) => {
-        const { pair, lx, lon, ready, diff } = item
-        const x = pair.x!
-        const on = pair.on!
-        const cheaper = ready ? (lx.entry_bps! <= lon.entry_bps! ? x : on) : null
-
+        const { group, ready, diff } = item
+        const best = item.usable.length ? item.usable.reduce((a, b) => (a.entry_bps! <= b.entry_bps! ? a : b)) : null
         return (
           <View style={s.card}>
             <View style={s.cardHead}>
-              <Pressable onPress={() => router.push(`/compare?ticker=${pair.ticker}`)}>
-                <Text style={s.ticker}>{pair.ticker} ›</Text>
+              <Pressable onPress={() => router.push(`/compare?ticker=${group.ticker}`)}>
+                <Text style={s.ticker}>{group.ticker} ›</Text>
               </Pressable>
-              {diff > 0 && <Text style={s.accentSmall}>{diff} bps apart</Text>}
+              {diff > 0 && <Text style={s.accentSmall}>{diff} bps spread</Text>}
             </View>
 
-            {[x, on].map((t) => {
+            {group.tokens.map((t) => {
               const l = latest[t.symbol]
               const h = hist[t.symbol]
               const usual = h && h.samples >= 5 && h.avg_entry !== null ? h.avg_entry : null
-              const unusual = l && usual ? (l.entry_bps ?? 0) > usual * 1.3 : false
-              const isBest = cheaper?.symbol === t.symbol && diff > 0
+              const isBest = best?.symbol === t.symbol && diff > 0
               return (
                 <Pressable key={t.symbol} style={s.tokenRow} onPress={() => router.push(`/passport?symbol=${t.symbol}`)}>
                   <View style={s.tokenLeft}>
                     <Text style={s.tokenSymbol}>{t.symbol}</Text>
-                    <Text style={s.faint}>{t.issuer}{l ? ` · supply ${compact(l.supply)}` : ''}</Text>
+                    <Text style={s.faint}>{t.issuer}</Text>
                   </View>
                   <View style={s.tokenRight}>
-                    <Text style={[s.big, num, unusual && s.warnText, isBest && s.accentText]}>
-                      {l ? costLabel(l.entry_bps, l.quotable) : '··'}
-                    </Text>
-                    <Text style={s.faint}>{usual ? `usual ${usual.toFixed(0)}` : 'collecting'}</Text>
+                    <Text style={[s.big, num, isBest && s.accentText]}>{l ? costLabel(l.entry_bps, l.quotable) : 'collecting'}</Text>
+                    <Text style={s.faint}>{usual ? `usual ${usual.toFixed(0)}` : ''}</Text>
                   </View>
                   <Text style={s.chevron}>›</Text>
                 </Pressable>
@@ -154,16 +150,15 @@ export default function MarketScreen() {
 
             <View style={s.cardFoot}>
               <Text style={s.footText}>
-                {diff > 0 ? <><Text style={s.accentText}>{cheaper?.symbol}</Text> is cheaper to enter</> : ready ? 'Both cost about the same' : 'No usable quote'}
+                {best && diff > 0 ? <><Text style={s.accentText}>{best.issuer}</Text> is cheapest to enter</> : ready ? 'All issuers cost about the same' : 'No usable quote'}
               </Text>
-              <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${pair.ticker}`)}>
+              <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${group.ticker}`)}>
                 <Text style={s.buyText}>Buy</Text>
               </Pressable>
             </View>
           </View>
         )
-      }}
-    />
+      }}    />
   )
 }
 
@@ -197,7 +192,6 @@ const s = StyleSheet.create({
   tokenSymbol: { color: T.text, fontSize: 15, fontWeight: '600' },
   big: { color: T.text, fontSize: 18, fontWeight: '600' },
   accentText: { color: T.accent },
-  warnText: { color: T.warn },
   faint: { color: T.faint, fontSize: 12 },
   chevron: { color: T.faint, fontSize: 22 },
   cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 12, marginTop: 6 },
@@ -206,4 +200,5 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
 

@@ -2,15 +2,17 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
-import { num, T } from '../constants/theme'
-import { isUsable } from '../lib/cost'
-import { getPairs, Pair } from '../lib/pairs'
-import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '../lib/swap'
-import { getStats, Latest } from '../lib/stats'
-import { savePurchase } from '../lib/purchases'
+import { num, T } from '@/constants/theme'
+import { isUsable } from '@/lib/cost'
+import { getGroups } from '@/lib/pairs'
+import { savePurchase } from '@/lib/purchases'
+import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '@/lib/swap'
+import { getStats, Latest, TokenRow } from '@/lib/stats'
 
 const SIZE_USD = 1000
 const MIN_SAVING_BPS = 5
+
+type Option = { token: TokenRow; entry: number }
 
 export default function BuyScreen() {
   const router = useRouter()
@@ -18,58 +20,48 @@ export default function BuyScreen() {
   const tk = ticker ?? 'SPY'
   const { account, connect, signAndSendTransaction } = useMobileWallet() as any
 
-  const [pair, setPair] = useState<Pair | null>(null)
-  const [latest, setLatest] = useState<Record<string, Latest>>({})
+  const [options, setOptions] = useState<Option[] | null>(null)
   const [quote, setQuote] = useState<Quote | null>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([getStats(), getPairs()])
-      .then(([s, pairs]) => {
+    Promise.all([getStats(), getGroups()])
+      .then(([s, groups]) => {
         const map: Record<string, Latest> = {}
         s.latest.forEach((r) => { map[r.symbol] = r })
-        setLatest(map)
-        setPair(pairs.find((p) => p.ticker === tk) ?? null)
+        const g = groups.find((x) => x.ticker === tk)
+        const opts = (g?.tokens ?? [])
+          .map((token) => ({ token, l: map[token.symbol] }))
+          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
+          .map((o) => ({ token: o.token, entry: o.l!.entry_bps! }))
+          .sort((a, b) => a.entry - b.entry)
+        setOptions(opts)
       })
       .catch((e) => setStatus((e as Error).message))
   }, [tk])
 
-  const x = pair?.x
-  const on = pair?.on
-  const lx = x ? latest[x.symbol] : undefined
-  const lon = on ? latest[on.symbol] : undefined
-  const xOk = isUsable(lx?.entry_bps, lx?.quotable)
-  const onOk = isUsable(lon?.entry_bps, lon?.quotable)
-
-  const selected = xOk && onOk ? (lx!.entry_bps! <= lon!.entry_bps! ? x! : on!) : xOk ? x! : onOk ? on! : null
-  const alternative = selected && x && on ? (selected.symbol === x.symbol ? on : x) : null
-  const selectedEntry = selected ? latest[selected.symbol]?.entry_bps ?? null : null
-  const altEntry = alternative ? latest[alternative.symbol]?.entry_bps ?? null : null
-  const total = selectedEntry !== null ? selectedEntry + PLATFORM_FEE_BPS : null
-  const bothOk = xOk && onOk
-  const netSaving = bothOk && total !== null && altEntry !== null ? altEntry - total : null
+  const selected = options?.[0] ?? null
+  const alternative = options?.[1] ?? null
+  const total = selected ? selected.entry + PLATFORM_FEE_BPS : null
+  const netSaving = selected && alternative && total !== null ? alternative.entry - total : null
   const worthIt = netSaving !== null && netSaving >= MIN_SAVING_BPS
 
   const prepare = useCallback(async () => {
     if (!selected) return
-    setBusy(true)
-    setStatus(null)
+    setBusy(true); setStatus(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
-      const q = await getQuote(usdc, SIZE_USD, selected.mint, selected.decimals, selected.symbol)
+      const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol)
       if (!q) throw new Error('No route available')
       setQuote(q)
-    } catch (e) {
-      setStatus((e as Error).message)
-    }
+    } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
   }, [selected])
 
   const sign = useCallback(async () => {
-    if (!quote) return
-    setBusy(true)
-    setStatus(null)
+    if (!quote || !selected) return
+    setBusy(true); setStatus(null)
     try {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
@@ -77,56 +69,66 @@ export default function BuyScreen() {
       if (!b64) throw new Error('Could not build transaction')
       const sig = await signAndSendTransaction(decodeTx(b64), BigInt(quote.contextSlot))
       setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
-    } catch (e) {
-      setStatus((e as Error).message)
-    }
+      await savePurchase({
+        ticker: tk,
+        symbol: selected.token.symbol,
+        issuer: selected.token.issuer,
+        sizeUsd: SIZE_USD,
+        entryBps: selected.entry,
+        feeBps: PLATFORM_FEE_BPS,
+        altBps: alternative?.entry ?? null,
+        savedBps: netSaving,
+        signature: String(sig),
+        at: Date.now(),
+      })
+    } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [quote, account, connect, signAndSendTransaction, selected, selectedEntry, altEntry, netSaving, tk])
+  }, [quote, selected, alternative, netSaving, account, connect, signAndSendTransaction, tk])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
+      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}>
+        <Text style={s.backText}>‹ Back</Text>
+      </Pressable>
 
       <Text style={s.kicker}>{worthIt ? 'BEST ENTRY' : 'ENTRY ROUTE'}</Text>
       <Text style={s.title}>Buy {tk}</Text>
-      <Text style={s.faint}>${SIZE_USD.toLocaleString()} in USDC</Text>
+      <Text style={s.faint}>${SIZE_USD.toLocaleString()} in USDC · {options?.length ?? 0} tradable issuer{options?.length === 1 ? '' : 's'}</Text>
 
-      {!selected && <Text style={s.faint}>{status ?? 'Loading measurements…'}</Text>}
+      {!options && <Text style={s.faint}>Loading measurements…</Text>}
+      {options?.length === 0 && <Text style={s.faint}>No issuer has a usable quote for {tk} right now.</Text>}
 
       {selected && (
         <>
           <View style={s.card}>
-            <Text style={s.cardTitle}>{selected.symbol} · {selected.issuer}</Text>
-            <View style={s.row}><Text style={s.label}>Entry cost</Text><Text style={[s.value, num]}>{selectedEntry} bps</Text></View>
+            <Text style={s.cardTitle}>{selected.token.symbol} · {selected.token.issuer}</Text>
+            <View style={s.row}><Text style={s.label}>Entry cost</Text><Text style={[s.value, num]}>{selected.entry} bps</Text></View>
             <View style={s.row}><Text style={s.label}>StockPass fee</Text><Text style={[s.value, num]}>{PLATFORM_FEE_BPS} bps</Text></View>
             <View style={s.divider} />
             <View style={s.row}><Text style={s.labelStrong}>Your total</Text><Text style={[s.valueStrong, num]}>{total} bps</Text></View>
           </View>
 
-          {alternative && (
+          {options!.length > 1 && (
             <View style={s.card}>
-              <View style={s.row}>
-                <Text style={s.label}>{alternative.symbol} · {alternative.issuer}</Text>
-                <Text style={[s.value, num]}>{altEntry !== null ? `${altEntry} bps` : 'no quote'}</Text>
-              </View>
-              {netSaving !== null && (
-                worthIt ? (
-                  <>
-                    <View style={s.divider} />
-                    <View style={s.row}><Text style={s.labelStrong}>You save</Text><Text style={[s.saving, num]}>{netSaving} bps</Text></View>
-                    <Text style={s.faint}>${((netSaving / 10000) * SIZE_USD).toFixed(2)} on ${SIZE_USD.toLocaleString()}, after our fee.</Text>
-                  </>
-                ) : (
-                  <>
-                    <View style={s.divider} />
-                    <Text style={s.labelStrong}>No meaningful difference</Text>
-                    <Text style={s.faint}>
-                      Only {netSaving} bps apart after the StockPass fee. Choose on availability or issuer instead.
-                    </Text>
-                  </>
-                )
+              <Text style={s.label}>Other issuers</Text>
+              {options!.slice(1).map((o) => (
+                <View key={o.token.symbol} style={s.row}>
+                  <Text style={s.label}>{o.token.symbol} · {o.token.issuer}</Text>
+                  <Text style={[s.value, num]}>{o.entry} bps</Text>
+                </View>
+              ))}
+              <View style={s.divider} />
+              {worthIt ? (
+                <>
+                  <View style={s.row}><Text style={s.labelStrong}>You save</Text><Text style={[s.saving, num]}>{netSaving} bps</Text></View>
+                  <Text style={s.faint}>${((netSaving! / 10000) * SIZE_USD).toFixed(2)} vs the next best route, after our fee.</Text>
+                </>
+              ) : (
+                <>
+                  <Text style={s.labelStrong}>No meaningful difference</Text>
+                  <Text style={s.faint}>Only {netSaving} bps apart after the StockPass fee. Choose on availability or issuer instead.</Text>
+                </>
               )}
-              {!bothOk && <Text style={s.faint}>The other issuer has no usable quote right now.</Text>}
             </View>
           )}
 
@@ -137,7 +139,7 @@ export default function BuyScreen() {
           ) : (
             <>
               <View style={s.card}>
-                <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.value, num]}>{quote.outUi.toFixed(4)} {selected.symbol}</Text></View>
+                <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.value, num]}>{quote.outUi.toFixed(4)} {selected.token.symbol}</Text></View>
                 <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.value, num]}>{quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
                 <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.value, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
                 <View style={s.row}><Text style={s.label}>Slippage</Text><Text style={[s.value, num]}>{quote.slippageBps} bps</Text></View>
@@ -158,7 +160,7 @@ export default function BuyScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
-  content: { padding: 20, paddingBottom: 40, gap: T.gap },
+  content: { padding: 20, paddingBottom: 40, gap: 12 },
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
   kicker: { color: T.faint, fontSize: 11, letterSpacing: 1.4 },
@@ -176,5 +178,3 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-

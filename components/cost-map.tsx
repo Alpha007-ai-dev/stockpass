@@ -1,13 +1,13 @@
 ﻿import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { num, T } from '../constants/theme'
-import { isUsable } from '../lib/cost'
-import { Latest } from '../lib/stats'
-import { Pair } from '../lib/pairs'
+import { num, T } from '@/constants/theme'
+import { isUsable } from '@/lib/cost'
+import { Group } from '@/lib/pairs'
+import { Latest } from '@/lib/stats'
 
-export type MapFilter = 'all' | 'x' | 'on' | 'none'
+export type MapFilter = 'all' | 'xStocks' | 'Ondo' | 'Backpack' | 'none'
 
-type Tile = { ticker: string; cost: number | null; issuer: string | null; age: number }
+type Tile = { ticker: string; cost: number | null; issuer: string | null; age: number; count: number }
 
 function tint(cost: number | null): { bg: string; fg: string } {
   if (cost === null) return { bg: '#1A1A18', fg: T.faint }
@@ -17,9 +17,9 @@ function tint(cost: number | null): { bg: string; fg: string } {
 }
 
 export function CostMap({
-  pairs, latest, filter, onFilter,
+  groups, latest, filter, onFilter,
 }: {
-  pairs: Pair[]
+  groups: Group[]
   latest: Record<string, Latest>
   filter: MapFilter
   onFilter: (f: MapFilter) => void
@@ -27,24 +27,33 @@ export function CostMap({
   const router = useRouter()
   const now = Date.now() / 1000
 
-  const all: Tile[] = pairs.map((p) => {
-    const lx = p.x ? latest[p.x.symbol] : undefined
-    const lon = p.on ? latest[p.on.symbol] : undefined
-    const xOk = isUsable(lx?.entry_bps, lx?.quotable)
-    const onOk = isUsable(lon?.entry_bps, lon?.quotable)
-    const best = xOk && onOk ? (lx!.entry_bps! <= lon!.entry_bps! ? lx! : lon!) : xOk ? lx! : onOk ? lon! : null
-    return { ticker: p.ticker, cost: best ? best.entry_bps : null, issuer: best ? best.issuer : null, age: best ? now - best.ts : 0 }
+  const all: Tile[] = groups.map((g) => {
+    const usable = g.tokens
+      .map((t) => latest[t.symbol])
+      .filter((l) => l && isUsable(l.entry_bps, l.quotable)) as Latest[]
+    const best = usable.length ? usable.reduce((a, b) => (a.entry_bps! <= b.entry_bps! ? a : b)) : null
+    return {
+      ticker: g.ticker,
+      cost: best ? best.entry_bps : null,
+      issuer: best ? best.issuer : null,
+      age: best ? now - best.ts : 0,
+      count: g.tokens.length,
+    }
   })
 
-  const viaX = all.filter((t) => t.issuer === 'xStocks').length
-  const viaOn = all.filter((t) => t.issuer === 'Ondo').length
+  const counts: Record<string, number> = { xStocks: 0, Ondo: 0, Backpack: 0 }
+  all.forEach((t) => { if (t.issuer) counts[t.issuer] = (counts[t.issuer] ?? 0) + 1 })
   const noQuote = all.filter((t) => t.cost === null).length
 
-  const tiles = all.filter((t) =>
-    filter === 'all' ? true : filter === 'x' ? t.issuer === 'xStocks' : filter === 'on' ? t.issuer === 'Ondo' : t.cost === null,
-  )
+  const tiles = all.filter((t) => (filter === 'all' ? true : filter === 'none' ? t.cost === null : t.issuer === filter))
 
-  const chips: [MapFilter, string][] = [['all', 'All'], ['x', 'xStocks cheaper'], ['on', 'Ondo cheaper'], ['none', 'No quote']]
+  const chips: [MapFilter, string][] = [
+    ['all', 'All'],
+    ['xStocks', `xStocks ${counts.xStocks}`],
+    ['Ondo', `Ondo ${counts.Ondo}`],
+    ['Backpack', `Backpack ${counts.Backpack}`],
+    ['none', `No quote ${noQuote}`],
+  ]
 
   return (
     <View style={{ gap: 12 }}>
@@ -55,16 +64,16 @@ export function CostMap({
 
       <View style={s.stats}>
         <View style={s.stat}>
-          <Text style={[s.statNum, num, { color: T.accent }]}>{viaX}</Text>
-          <Text style={s.statLabel}>cheaper via xStocks</Text>
+          <Text style={[s.statNum, num, { color: T.accent }]}>{counts.xStocks}</Text>
+          <Text style={s.statLabel}>cheapest via xStocks</Text>
         </View>
         <View style={s.stat}>
-          <Text style={[s.statNum, num]}>{noQuote}</Text>
-          <Text style={s.statLabel}>no quote</Text>
+          <Text style={[s.statNum, num, { color: '#F08C5A' }]}>{counts.Ondo}</Text>
+          <Text style={s.statLabel}>via Ondo</Text>
         </View>
         <View style={s.stat}>
-          <Text style={[s.statNum, num, { color: '#F08C5A' }]}>{viaOn}</Text>
-          <Text style={s.statLabel}>cheaper via Ondo</Text>
+          <Text style={[s.statNum, num, { color: '#5C8FD6' }]}>{counts.Backpack}</Text>
+          <Text style={s.statLabel}>via Backpack</Text>
         </View>
       </View>
 
@@ -84,7 +93,7 @@ export function CostMap({
               onPress={() => router.push(`/compare?ticker=${t.ticker}`)}>
               <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>{t.ticker}</Text>
               <Text style={[s.tileCost, num, { color: c.fg }]}>{t.cost === null ? '—' : t.cost}</Text>
-              <Text style={[s.tileUnit, { color: c.fg }]}>{t.cost === null ? 'no quote' : 'bps'}</Text>
+              <Text style={[s.tileUnit, { color: c.fg }]}>{t.cost === null ? 'no quote' : `bps · ${t.count}`}</Text>
             </Pressable>
           )
         })}
@@ -97,7 +106,7 @@ export function CostMap({
         <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#3A3A36' }]} /><Text style={s.legendText}>No quote</Text></View>
       </View>
 
-      <Text style={s.foot}>Entry cost at $1,000 through the cheaper issuer. Measured over the last 35 minutes.</Text>
+      <Text style={s.foot}>Cheapest entry cost at $1,000 across all issuers. The small number is how many issuers exist for that stock.</Text>
     </View>
   )
 }
