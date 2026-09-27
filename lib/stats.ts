@@ -25,7 +25,17 @@ export type History = {
   availability: number
 }
 
-export type Stats = { latest: Latest[]; history: History[] }
+export type Reference = {
+  ticker: string
+  bid: number
+  ask: number
+  mid: number
+  market_state: string
+  stale: number
+  ts: number
+}
+
+export type Stats = { latest: Latest[]; history: History[]; reference?: Reference[] }
 
 export async function getStats(): Promise<Stats> {
   const res = await fetch(`${BASE}/stats`)
@@ -111,6 +121,7 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+
 
 
 

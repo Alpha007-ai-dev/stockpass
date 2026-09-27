@@ -103,12 +103,12 @@ export default function HomeScreen() {
   const exitDemo = async () => { await setDemo(false); setDemoState(false); setItems(null) }
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
-  const change = total !== null && prev && prev.total > 0 && Date.now() - prev.at > 30000 ? total - prev.total : null
+  const change = total !== null && prev && prev.total > 0 ? total - prev.total : null
   const changePct = change !== null && prev ? (change / prev.total) * 100 : null
   useEffect(() => {
     if (total === null || total <= 0) return
     if (prev && Date.now() - prev.at < 5 * 60 * 1000) return
-    savePortfolio(total)
+    savePortfolio(total).then(() => getLastPortfolio().then(setPrev))
   }, [total, prev])
   const issuers = new Set(items?.map((i) => i.issuer)).size
   const ago = updated ? Math.max(1, Math.round((Date.now() - updated.getTime()) / 1000)) : null
@@ -164,6 +164,11 @@ export default function HomeScreen() {
       {total !== null ? (
         <>
           <Text style={[s.total, num]}>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+          {change !== null && changePct !== null && (
+            <Text style={[s.change, num, { color: change >= 0 ? T.accent : T.down }]}>
+              {change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(2)} ({change >= 0 ? '+' : ''}{changePct.toFixed(2)}%)
+            </Text>
+          )}
           <Text style={s.faint}>
             {items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{ago ? ` · updated ${ago}s ago` : ''}
           </Text>
@@ -313,6 +318,8 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 

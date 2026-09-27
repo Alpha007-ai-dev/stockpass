@@ -31,6 +31,7 @@ export default function PassportScreen() {
   const [balance, setBalance] = useState<number | null>(null)
   const [token, setToken] = useState<{ icon?: string | null; name?: string | null } | null>(null)
   const [others, setOthers] = useState<Latest[]>([])
+  const [reference, setReference] = useState<any | null>(null)
   useEffect(() => {
     getGroups()
       .then((gs) => {
@@ -69,6 +70,7 @@ export default function PassportScreen() {
       .then((s) => {
         setMine(s.latest.find((r) => r.symbol === sym) ?? null)
         setOthers(s.latest.filter((r) => r.symbol !== sym))
+        setReference((s as any).reference?.find((r: any) => r.ticker === ticker) ?? null)
         setHist(s.history.filter((r) => r.symbol === sym).sort((a, b) => b.samples - a.samples))
       })
       .catch((e) => setError((e as Error).message))
@@ -181,6 +183,35 @@ export default function PassportScreen() {
               <Text style={s.faint}>Exit cost {mine && mine.quotable ? `${mine.exit_bps} bps` : '—'}</Text>
             </View>
           </View>
+
+          {reference && mine?.buy_px && (
+            <View style={s.card}>
+              <Text style={s.section}>{reference.stale ? 'Off-market deviation' : 'On-chain premium'}</Text>
+              <View style={s.row}>
+                <Text style={s.label}>Traditional reference</Text>
+                <Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>{sym} per share</Text>
+                <Text style={[s.value, num]}>${mine.buy_px.toFixed(2)}</Text>
+              </View>
+              {reference.stale ? (
+                <Text style={s.faint}>
+                  The traditional market is closed, so this reference is a stale quote. No premium is shown against it.
+                </Text>
+              ) : (
+                <>
+                  <View style={s.row}>
+                    <Text style={s.section}>On-chain premium</Text>
+                    <Text style={[s.gapGood, num]}>{Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps</Text>
+                  </View>
+                  <Text style={s.faint}>
+                    What the on-chain form costs versus the traditional mid price. Separate from the entry cost above.
+                  </Text>
+                </>
+              )}
+            </View>
+          )}
 
           <View style={s.grid2}>
             <View style={s.box}>
@@ -316,10 +347,12 @@ const s = StyleSheet.create({
   barValue: { color: T.text, fontSize: 13, width: 28, textAlign: 'right' },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 16 },
   label: { color: T.dim, fontSize: 14 },
+  labelStrong: { color: T.text, fontSize: 15, fontWeight: '700' },
   value: { color: T.text, fontSize: 14, textAlign: 'right', flexShrink: 1 },
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
 
 
 
