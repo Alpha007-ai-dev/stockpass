@@ -24,4 +24,12 @@ export const ISSUERS: Record<string, IssuerInfo> = {
     eligibility: 'Eligible non-US users only',
     standard: 'Token-2022, Scaled UI Amount',
   },
+  Backpack: {
+    legalName: 'Backpack Securities',
+    backing: 'See issuer documentation',
+    dividends: 'See issuer documentation',
+    redemption: 'Through Backpack',
+    eligibility: 'See issuer documentation',
+    standard: 'Token-2022',
+  },
 }

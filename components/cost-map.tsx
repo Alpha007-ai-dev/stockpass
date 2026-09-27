@@ -1,6 +1,6 @@
 ﻿import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { num, T } from '@/constants/theme'
+import { costTint, ISSUER_COLOR, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { Group } from '@/lib/pairs'
 import { Latest } from '@/lib/stats'
@@ -9,12 +9,7 @@ export type MapFilter = 'all' | 'xStocks' | 'Ondo' | 'Backpack' | 'none'
 
 type Tile = { ticker: string; cost: number | null; issuer: string | null; age: number; count: number }
 
-function tint(cost: number | null): { bg: string; fg: string } {
-  if (cost === null) return { bg: '#1A1A18', fg: T.faint }
-  if (cost <= 15) return { bg: '#26331A', fg: '#C8EE62' }
-  if (cost <= 30) return { bg: '#2E2A14', fg: '#E4C75A' }
-  return { bg: '#33210F', fg: '#F08C5A' }
-}
+const tint = costTint
 
 export function CostMap({
   groups, latest, filter, onFilter,
@@ -64,15 +59,15 @@ export function CostMap({
 
       <View style={s.stats}>
         <View style={s.stat}>
-          <Text style={[s.statNum, num, { color: T.accent }]}>{counts.xStocks}</Text>
+          <Text style={[s.statNum, num, { color: ISSUER_COLOR.xStocks }]}>{counts.xStocks}</Text>
           <Text style={s.statLabel}>cheapest via xStocks</Text>
         </View>
         <View style={s.stat}>
-          <Text style={[s.statNum, num, { color: '#F08C5A' }]}>{counts.Ondo}</Text>
+          <Text style={[s.statNum, num, { color: ISSUER_COLOR.Ondo }]}>{counts.Ondo}</Text>
           <Text style={s.statLabel}>via Ondo</Text>
         </View>
         <View style={s.stat}>
-          <Text style={[s.statNum, num, { color: '#5C8FD6' }]}>{counts.Backpack}</Text>
+          <Text style={[s.statNum, num, { color: ISSUER_COLOR.Backpack }]}>{counts.Backpack}</Text>
           <Text style={s.statLabel}>via Backpack</Text>
         </View>
       </View>
@@ -100,9 +95,9 @@ export function CostMap({
       </View>
 
       <View style={s.legend}>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#C8EE62' }]} /><Text style={s.legendText}>≤15 bps</Text></View>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#E4C75A' }]} /><Text style={s.legendText}>16–30</Text></View>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#F08C5A' }]} /><Text style={s.legendText}>&gt;30</Text></View>
+        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#5BE585' }]} /><Text style={s.legendText}>≤15 bps</Text></View>
+        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#F5C451' }]} /><Text style={s.legendText}>16–30</Text></View>
+        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#FB8A5C' }]} /><Text style={s.legendText}>&gt;30</Text></View>
         <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#3A3A36' }]} /><Text style={s.legendText}>No quote</Text></View>
       </View>
 
@@ -135,3 +130,4 @@ const s = StyleSheet.create({
   legendText: { color: T.faint, fontSize: 11 },
   foot: { color: T.faint, fontSize: 11 },
 })
+

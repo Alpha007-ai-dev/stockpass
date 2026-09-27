@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { num, T } from '@/constants/theme'
+import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { getGroups, Group } from '@/lib/pairs'
 import { compact, getStats, Latest } from '@/lib/stats'
@@ -60,7 +60,7 @@ export default function CompareScreen() {
             <View style={s.cardHead}>
               <View>
                 <Text style={s.symbol}>{token.symbol}</Text>
-                <Text style={s.issuer}>{token.issuer}</Text>
+                <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.cost, num, isBest && s.accent]}>
@@ -70,7 +70,7 @@ export default function CompareScreen() {
               </View>
             </View>
 
-            <View style={s.track}><View style={[s.fill, { width: `${width}%`, backgroundColor: isBest ? T.accent : '#5C8FD6' }]} /></View>
+            <View style={s.track}><View style={[s.fill, { width: `${width}%`, backgroundColor: issuerColor(token.issuer) }]} /></View>
 
             <View style={s.metaRow}>
               <Text style={s.faint}>{l?.buy_px ? `$${l.buy_px.toFixed(2)} per share` : 'no price yet'}</Text>
@@ -143,6 +143,7 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
 
 
 
