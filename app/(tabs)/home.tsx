@@ -2,11 +2,11 @@
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
-import { num, T } from '../constants/theme'
-import { isUsable } from '../lib/cost'
-import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
-import { getLastPurchase, Purchase } from '../lib/purchases'
-import { getHoldings, getStats, HoldingRow, Latest } from '../lib/stats'
+import { num, T } from '@/constants/theme'
+import { isUsable } from '@/lib/cost'
+import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
+import { getLastPurchase, Purchase } from '@/lib/purchases'
+import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
 
 type Item = HoldingRow & { shares: number; value: number | null; exitBps: number | null }
 
@@ -168,3 +168,4 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+

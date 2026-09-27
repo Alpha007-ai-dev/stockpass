@@ -49,7 +49,7 @@ export default function PassportScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <Pressable onPress={() => router.back()} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
+      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
 
       <Text style={s.kicker}>TOKEN PASSPORT</Text>
       <Text style={s.title}>{sym}</Text>
@@ -182,6 +182,7 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   warnLine: { color: T.warn, fontSize: 13, fontWeight: '600' },
 })
+
 
 
 

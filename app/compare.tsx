@@ -59,7 +59,7 @@ export default function CompareScreen() {
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <Pressable onPress={() => router.back()} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
+      <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}><Text style={s.backText}>‹ Back</Text></Pressable>
 
       <Text style={s.h1}>Compare</Text>
       <Text style={s.h2}>Same underlying.{'\n'}Different representation.</Text>
@@ -137,3 +137,4 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+

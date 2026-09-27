@@ -1,12 +1,12 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { CostMap, MapFilter } from '../components/cost-map'
-import { num, T } from '../constants/theme'
-import { costLabel, isUsable } from '../lib/cost'
-import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
-import { getPairs, Pair } from '../lib/pairs'
-import { compact, getStats, History, Latest } from '../lib/stats'
+import { CostMap, MapFilter } from '@/components/cost-map'
+import { num, T } from '@/constants/theme'
+import { costLabel, isUsable } from '@/lib/cost'
+import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
+import { getPairs, Pair } from '@/lib/pairs'
+import { compact, getStats, History, Latest } from '@/lib/stats'
 
 type Sort = 'diff' | 'cheap' | 'name'
 
@@ -206,3 +206,4 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
