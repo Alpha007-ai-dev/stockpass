@@ -46,6 +46,7 @@ export type TokenRow = {
   mint: string
   decimals: number
   icon?: string | null
+  name?: string | null
 }
 
 let tokenCache: TokenRow[] | null = null
@@ -110,6 +111,7 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+
 
 
 

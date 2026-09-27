@@ -19,6 +19,7 @@ export default function MarketScreen() {
   const [sort, setSort] = useState<Sort>('diff')
   const [view, setView] = useState<'map' | 'list'>('map')
   const [mapFilter, setMapFilter] = useState<MapFilter>('all')
+  const [searchOpen, setSearchOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const state = getMarketState()
@@ -77,8 +78,13 @@ export default function MarketScreen() {
         <View style={{ gap: T.gap }}>
           <View style={s.headRow}>
             <Text style={s.brand}>Markets</Text>
-            <View style={[s.pill, closed && s.pillWarn]}>
-              <Text style={[s.pillText, closed && s.pillTextWarn]}>{market.title}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[s.pill, closed && s.pillWarn]}>
+                <Text style={[s.pillText, closed && s.pillTextWarn]}>{market.title}</Text>
+              </View>
+              <Pressable onPress={() => { setSearchOpen((v) => !v); setView('list') }} hitSlop={10}>
+                <Text style={s.searchIcon}>&#9906;</Text>
+              </Pressable>
             </View>
           </View>
 
@@ -91,6 +97,18 @@ export default function MarketScreen() {
           </View>
 
           {error && <Text style={s.error}>{error}</Text>}
+
+          {searchOpen && (
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search ticker"
+              placeholderTextColor={T.faint}
+              autoCapitalize="characters"
+              autoFocus
+              style={s.search}
+            />
+          )}
 
           {view === 'map' ? (
             <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
@@ -166,6 +184,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
   content: { padding: 20, paddingBottom: 40, gap: T.gap },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  searchIcon: { color: T.dim, fontSize: 20 },
   brand: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
   pill: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#1F2A12' },
   pillWarn: { backgroundColor: '#2A2110' },
@@ -200,5 +219,7 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
+
 
 

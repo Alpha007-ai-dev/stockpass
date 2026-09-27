@@ -7,6 +7,7 @@ import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
+import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
 import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
 import { TokenIcon } from '@/components/token-icon'
@@ -30,6 +31,7 @@ export default function HomeScreen() {
   const [demo, setDemoState] = useState(false)
   const [busy, setBusy] = useState(false)
   const [updated, setUpdated] = useState<Date | null>(null)
+  const [prev, setPrev] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const market = MARKET_LABEL[getMarketState()]
   const [icons, setIcons] = useState<Record<string, string | null>>({})
@@ -84,6 +86,7 @@ export default function HomeScreen() {
       gs.forEach((g) => g.tokens.forEach((t) => { m[t.ticker + "|" + t.issuer] = t.icon ?? null }))
       setIcons(m)
     }).catch(() => {})
+    getLastPortfolio().then(setPrev)
     getLastPurchase().then(setLast)
     isDemo().then((d) => { setDemoState(d); if (d) scan(true) })
     getStats()
@@ -100,6 +103,13 @@ export default function HomeScreen() {
   const exitDemo = async () => { await setDemo(false); setDemoState(false); setItems(null) }
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
+  const change = total !== null && prev && prev.total > 0 && Date.now() - prev.at > 30000 ? total - prev.total : null
+  const changePct = change !== null && prev ? (change / prev.total) * 100 : null
+  useEffect(() => {
+    if (total === null || total <= 0) return
+    if (prev && Date.now() - prev.at < 5 * 60 * 1000) return
+    savePortfolio(total)
+  }, [total, prev])
   const issuers = new Set(items?.map((i) => i.issuer)).size
   const ago = updated ? Math.max(1, Math.round((Date.now() - updated.getTime()) / 1000)) : null
 
@@ -145,7 +155,10 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <Text style={s.brand}>StockPass</Text>
+      <View style={s.topRow}>
+        <Text style={s.brand}>StockPass</Text>
+        <Text style={s.bell}>&#9788;</Text>
+      </View>
       <Text style={s.sub}>{total !== null ? 'Your on-chain portfolio' : 'What you really pay to own a stock on-chain'}</Text>
 
       {total !== null ? (
@@ -271,6 +284,9 @@ const s = StyleSheet.create({
   demoBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#33290F', borderRadius: 12, padding: 10, marginTop: 8 },
   demoText: { color: T.warn, fontSize: 11, fontWeight: '700', flexShrink: 1 },
   demoExit: { color: T.warn, fontSize: 12, fontWeight: '700', paddingHorizontal: 8 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  bell: { color: T.dim, fontSize: 20 },
+  change: { fontSize: 15, fontWeight: '600', marginTop: 2 },
   brand: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 8 },
   sub: { color: T.dim, fontSize: 13 },
   total: { color: T.text, fontSize: 40, fontWeight: '700', letterSpacing: -1.2, marginTop: 6 },
@@ -297,6 +313,8 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 

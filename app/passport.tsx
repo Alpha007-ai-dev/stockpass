@@ -6,6 +6,11 @@ import { CostTimeline } from '@/components/cost-timeline'
 import { ISSUERS } from '@/constants/issuers'
 import { num, T } from '@/constants/theme'
 import { costLabel } from '@/lib/cost'
+import { getGroups } from '@/lib/pairs'
+import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
+import { getHoldings } from '@/lib/stats'
+import { TokenIcon } from '@/components/token-icon'
 import { compact, getStats, History, Latest } from '@/lib/stats'
 
 type Tab = 'overview' | 'costs' | 'ownership' | 'utility'
@@ -22,6 +27,34 @@ export default function PassportScreen() {
   const [mine, setMine] = useState<Latest | null>(null)
   const [hist, setHist] = useState<History[]>([])
   const [error, setError] = useState<string | null>(null)
+  const { account } = useMobileWallet() as any
+  const [balance, setBalance] = useState<number | null>(null)
+  const [token, setToken] = useState<{ icon?: string | null; name?: string | null } | null>(null)
+  useEffect(() => {
+    getGroups()
+      .then((gs) => {
+        const t = gs.flatMap((g) => g.tokens).find((x) => x.symbol === sym)
+        setToken(t ? { icon: t.icon, name: t.name } : null)
+      })
+      .catch(() => {})
+  }, [sym])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        if (await isDemo()) {
+          const d = DEMO_HOLDINGS.find((x) => x.symbol === sym)
+          setBalance(d ? d.walletAmount : null)
+          return
+        }
+        const addr = account?.address
+        if (!addr) return
+        const rows = await getHoldings(String(addr))
+        const row = rows.find((r) => r.symbol === sym)
+        setBalance(row ? row.walletAmount : null)
+      } catch {}
+    })()
+  }, [sym, account])
 
   const isOndo = sym.endsWith('on')
   const isBp = sym.endsWith('bp')
@@ -39,6 +72,23 @@ export default function PassportScreen() {
       .catch((e) => setError((e as Error).message))
   }, [sym])
 
+  useEffect(() => {
+    ;(async () => {
+      try {
+        if (await isDemo()) {
+          const d = DEMO_HOLDINGS.find((x) => x.symbol === sym)
+          setBalance(d ? d.walletAmount : null)
+          return
+        }
+        const addr = account?.address
+        if (!addr) return
+        const rows = await getHoldings(String(addr))
+        const row = rows.find((r) => r.symbol === sym)
+        setBalance(row ? row.walletAmount : null)
+      } catch {}
+    })()
+  }, [sym, account])
+
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
   const maxAvg = Math.max(1, ...hist.filter((h) => h.avg_entry !== null).map((h) => h.avg_entry as number))
@@ -54,7 +104,13 @@ export default function PassportScreen() {
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
 
-      <Text style={s.title}>{sym}</Text>
+      <View style={s.header}>
+        <TokenIcon icon={token?.icon} symbol={sym} label={ticker} issuer={issuerName} size={52} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={s.title}>{sym}</Text>
+          <Text style={s.subtitle} numberOfLines={1}>{token?.name ?? ticker}</Text>
+        </View>
+      </View>
       <View style={s.badges}>
         <View style={s.badge}><Text style={s.badgeText}>{issuerName}</Text></View>
         <View style={s.badge}><Text style={s.badgeText}>{info.standard}</Text></View>
@@ -128,6 +184,17 @@ export default function PassportScreen() {
             </Text>
           </View>
 
+          {balance !== null && (
+            <View style={s.card}>
+              <Text style={s.section}>Your balance</Text>
+              <Text style={[s.hero, num]}>{balance.toFixed(4)} {sym}</Text>
+              <Text style={s.faint}>
+                = {(balance * (mine?.multiplier ?? 1)).toFixed(4)} shares
+                {mine?.buy_px ? ` · ≈ $${(balance * (mine.multiplier ?? 1) * mine.buy_px).toFixed(2)}` : ''}
+              </Text>
+            </View>
+          )}
+
           <View style={s.card}>
             <Text style={s.section}>Total supply</Text>
             <Text style={[s.hero, num]}>{mine ? compact(mine.supply) : '—'} {sym}</Text>
@@ -170,7 +237,9 @@ const s = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40, gap: 12 },
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
-  title: { color: T.text, fontSize: 36, fontWeight: '700', letterSpacing: -1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  title: { color: T.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.8 },
+  subtitle: { color: T.dim, fontSize: 14 },
   badges: { flexDirection: 'row', gap: 8 },
   badge: { backgroundColor: T.border, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 },
   badgeText: { color: T.text, fontSize: 11, fontWeight: '600' },
@@ -198,3 +267,6 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
+
+

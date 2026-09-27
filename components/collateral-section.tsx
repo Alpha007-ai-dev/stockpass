@@ -38,18 +38,26 @@ export function CollateralSection({ symbol, otherSymbol }: { symbol: string; oth
                 <Text style={[s.stat, num, best?.market === r.market && s.accent]}>{(r.borrowApy * 100).toFixed(2)}%</Text>
                 <Text style={s.statLabel}>borrow</Text>
               </View>
+              <Text style={s.extLink}>&#8599;</Text>
             </View>
           ))}
 
           {mine.length > 1 && (
-            <Text style={s.faint}>
-              Same token, two markets: borrowing costs {(Math.max(...mine.map((r) => r.borrowApy)) * 100).toFixed(2)}% on one
-              and {(Math.min(...mine.map((r) => r.borrowApy)) * 100).toFixed(2)}% on the other.
-            </Text>
+            <View style={s.notice}>
+              <Text style={s.noticeIcon}>&#9888;</Text>
+              <Text style={s.noticeText}>
+                Same token. Different lending markets. The borrowing rate is{' '}
+                {(Math.max(...mine.map((r) => r.borrowApy)) / Math.max(0.0001, Math.min(...mine.map((r) => r.borrowApy)))).toFixed(1)}× higher
+                depending on the market.
+              </Text>
+            </View>
           )}
 
           {other.length === 0 && (
-            <Text style={s.faint}>{otherSymbol} is not accepted as collateral on Kamino.</Text>
+            <View style={s.blocked}>
+              <Text style={s.blockedTitle}>&#8856;  Not accepted ({otherSymbol.endsWith('on') ? 'Ondo' : 'xStocks'})</Text>
+              <Text style={s.faint}>{otherSymbol} is currently not accepted as collateral on Kamino markets.</Text>
+            </View>
           )}
 
           <Pressable onPress={() => Linking.openURL('https://app.kamino.finance/')}>
@@ -67,10 +75,17 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, borderColor: T.border, padding: 12 },
   rowBest: { borderColor: T.accent },
   market: { color: T.text, fontSize: 14, fontWeight: '600' },
+  notice: { flexDirection: 'row', gap: 10, backgroundColor: '#2A2110', borderRadius: 14, padding: 12 },
+  noticeIcon: { color: T.warn, fontSize: 16 },
+  noticeText: { color: '#E8D6A8', fontSize: 12, lineHeight: 17, flex: 1 },
+  blocked: { backgroundColor: '#2A1414', borderRadius: 14, padding: 12, gap: 4 },
+  blockedTitle: { color: T.down, fontSize: 13, fontWeight: '700' },
   stats: { alignItems: 'flex-end', width: 62 },
   stat: { color: T.text, fontSize: 16, fontWeight: '700' },
   statLabel: { color: T.faint, fontSize: 10 },
   accent: { color: T.accent },
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 13, fontWeight: '600' },
+  extLink: { color: T.faint, fontSize: 16, marginLeft: 4 },
 })
+
