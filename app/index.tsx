@@ -1,11 +1,12 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
+import { CostMap, MapFilter } from '../components/cost-map'
 import { num, T } from '../constants/theme'
-import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
-import { compact, getStats, History, Latest } from '../lib/stats'
-import { getPairs, Pair } from '../lib/pairs'
 import { costLabel, isUsable } from '../lib/cost'
+import { getMarketState, MARKET_LABEL } from '../lib/market-hours'
+import { getPairs, Pair } from '../lib/pairs'
+import { compact, getStats, History, Latest } from '../lib/stats'
 
 type Sort = 'diff' | 'cheap' | 'name'
 
@@ -16,9 +17,10 @@ export default function MarketScreen() {
   const [pairs, setPairs] = useState<Pair[]>([])
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>('diff')
+  const [view, setView] = useState<'map' | 'list'>('map')
+  const [mapFilter, setMapFilter] = useState<MapFilter>('all')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [byState, setByState] = useState<Record<string, { x: number; on: number }>>({})
   const state = getMarketState()
   const market = MARKET_LABEL[state]
 
@@ -34,20 +36,6 @@ export default function MarketScreen() {
       setLatest(l)
       setHist(h)
       setPairs(allPairs.filter((p) => p.x && p.on))
-
-      const acc: Record<string, { xs: number; xn: number; os: number; on: number }> = {}
-      stats.history.forEach((row) => {
-        if (row.avg_entry === null || row.avg_entry >= 200) return
-        const a = acc[row.market_state] ?? { xs: 0, xn: 0, os: 0, on: 0 }
-        if (row.issuer === 'Ondo') { a.os += row.avg_entry * row.samples; a.on += row.samples }
-        else { a.xs += row.avg_entry * row.samples; a.xn += row.samples }
-        acc[row.market_state] = a
-      })
-      const out: Record<string, { x: number; on: number }> = {}
-      Object.entries(acc).forEach(([k, a]) => {
-        if (a.xn > 0 && a.on > 0) out[k] = { x: a.xs / a.xn, on: a.os / a.on }
-      })
-      setByState(out)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -62,8 +50,8 @@ export default function MarketScreen() {
       const lx = latest[p.x!.symbol]
       const lon = latest[p.on!.symbol]
       const ready = isUsable(lx?.entry_bps, lx?.quotable) && isUsable(lon?.entry_bps, lon?.quotable)
-      const diff = ready ? Math.abs(lx.entry_bps - lon.entry_bps) : -1
-      const cheapest = ready ? Math.min(lx.entry_bps, lon.entry_bps) : 9999
+      const diff = ready ? Math.abs(lx.entry_bps! - lon.entry_bps!) : -1
+      const cheapest = ready ? Math.min(lx.entry_bps!, lon.entry_bps!) : 9999
       return { pair: p, lx, lon, ready, diff, cheapest }
     })
     const filtered = q ? withData.filter((r) => r.pair.ticker.includes(q)) : withData
@@ -80,87 +68,82 @@ export default function MarketScreen() {
     <FlatList
       style={s.screen}
       contentContainerStyle={s.content}
-      data={rows}
+      data={view === 'map' ? [] : rows}
       keyExtractor={(r) => r.pair.ticker}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={T.dim} />}
       ListHeaderComponent={
         <View style={{ gap: T.gap }}>
-          <View>
-            <Text style={s.brand}>StockPass</Text>
-            <Text style={s.sub}>What you really pay to own a stock on-chain</Text>
+          <View style={s.headRow}>
+            <Text style={s.brand}>Markets</Text>
+            <View style={[s.pill, closed && s.pillWarn]}>
+              <Text style={[s.pillText, closed && s.pillTextWarn]}>{market.title}</Text>
+            </View>
           </View>
 
-          <View style={[s.pill, closed && s.pillWarn]}>
-            <Text style={[s.pillText, closed && s.pillTextWarn]}>{market.title}</Text>
-          </View>
-
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Search ticker"
-            placeholderTextColor={T.faint}
-            autoCapitalize="characters"
-            style={s.search}
-          />
-
-          <View style={s.sorts}>
-            {([['diff', 'Biggest gap'], ['cheap', 'Cheapest'], ['name', 'A-Z']] as [Sort, string][]).map(([key, label]) => (
-              <Pressable key={key} onPress={() => setSort(key)} style={[s.sortBtn, sort === key && s.sortActive]}>
-                <Text style={[s.sortText, sort === key && s.sortTextActive]}>{label}</Text>
+          <View style={s.toggle}>
+            {(['map', 'list'] as const).map((v) => (
+              <Pressable key={v} onPress={() => setView(v)} style={[s.tab, view === v && s.tabOn]}>
+                <Text style={[s.tabText, view === v && s.tabTextOn]}>{v === 'map' ? 'Cost map' : 'List'}</Text>
               </Pressable>
             ))}
           </View>
 
-          {(byState[state] ?? byState[Object.keys(byState)[0]]) && (
-            <View style={s.summary}>
-              <Text style={s.summaryTitle}>Average entry cost - {byState[state] ? market.title.toLowerCase() : Object.keys(byState)[0]}</Text>
-              <View style={s.summaryRow}>
-                <Text style={s.summaryLabel}>xStocks</Text>
-                <Text style={[s.summaryValue, num]}>{(byState[state] ?? byState[Object.keys(byState)[0]]).x.toFixed(0)} bps</Text>
-                <Text style={s.summaryLabel}>Ondo</Text>
-                <Text style={[s.summaryValue, num]}>{(byState[state] ?? byState[Object.keys(byState)[0]]).on.toFixed(0)} bps</Text>
+          {error && <Text style={s.error}>{error}</Text>}
+
+          {view === 'map' ? (
+            <CostMap pairs={pairs} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
+          ) : (
+            <View style={{ gap: T.gap }}>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search ticker"
+                placeholderTextColor={T.faint}
+                autoCapitalize="characters"
+                style={s.search}
+              />
+              <View style={s.sorts}>
+                {([['diff', 'Biggest gap'], ['cheap', 'Cheapest'], ['name', 'A-Z']] as [Sort, string][]).map(([key, label]) => (
+                  <Pressable key={key} onPress={() => setSort(key)} style={[s.sortBtn, sort === key && s.sortActive]}>
+                    <Text style={[s.sortText, sort === key && s.sortTextActive]}>{label}</Text>
+                  </Pressable>
+                ))}
               </View>
-              {Object.keys(byState).filter((k) => k !== state).length > 0 && (
-                <Text style={s.faint}>
-                  {Object.entries(byState).filter(([k]) => k !== state).map(([k, v]) => `${k}: ${v.x.toFixed(0)} / ${v.on.toFixed(0)}`).join(' - ')}
-                </Text>
-              )}
+              <Text style={s.faint}>{rows.length} stocks · entry cost at $1,000</Text>
             </View>
           )}
-
-          {error && <Text style={s.error}>{error}</Text>}
-          <Text style={s.faint}>{rows.length} stocks - entry cost at $1,000</Text>
         </View>
       }
       renderItem={({ item }) => {
         const { pair, lx, lon, ready, diff } = item
         const x = pair.x!
         const on = pair.on!
-        const cheaper = ready ? (lx.entry_bps <= lon.entry_bps ? x : on) : null
+        const cheaper = ready ? (lx.entry_bps! <= lon.entry_bps! ? x : on) : null
 
         return (
           <View style={s.card}>
             <View style={s.cardHead}>
-              <Pressable onPress={() => router.push(`/compare?ticker=${pair.ticker}`)}><Text style={s.ticker}>{pair.ticker} ›</Text></Pressable>
+              <Pressable onPress={() => router.push(`/compare?ticker=${pair.ticker}`)}>
+                <Text style={s.ticker}>{pair.ticker} ›</Text>
+              </Pressable>
               {diff > 0 && <Text style={s.accentSmall}>{diff} bps apart</Text>}
             </View>
 
             {[x, on].map((t) => {
               const l = latest[t.symbol]
               const h = hist[t.symbol]
-              const usual = h && h.samples >= 5 ? h.avg_entry : null
-              const unusual = l && usual ? l.entry_bps > usual * 1.3 : false
+              const usual = h && h.samples >= 5 && h.avg_entry !== null ? h.avg_entry : null
+              const unusual = l && usual ? (l.entry_bps ?? 0) > usual * 1.3 : false
               const isBest = cheaper?.symbol === t.symbol && diff > 0
               return (
                 <Pressable key={t.symbol} style={s.tokenRow} onPress={() => router.push(`/passport?symbol=${t.symbol}`)}>
                   <View style={s.tokenLeft}>
                     <Text style={s.tokenSymbol}>{t.symbol}</Text>
-                    <Text style={s.faint}>{t.issuer}{l ? ` - supply ${compact(l.supply)}` : ''}</Text>
+                    <Text style={s.faint}>{t.issuer}{l ? ` · supply ${compact(l.supply)}` : ''}</Text>
                   </View>
                   <View style={s.tokenRight}>
                     <Text style={[s.big, num, unusual && s.warnText, isBest && s.accentText]}>
-                      {l ? (l.quotable ? `${l.entry_bps}` : '-') : '..'}
-                      {l?.quotable ? <Text style={s.unit}> bps</Text> : null}
+                      {l ? costLabel(l.entry_bps, l.quotable) : '··'}
                     </Text>
                     <Text style={s.faint}>{usual ? `usual ${usual.toFixed(0)}` : 'collecting'}</Text>
                   </View>
@@ -171,7 +154,7 @@ export default function MarketScreen() {
 
             <View style={s.cardFoot}>
               <Text style={s.footText}>
-                {diff > 0 ? <><Text style={s.accentText}>{cheaper?.symbol}</Text> is cheaper to enter</> : ready ? 'Both cost about the same' : 'No quote right now'}
+                {diff > 0 ? <><Text style={s.accentText}>{cheaper?.symbol}</Text> is cheaper to enter</> : ready ? 'Both cost about the same' : 'No usable quote'}
               </Text>
               <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${pair.ticker}`)}>
                 <Text style={s.buyText}>Buy</Text>
@@ -187,12 +170,17 @@ export default function MarketScreen() {
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
   content: { padding: 20, paddingBottom: 40, gap: T.gap },
-  brand: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 8 },
-  sub: { color: T.dim, fontSize: 13, marginTop: 4 },
-  pill: { alignSelf: 'flex-start', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: '#1F2A12' },
+  headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  brand: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
+  pill: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: '#1F2A12' },
   pillWarn: { backgroundColor: '#2A2110' },
-  pillText: { color: T.accent, fontSize: 12, fontWeight: '600', letterSpacing: 0.6 },
+  pillText: { color: T.accent, fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
   pillTextWarn: { color: T.warn },
+  toggle: { flexDirection: 'row', backgroundColor: T.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.border },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
+  tabOn: { backgroundColor: T.accent },
+  tabText: { color: T.dim, fontSize: 14, fontWeight: '600' },
+  tabTextOn: { color: T.bg },
   search: { backgroundColor: T.surface, borderRadius: 14, borderWidth: 1, borderColor: T.border, color: T.text, paddingHorizontal: 14, height: 48, fontSize: 15 },
   sorts: { flexDirection: 'row', gap: 8 },
   sortBtn: { borderRadius: 12, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, paddingVertical: 8 },
@@ -207,8 +195,7 @@ const s = StyleSheet.create({
   tokenLeft: { flex: 1, gap: 2 },
   tokenRight: { alignItems: 'flex-end', gap: 2 },
   tokenSymbol: { color: T.text, fontSize: 15, fontWeight: '600' },
-  big: { color: T.text, fontSize: 22, fontWeight: '600' },
-  unit: { fontSize: 13, color: T.dim, fontWeight: '400' },
+  big: { color: T.text, fontSize: 18, fontWeight: '600' },
   accentText: { color: T.accent },
   warnText: { color: T.warn },
   faint: { color: T.faint, fontSize: 12 },
@@ -218,16 +205,4 @@ const s = StyleSheet.create({
   buy: { backgroundColor: T.accent, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 10 },
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
-  summary: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 8 },
-  summaryTitle: { color: T.text, fontSize: 14, fontWeight: '600' },
-  summaryRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  summaryLabel: { color: T.dim, fontSize: 13 },
-  summaryValue: { color: T.accent, fontSize: 20, fontWeight: '700', marginRight: 8 },
 })
-
-
-
-
-
-
-
