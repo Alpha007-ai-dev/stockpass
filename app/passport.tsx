@@ -30,6 +30,7 @@ export default function PassportScreen() {
   const { account } = useMobileWallet() as any
   const [balance, setBalance] = useState<number | null>(null)
   const [token, setToken] = useState<{ icon?: string | null; name?: string | null } | null>(null)
+  const [others, setOthers] = useState<Latest[]>([])
   useEffect(() => {
     getGroups()
       .then((gs) => {
@@ -67,6 +68,7 @@ export default function PassportScreen() {
     getStats()
       .then((s) => {
         setMine(s.latest.find((r) => r.symbol === sym) ?? null)
+        setOthers(s.latest.filter((r) => r.symbol !== sym))
         setHist(s.history.filter((r) => r.symbol === sym).sort((a, b) => b.samples - a.samples))
       })
       .catch((e) => setError((e as Error).message))
@@ -126,6 +128,46 @@ export default function PassportScreen() {
 
       {tab === 'overview' && (
         <>
+          {(() => {
+            const peer = others.find((o) => o.ticker === ticker && o.buy_px && mine?.buy_px)
+            if (!peer || !mine?.buy_px || !peer.buy_px) return null
+            const rawMine = mine.buy_px * mine.multiplier
+            const rawPeer = peer.buy_px * peer.multiplier
+            const rawGap = Math.round((rawPeer / rawMine - 1) * 10000)
+            const normGap = Math.round((peer.buy_px / mine.buy_px - 1) * 10000)
+            if (Math.abs(rawGap - normGap) < 3) return null
+            return (
+              <View style={s.normCard}>
+                <Text style={s.normKicker}>PRICE NORMALIZATION</Text>
+                <View style={s.normRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.faint}>Raw token price</Text>
+                    <Text style={[s.normSmall, num]}>${rawMine.toFixed(2)}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.faint}>Per-share price</Text>
+                    <Text style={[s.normBig, num]}>${mine.buy_px.toFixed(2)}</Text>
+                  </View>
+                </View>
+                <View style={s.normDivider} />
+                <View style={s.normRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.faint}>Raw-price gap</Text>
+                    <Text style={[s.gapBad, num]}>{Math.abs(rawGap)} bps</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.faint}>Normalized gap</Text>
+                    <Text style={[s.gapGood, num]}>{Math.abs(normGap)} bps</Text>
+                  </View>
+                </View>
+                <Text style={s.faint}>
+                  Looks {Math.abs(rawGap)} bps apart from {peer.symbol} by raw token price.
+                  After multiplier adjustment: only {Math.abs(normGap)} bps.
+                </Text>
+              </View>
+            )
+          })()}
+
           <View style={s.grid2}>
             <View style={s.box}>
               <Text style={s.boxLabel}>Normalized price (per share)</Text>
@@ -253,6 +295,14 @@ const s = StyleSheet.create({
   boxLabel: { color: T.faint, fontSize: 11 },
   boxBig: { color: T.text, fontSize: 24, fontWeight: '700' },
   boxMid: { color: T.text, fontSize: 18, fontWeight: '600' },
+  normCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1.5, borderColor: T.accent, padding: 16, gap: 10 },
+  normKicker: { color: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  normRow: { flexDirection: 'row', gap: 12 },
+  normSmall: { color: T.dim, fontSize: 18, fontWeight: '600', textDecorationLine: 'line-through' },
+  normBig: { color: T.text, fontSize: 24, fontWeight: '700' },
+  normDivider: { height: 1, backgroundColor: T.border },
+  gapBad: { color: T.down, fontSize: 22, fontWeight: '700' },
+  gapGood: { color: T.accent, fontSize: 22, fontWeight: '700' },
   card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
   section: { color: T.text, fontSize: 15, fontWeight: '600' },
   hero: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
@@ -267,6 +317,7 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
 
 
 

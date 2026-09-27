@@ -51,6 +51,31 @@ export default function CompareScreen() {
       <Text style={s.h2}>Same underlying.{'\n'}Different representation.</Text>
       <Text style={s.faint}>{tk} · {rows.length} issuer{rows.length === 1 ? '' : 's'} on Solana</Text>
 
+      {rows.length > 1 && rows.length <= 3 && (
+        <View style={s.race}>
+          {rows.map(({ token, l }) => {
+            const ok = !!l && isUsable(l.entry_bps, l.quotable)
+            const isBest = best?.token.symbol === token.symbol && usable.length > 1
+            const h = ok ? Math.max(8, Math.round(((l!.entry_bps as number) / maxBps) * 70)) : 0
+            return (
+              <View key={token.symbol} style={[s.raceCol, isBest && s.raceBest]}>
+                {isBest && <Text style={s.bestTag}>BEST</Text>}
+                <Text style={[s.raceIssuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
+                <Text style={[s.raceCost, num, isBest && { color: T.accent }]}>
+                  {ok ? `${l!.entry_bps}` : '—'}
+                </Text>
+                <Text style={s.faint}>{ok ? 'bps' : 'no quote'}</Text>
+                <View style={s.barWrap}>
+                  <View style={[s.bar, { height: h, backgroundColor: issuerColor(token.issuer) }]} />
+                </View>
+                <Text style={[s.racePrice, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
+                <Text style={s.faint}>{l ? `×${l.multiplier.toFixed(4)}` : ''}</Text>
+              </View>
+            )
+          })}
+        </View>
+      )}
+
       {rows.map(({ token, l }) => {
         const ok = !!l && isUsable(l.entry_bps, l.quotable)
         const isBest = best?.token.symbol === token.symbol && usable.length > 1
@@ -127,6 +152,15 @@ const s = StyleSheet.create({
   backText: { color: T.dim, fontSize: 15 },
   h1: { color: T.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
   h2: { color: T.text, fontSize: 22, fontWeight: '600', lineHeight: 28, letterSpacing: -0.4 },
+  race: { flexDirection: 'row', gap: 8 },
+  raceCol: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 12, alignItems: 'center', gap: 2 },
+  raceBest: { borderColor: T.accent, borderWidth: 1.5 },
+  bestTag: { color: T.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.8 },
+  raceIssuer: { fontSize: 12, fontWeight: '700' },
+  raceCost: { color: T.text, fontSize: 26, fontWeight: '700' },
+  barWrap: { height: 74, justifyContent: 'flex-end', marginVertical: 6 },
+  bar: { width: 22, borderRadius: 5 },
+  racePrice: { color: T.text, fontSize: 13, fontWeight: '600' },
   card: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 8 },
   cardBest: { borderColor: T.accent, borderWidth: 1.5 },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
@@ -147,6 +181,8 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
 
 
 
