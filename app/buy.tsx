@@ -7,6 +7,7 @@ import { isUsable } from '../lib/cost'
 import { getPairs, Pair } from '../lib/pairs'
 import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '../lib/swap'
 import { getStats, Latest } from '../lib/stats'
+import { savePurchase } from '../lib/purchases'
 
 const SIZE_USD = 1000
 const MIN_SAVING_BPS = 5
@@ -80,7 +81,7 @@ export default function BuyScreen() {
       setStatus((e as Error).message)
     }
     setBusy(false)
-  }, [quote, account, connect, signAndSendTransaction])
+  }, [quote, account, connect, signAndSendTransaction, selected, selectedEntry, altEntry, netSaving, tk])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
@@ -175,3 +176,4 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+

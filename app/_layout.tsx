@@ -17,6 +17,10 @@ export default function RootLayout() {
         }}
       >
         <Tabs.Screen
+          name="home"
+          options={{ title: 'Home', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>⌂</Text> }}
+        />
+        <Tabs.Screen
           name="index"
           options={{ title: 'Markets', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>▤</Text> }}
         />
@@ -32,4 +36,5 @@ export default function RootLayout() {
     </AppProviders>
   )
 }
+
 
