@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CollateralSection } from '@/components/collateral-section'
 import { NormalizationHero } from '@/components/normalization-hero'
 import { CostTimeline } from '@/components/cost-timeline'
+import { CostToGoOnChain } from '@/components/cost-to-go-onchain'
 import { ISSUERS } from '@/constants/issuers'
 import { num, T } from '@/constants/theme'
 import { costLabel } from '@/lib/cost'
@@ -152,6 +153,8 @@ export default function PassportScreen() {
             </View>
           </View>
 
+          {mine && <CostToGoOnChain mine={mine} reference={reference} />}
+
           <CostTimeline ticker={ticker} />
         </>
       )}
@@ -249,9 +252,9 @@ const s = StyleSheet.create({
   tabOn: { borderBottomWidth: 2, borderBottomColor: T.accent },
   tabText: { color: T.dim, fontSize: 14 },
   tabTextOn: { color: T.accent, fontWeight: '700' },
-  grid2: { flexDirection: 'row', gap: 12 },
-  box: { flex: 1, backgroundColor: T.surface, borderRadius: 14, padding: 14, gap: 4 },
-  boxLabel: { color: T.faint, fontSize: 12 },
+  grid2: { flexDirection: 'row', gap: 16, borderTopWidth: 1, borderTopColor: T.border },
+  box: { flex: 1, paddingVertical: 14, gap: 3 },
+  boxLabel: { color: T.faint, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
   boxBig: { color: T.text, fontSize: 28, fontWeight: '700' },
   boxMid: { color: T.text, fontSize: 18, fontWeight: '600' },
   normCard: { backgroundColor: '#12180E', borderRadius: 22, borderWidth: 1.5, borderColor: T.accent, padding: 18, gap: 14 },
@@ -285,6 +288,8 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 13 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 
