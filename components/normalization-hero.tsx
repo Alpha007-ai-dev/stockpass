@@ -33,22 +33,20 @@ export function NormalizationHero({
 
       <Text style={s.kicker}>PRICE NORMALIZATION</Text>
 
-      <View style={s.row}>
-        <View style={s.left}>
-          <Text style={s.label}>Raw token price</Text>
-          <Text style={[s.raw, num]}>${rawMine.toFixed(2)}</Text>
+      <View style={s.stack}>
+        <Text style={s.label}>Raw token price</Text>
+        <Text style={[s.raw, num]}>${rawMine.toFixed(2)}</Text>
+        <Text style={s.arrow}>&#8595;</Text>
+        <Text style={s.label}>Normalized per-share price</Text>
+        <Text style={[s.real, num]}>${(mine.buy_px ?? 0).toFixed(2)}</Text>
+      </View>
 
-          <Text style={[s.label, { marginTop: 14 }]}>Per-share price</Text>
-          <Text style={[s.real, num]}>${(mine.buy_px ?? 0).toFixed(2)}</Text>
-        </View>
-
-        <View style={s.right}>
-          <Text style={[s.gapBad, num]}>{rawGap} bps</Text>
-          <Text style={s.gapLabel}>raw gap</Text>
-          <Text style={s.arrow}>&#8595;</Text>
-          <Text style={[s.gapGood, num]}>{normGap} bps</Text>
-          <Text style={[s.gapLabel, { color: T.accent }]}>normalized gap</Text>
-        </View>
+      <View style={s.gapStack}>
+        <Text style={[s.gapBad, num]}>{rawGap} bps</Text>
+        <Text style={s.gapLabel}>RAW PRICE GAP</Text>
+        <Text style={s.arrow}>&#8595;</Text>
+        <Text style={[s.gapGood, num]}>{normGap} bps</Text>
+        <Text style={[s.gapLabel, { color: T.accent }]}>NORMALIZED GAP</Text>
       </View>
 
       {reference && (
@@ -72,22 +70,24 @@ export function NormalizationHero({
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: '#10160C', borderRadius: 22, borderWidth: 1.5, borderColor: '#2F4718', padding: 18, gap: 12, overflow: 'hidden' },
+  card: { backgroundColor: 'transparent', paddingVertical: 20, gap: 10, overflow: 'hidden' },
   glow: { position: 'absolute', right: -6, bottom: -6 },
   kicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  stack: { alignItems: 'center', gap: 2 },
+  gapStack: { alignItems: 'center', gap: 2, marginTop: 4 },
   left: { flexShrink: 1 },
   right: { alignItems: 'flex-end', minWidth: 120 },
   label: { color: T.faint, fontSize: 12 },
-  raw: { color: T.faint, fontSize: 18, fontWeight: '600', textDecorationLine: 'line-through', marginTop: 2 },
-  real: { color: T.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.6, marginTop: 2 },
-  gapBad: { color: '#F87171', fontSize: 22, fontWeight: '800' },
-  gapGood: { color: T.accent, fontSize: 38, fontWeight: '800', letterSpacing: -1.2 },
-  gapLabel: { color: T.faint, fontSize: 12 },
-  arrow: { color: T.dim, fontSize: 18, marginVertical: 6 },
+  raw: { color: T.faint, fontSize: 24, fontWeight: '600', textDecorationLine: 'line-through' },
+  real: { color: T.text, fontSize: 38, fontWeight: '800', letterSpacing: -1 },
+  gapBad: { color: T.faint, fontSize: 26, fontWeight: '800', textDecorationLine: 'line-through' },
+  gapGood: { color: T.accent, fontSize: 48, fontWeight: '800', letterSpacing: -1.6 },
+  gapLabel: { color: T.faint, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  arrow: { color: T.dim, fontSize: 20, marginVertical: 4 },
   refRow: { flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: '#26331A', paddingTop: 12, backgroundColor: '#10160C', marginHorizontal: -18, marginBottom: -18, paddingHorizontal: 18, paddingBottom: 18, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 },
   refBox: { flex: 1 },
   refValue: { color: T.text, fontSize: 20, fontWeight: '700', marginTop: 2 },
   tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
 })
+
 
