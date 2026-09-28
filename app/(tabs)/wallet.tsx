@@ -2,7 +2,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
-import { num, T } from '@/constants/theme'
+import { issuerColor, num, T } from '@/constants/theme'
 import { TokenIcon } from '@/components/token-icon'
 import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
@@ -84,25 +84,47 @@ export default function WalletScreen() {
         const priced = items.filter((i) => i.exitBps !== null && i.value !== null)
         const totalValue = priced.reduce((n, i) => n + (i.value as number), 0)
         const totalCost = priced.reduce((n, i) => n + ((i.value as number) * (i.exitBps as number)) / 10000, 0)
-        const avgBps = totalValue > 0 ? (totalCost / totalValue) * 10000 : null
+        const avgExit = totalValue > 0 ? (totalCost / totalValue) * 10000 : null
+        const entryPriced = items.filter((i) => i.entryBps !== null && i.value !== null)
+        const entryValue = entryPriced.reduce((n, i) => n + (i.value as number), 0)
+        const avgEntry = entryValue > 0
+          ? entryPriced.reduce((n, i) => n + (i.value as number) * (i.entryBps as number), 0) / entryValue
+          : null
+        const allocTotal = items.reduce((n, i) => n + (i.value ?? 0), 0)
         return (
-          <View style={s.card}>
-            <Text style={s.costKicker}>PORTFOLIO COSTS</Text>
-            <View style={s.row}>
-              <Text style={s.faint}>Estimated exit cost</Text>
-              <Text style={[s.costBig, num]}>${totalCost.toFixed(2)}</Text>
-            </View>
-            <View style={s.row}>
-              <Text style={s.faint}>Average exit</Text>
-              <Text style={[s.costSmall, num]}>{avgBps !== null ? `${avgBps.toFixed(1)} bps` : '—'}</Text>
-            </View>
-            <View style={s.row}>
-              <Text style={s.faint}>Executable now</Text>
-              <Text style={s.costSmall}>{priced.length} of {items.length} holdings</Text>
+          <View style={{ gap: 14 }}>
+            <Text style={s.costKicker}>PORTFOLIO COST</Text>
+            <View style={s.heroRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.faint}>Average entry</Text>
+                <Text style={[s.costBig, num]}>{avgEntry !== null ? `${avgEntry.toFixed(1)} bps` : "—"}</Text>
+                <Text style={s.tiny}>at current quotes</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.faint}>Estimated exit cost</Text>
+                <Text style={[s.costBig, num]}>${totalCost.toFixed(2)}</Text>
+                <Text style={s.tiny}>{avgExit !== null ? `${avgExit.toFixed(1)} bps average` : ""}</Text>
+              </View>
             </View>
             <Text style={s.faint}>
-              What it would cost to sell every position back to USDC at current quotes. Estimate, not a commitment.
+              {priced.length} of {items.length} holdings executable right now. Estimate, not a commitment.
             </Text>
+
+            <Text style={[s.costKicker, { marginTop: 6 }]}>ALLOCATION</Text>
+            {items.map((i) => {
+              const pct = allocTotal > 0 ? ((i.value ?? 0) / allocTotal) * 100 : 0
+              return (
+                <View key={i.symbol} style={{ gap: 5 }}>
+                  <View style={s.row}>
+                    <Text style={s.allocLabel}>{i.symbol}</Text>
+                    <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
+                  </View>
+                  <View style={s.track}>
+                    <View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} />
+                  </View>
+                </View>
+              )
+            })}
           </View>
         )
       })()}
@@ -202,12 +224,20 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 13 },
   accent: { color: T.accent, fontSize: 13, fontWeight: '600' },
   costKicker: { color: T.faint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  heroRow: { flexDirection: 'row', gap: 16 },
+  tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
+  allocLabel: { color: T.text, fontSize: 14, fontWeight: '600' },
+  allocPct: { color: T.dim, fontSize: 14, fontWeight: '600' },
+  track: { height: 6, borderRadius: 3, backgroundColor: T.border },
+  fill: { height: 6, borderRadius: 3 },
   costBig: { color: T.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
   costSmall: { color: T.text, fontSize: 15, fontWeight: '600' },
   error: { color: T.warn, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
 
 
 
