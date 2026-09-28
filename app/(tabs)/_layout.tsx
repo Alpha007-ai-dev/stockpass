@@ -15,8 +15,10 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" options={{ title: 'Home', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>⌂</Text> }} />
       <Tabs.Screen name="index" options={{ title: 'Markets', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>▤</Text> }} />
+      <Tabs.Screen name="defi" options={{ title: 'DeFi', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>◇</Text> }} />
       <Tabs.Screen name="wallet" options={{ title: 'Wallet', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>◈</Text> }} />
     </Tabs>
   )
 }
+
 
