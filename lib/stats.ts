@@ -2,6 +2,8 @@
 
 export type Latest = {
   symbol: string
+  ticker: string
+  issuer: string
   buy_px: number | null
   sell_px: number | null
   entry_bps: number
@@ -77,6 +79,8 @@ export type HoldingRow = {
   mint: string
   decimals: number
   walletAmount: number
+  icon?: string | null
+  name?: string | null
 }
 
 export async function getHoldings(owner: string): Promise<HoldingRow[]> {
@@ -123,6 +127,7 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+
 
 
 

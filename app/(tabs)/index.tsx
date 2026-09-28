@@ -152,7 +152,7 @@ export default function MarketScreen() {
         </View>
       }
       renderItem={({ item }) => {
-        const { group, ready, diff } = item
+        const { group, diff } = item
         const best = item.usable.length ? item.usable.reduce((a, b) => (a.entry_bps! <= b.entry_bps! ? a : b)) : null
         return (
           <View style={s.card}>
@@ -185,7 +185,7 @@ export default function MarketScreen() {
 
             <View style={s.cardFoot}>
               <Text style={s.footText}>
-                {best && diff > 0 ? <><Text style={s.accentText}>{best.issuer}</Text> is cheapest to enter</> : ready ? 'All issuers cost about the same' : 'No usable quote'}
+                {best && diff > 0 ? <><Text style={s.accentText}>{best.issuer}</Text> is cheapest to enter</> : item.best ? 'All issuers cost about the same' : 'No usable quote'}
               </Text>
               <Pressable style={s.buy} onPress={() => router.push(`/buy?ticker=${group.ticker}`)}>
                 <Text style={s.buyText}>Buy</Text>
@@ -236,6 +236,7 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
 
 
 
