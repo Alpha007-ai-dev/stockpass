@@ -107,6 +107,53 @@ export default function WalletScreen() {
         )
       })()}
 
+      {items && items.length > 0 && (() => {
+        const rows = items.map((i) => {
+          const cheaper = i.altEntryBps !== null && i.entryBps !== null && i.altEntryBps < i.entryBps
+          const saving = cheaper ? (i.entryBps as number) - (i.altEntryBps as number) : 0
+          const switching = i.exitBps !== null && i.altEntryBps !== null ? (i.exitBps as number) + (i.altEntryBps as number) : null
+          const net = switching !== null ? saving - switching : null
+          return { i, cheaper, saving, switching, net }
+        })
+        const onCheapest = rows.filter((r) => !r.cheaper).length
+        return (
+          <View style={{ gap: 10 }}>
+            <Text style={s.costKicker}>OPPORTUNITIES</Text>
+            <Text style={s.faint}>
+              {onCheapest} of {rows.length} holdings are already on the cheapest route right now.
+            </Text>
+
+            {rows.map((r) => (
+              <View key={r.i.symbol} style={s.card}>
+                <View style={s.row}>
+                  <Text style={s.symbol}>{r.i.symbol}</Text>
+                  <Text style={[s.faint, !r.cheaper && { color: T.accent }]}>
+                    {r.cheaper ? 'cheaper issuer exists' : 'cheapest route'}
+                  </Text>
+                </View>
+                {r.cheaper && r.switching !== null ? (
+                  <>
+                    <Text style={s.faint}>
+                      {r.i.altSymbol} is {r.saving} bps cheaper to enter. Switching costs {r.switching} bps.
+                    </Text>
+                    <Text style={[s.accent, (r.net ?? 0) < 0 && { color: T.warn }]}>
+                      Net result: {(r.net ?? 0) >= 0 ? '+' : ''}{r.net} bps
+                      {(r.net ?? 0) < 0 ? ' · not worth switching' : ' · switching could pay off'}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={s.faint}>
+                    {r.cheaper ? 'No exit quote right now, so switching cannot be priced.' : 'You already hold the cheapest issuer for this stock.'}
+                  </Text>
+                )}
+              </View>
+            ))}
+
+            <Text style={s.faint}>Cheapest to buy is not the same as cheapest for you.</Text>
+          </View>
+        )
+      })()}
+
       {hidden > 0.00001 && (
         <View style={s.card}>
           <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet doesn't show</Text>
