@@ -10,6 +10,8 @@ import { getGroups } from '@/lib/pairs'
 
 type Item = HoldingRow & {
   shares: number
+  value: number | null
+  exitBps: number | null
   entryBps: number | null
   altSymbol: string | null
   altEntryBps: number | null
@@ -50,6 +52,8 @@ export default function WalletScreen() {
         return {
           ...r,
           shares: r.walletAmount * (mine?.multiplier ?? 1),
+          value: mine?.sell_px ? r.walletAmount * (mine.multiplier ?? 1) * mine.sell_px : null,
+          exitBps: mine?.quotable ? mine.exit_bps : null,
           entryBps: mine?.quotable ? mine.entry_bps : null,
           altSymbol: alt ? altSymbol : null,
           altEntryBps: alt?.quotable ? alt.entry_bps : null,
@@ -75,6 +79,33 @@ export default function WalletScreen() {
 
       {error && <Text style={s.error}>{error}</Text>}
       {items?.length === 0 && <Text style={s.faint}>No tokenized stocks in this wallet yet.</Text>}
+
+      {items && items.length > 0 && (() => {
+        const priced = items.filter((i) => i.exitBps !== null && i.value !== null)
+        const totalValue = priced.reduce((n, i) => n + (i.value as number), 0)
+        const totalCost = priced.reduce((n, i) => n + ((i.value as number) * (i.exitBps as number)) / 10000, 0)
+        const avgBps = totalValue > 0 ? (totalCost / totalValue) * 10000 : null
+        return (
+          <View style={s.card}>
+            <Text style={s.costKicker}>PORTFOLIO COSTS</Text>
+            <View style={s.row}>
+              <Text style={s.faint}>Estimated exit cost</Text>
+              <Text style={[s.costBig, num]}>${totalCost.toFixed(2)}</Text>
+            </View>
+            <View style={s.row}>
+              <Text style={s.faint}>Average exit</Text>
+              <Text style={[s.costSmall, num]}>{avgBps !== null ? `${avgBps.toFixed(1)} bps` : '—'}</Text>
+            </View>
+            <View style={s.row}>
+              <Text style={s.faint}>Executable now</Text>
+              <Text style={s.costSmall}>{priced.length} of {items.length} holdings</Text>
+            </View>
+            <Text style={s.faint}>
+              What it would cost to sell every position back to USDC at current quotes. Estimate, not a commitment.
+            </Text>
+          </View>
+        )
+      })()}
 
       {hidden > 0.00001 && (
         <View style={s.card}>
@@ -123,10 +154,17 @@ const s = StyleSheet.create({
   foot: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 8 },
   faint: { color: T.faint, fontSize: 12 },
   accent: { color: T.accent, fontSize: 13, fontWeight: '600' },
+  costKicker: { color: T.faint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  costBig: { color: T.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  costSmall: { color: T.text, fontSize: 15, fontWeight: '600' },
   error: { color: T.warn, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
+
+
 
 
 
