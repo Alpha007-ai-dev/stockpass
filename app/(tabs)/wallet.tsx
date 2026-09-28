@@ -194,20 +194,22 @@ const s = StyleSheet.create({
   content: { padding: 20, paddingBottom: 40, gap: T.gap },
   title: { color: T.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.6, marginTop: 8 },
   sub: { color: T.dim, fontSize: 13 },
-  card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 8 },
+  card: { backgroundColor: T.surface, borderRadius: 16, padding: 16, gap: 8 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   symbol: { color: T.text, fontSize: 17, fontWeight: '600' },
   shares: { color: T.accent, fontSize: 17, fontWeight: '600' },
-  foot: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 8 },
-  faint: { color: T.faint, fontSize: 12 },
+  foot: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingTop: 6 },
+  faint: { color: T.faint, fontSize: 13 },
   accent: { color: T.accent, fontSize: 13, fontWeight: '600' },
   costKicker: { color: T.faint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  costBig: { color: T.text, fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
+  costBig: { color: T.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
   costSmall: { color: T.text, fontSize: 15, fontWeight: '600' },
   error: { color: T.warn, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
 
 
 

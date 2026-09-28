@@ -195,17 +195,18 @@ const s = StyleSheet.create({
   value: { color: T.text, fontSize: 14 },
   valueSmall: { color: T.dim, fontSize: 13 },
   valueStrong: { color: T.text, fontSize: 18, fontWeight: '700' },
-  saving: { color: T.accent, fontSize: 22, fontWeight: '700' },
+  saving: { color: T.accent, fontSize: 26, fontWeight: '700' },
   saveBox: { backgroundColor: '#1F2A12', borderRadius: 18, borderWidth: 1.5, borderColor: T.accent, padding: 16, gap: 2, alignItems: 'center' },
   saveKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   saveBig: { color: T.accent, fontSize: 34, fontWeight: '700' },
   saveSub: { color: T.text, fontSize: 14 },
   sameBox: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 6 },
   sameKicker: { color: T.dim, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
 
 
 

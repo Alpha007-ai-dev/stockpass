@@ -107,7 +107,7 @@ export default function HomeScreen() {
   const changePct = change !== null && prev ? (change / prev.total) * 100 : null
   useEffect(() => {
     if (total === null || total <= 0) return
-    if (prev && Date.now() - prev.at < 5 * 60 * 1000) return
+    if (prev && Date.now() - prev.at < 60 * 60 * 1000) return
     savePortfolio(total).then(() => getLastPortfolio().then(setPrev))
   }, [total, prev])
   const issuers = new Set(items?.map((i) => i.issuer)).size
@@ -292,12 +292,12 @@ const s = StyleSheet.create({
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   bell: { color: T.dim, fontSize: 20 },
   change: { fontSize: 15, fontWeight: '600', marginTop: 2 },
-  brand: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 8 },
+  brand: { color: T.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.5, marginTop: 8 },
   sub: { color: T.dim, fontSize: 13 },
   total: { color: T.text, fontSize: 40, fontWeight: '700', letterSpacing: -1.2, marginTop: 6 },
   miniRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   mini: { flex: 1, backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.border, padding: 12, gap: 2, alignItems: 'center' },
-  miniNum: { color: T.text, fontSize: 22, fontWeight: '700' },
+  miniNum: { color: T.text, fontSize: 26, fontWeight: '700' },
   miniLabel: { color: T.faint, fontSize: 11, textAlign: 'center' },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   section: { color: T.text, fontSize: 16, fontWeight: '700' },
@@ -310,7 +310,7 @@ const s = StyleSheet.create({
   tag: { color: T.accent, fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
   rowTitle: { color: T.text, fontSize: 16, fontWeight: '700' },
   rowValue: { color: T.text, fontSize: 16, fontWeight: '700' },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   warn: { color: T.warn, fontSize: 13 },
   link: { color: T.accent, fontSize: 13, fontWeight: '600' },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
@@ -318,6 +318,9 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 14, fontWeight: '600' },
 })
+
+
+
 
 
 

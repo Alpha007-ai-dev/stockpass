@@ -250,9 +250,9 @@ const s = StyleSheet.create({
   tabText: { color: T.dim, fontSize: 14 },
   tabTextOn: { color: T.accent, fontWeight: '700' },
   grid2: { flexDirection: 'row', gap: 12 },
-  box: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 4 },
+  box: { flex: 1, backgroundColor: T.surface, borderRadius: 14, padding: 14, gap: 4 },
   boxLabel: { color: T.faint, fontSize: 12 },
-  boxBig: { color: T.text, fontSize: 24, fontWeight: '700' },
+  boxBig: { color: T.text, fontSize: 28, fontWeight: '700' },
   boxMid: { color: T.text, fontSize: 18, fontWeight: '600' },
   normCard: { backgroundColor: '#12180E', borderRadius: 22, borderWidth: 1.5, borderColor: T.accent, padding: 18, gap: 14 },
   heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingVertical: 6 },
@@ -270,7 +270,7 @@ const s = StyleSheet.create({
   arrow: { color: T.faint, fontSize: 22, marginTop: 14 },
   gapBad: { color: T.down, fontSize: 26, fontWeight: '700', textDecorationLine: 'line-through' },
   gapGood: { color: T.accent, fontSize: 34, fontWeight: '700', letterSpacing: -1 },
-  card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
+  card: { backgroundColor: T.surface, borderRadius: 16, padding: 16, gap: 10 },
   section: { color: T.text, fontSize: 15, fontWeight: '600' },
   hero: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -282,9 +282,11 @@ const s = StyleSheet.create({
   label: { color: T.dim, fontSize: 14 },
   labelStrong: { color: T.text, fontSize: 15, fontWeight: '700' },
   value: { color: T.text, fontSize: 14, textAlign: 'right', flexShrink: 1 },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
+
 
 
 

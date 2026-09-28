@@ -2,6 +2,7 @@
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { CostMap, MapFilter } from '@/components/cost-map'
+import { Skeleton } from '@/components/skeleton'
 import { num, T } from '@/constants/theme'
 import { costLabel, isUsable } from '@/lib/cost'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
@@ -110,7 +111,23 @@ export default function MarketScreen() {
             />
           )}
 
-          {view === 'map' ? (
+          {groups.length === 0 && loading && (
+            <View style={{ gap: 12 }}>
+              <Skeleton height={26} width="60%" />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Skeleton height={72} width="32%" radius={16} />
+                <Skeleton height={72} width="32%" radius={16} />
+                <Skeleton height={72} width="32%" radius={16} />
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {Array.from({ length: 20 }).map((_, i) => (
+                  <Skeleton key={i} height={66} width={62} radius={14} />
+                ))}
+              </View>
+            </View>
+          )}
+
+          {groups.length > 0 && view === 'map' ? (
             <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
           ) : (
             <View style={{ gap: T.gap }}>
@@ -211,7 +228,7 @@ const s = StyleSheet.create({
   tokenSymbol: { color: T.text, fontSize: 15, fontWeight: '600' },
   big: { color: T.text, fontSize: 18, fontWeight: '600' },
   accentText: { color: T.accent },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   chevron: { color: T.faint, fontSize: 22 },
   cardFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderTopWidth: 1, borderTopColor: T.border, paddingTop: 12, marginTop: 6 },
   footText: { color: T.dim, fontSize: 13, flexShrink: 1 },
@@ -219,6 +236,9 @@ const s = StyleSheet.create({
   buyText: { color: T.bg, fontSize: 14, fontWeight: '700' },
   error: { color: T.warn, fontSize: 13 },
 })
+
+
+
 
 
 

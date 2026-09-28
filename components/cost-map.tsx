@@ -128,7 +128,8 @@ const s = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { color: T.faint, fontSize: 12 },
-  foot: { color: T.faint, fontSize: 12, lineHeight: 17 },
+  foot: { color: T.faint, fontSize: 13, lineHeight: 19 },
 })
+
 
 

@@ -77,16 +77,17 @@ const s = StyleSheet.create({
   market: { color: T.text, fontSize: 14, fontWeight: '600' },
   notice: { flexDirection: 'row', gap: 10, backgroundColor: '#2A2110', borderRadius: 14, padding: 12 },
   noticeIcon: { color: T.warn, fontSize: 16 },
-  noticeText: { color: '#E8D6A8', fontSize: 12, lineHeight: 17, flex: 1 },
+  noticeText: { color: '#E8D6A8', fontSize: 13, lineHeight: 19, flex: 1 },
   blocked: { backgroundColor: '#2A1414', borderRadius: 14, padding: 12, gap: 4 },
   blockedTitle: { color: T.down, fontSize: 13, fontWeight: '700' },
   stats: { alignItems: 'flex-end', width: 62 },
   stat: { color: T.text, fontSize: 16, fontWeight: '700' },
   statLabel: { color: T.faint, fontSize: 10 },
   accent: { color: T.accent },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   link: { color: T.accent, fontSize: 13, fontWeight: '600' },
   extLink: { color: T.faint, fontSize: 16, marginLeft: 4 },
 })
+
 
 

@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   track: { height: 6, borderRadius: 3, backgroundColor: T.border },
   fill: { height: 6, borderRadius: 3 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  note: { color: T.faint, fontSize: 12, lineHeight: 17 },
+  note: { color: T.faint, fontSize: 13, lineHeight: 19 },
   banner: { backgroundColor: '#1F2A12', borderRadius: 16, padding: 14, gap: 4 },
   bannerStrong: { color: T.accent, fontSize: 15, fontWeight: '600' },
   switchCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 9 },
@@ -237,10 +237,11 @@ const s = StyleSheet.create({
   section: { gap: 6 },
   sectionTitle: { color: T.text, fontSize: 15, fontWeight: '600' },
   body: { color: T.dim, fontSize: 13, lineHeight: 19 },
-  faint: { color: T.faint, fontSize: 12 },
+  faint: { color: T.faint, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
 
 
 
