@@ -80,101 +80,15 @@ export default function WalletScreen() {
       {error && <Text style={s.error}>{error}</Text>}
       {items?.length === 0 && <Text style={s.faint}>No tokenized stocks in this wallet yet.</Text>}
 
-      {items && items.length > 0 && (() => {
-        const priced = items.filter((i) => i.exitBps !== null && i.value !== null)
-        const totalValue = priced.reduce((n, i) => n + (i.value as number), 0)
-        const totalCost = priced.reduce((n, i) => n + ((i.value as number) * (i.exitBps as number)) / 10000, 0)
-        const avgExit = totalValue > 0 ? (totalCost / totalValue) * 10000 : null
-        const entryPriced = items.filter((i) => i.entryBps !== null && i.value !== null)
-        const entryValue = entryPriced.reduce((n, i) => n + (i.value as number), 0)
-        const avgEntry = entryValue > 0
-          ? entryPriced.reduce((n, i) => n + (i.value as number) * (i.entryBps as number), 0) / entryValue
-          : null
-        const allocTotal = items.reduce((n, i) => n + (i.value ?? 0), 0)
-        return (
-          <View style={{ gap: 14 }}>
-            <Text style={s.costKicker}>PORTFOLIO COST</Text>
-            <View style={s.heroRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.faint}>Average entry</Text>
-                <Text style={[s.costBig, num]}>{avgEntry !== null ? `${avgEntry.toFixed(1)} bps` : "—"}</Text>
-                <Text style={s.tiny}>at current quotes</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.faint}>Estimated exit cost</Text>
-                <Text style={[s.costBig, num]}>${totalCost.toFixed(2)}</Text>
-                <Text style={s.tiny}>{avgExit !== null ? `${avgExit.toFixed(1)} bps average` : ""}</Text>
-              </View>
-            </View>
-            <Text style={s.faint}>
-              {priced.length} of {items.length} holdings executable right now. Estimate, not a commitment.
-            </Text>
-
-            <Text style={[s.costKicker, { marginTop: 6 }]}>ALLOCATION</Text>
-            {items.map((i) => {
-              const pct = allocTotal > 0 ? ((i.value ?? 0) / allocTotal) * 100 : 0
-              return (
-                <View key={i.symbol} style={{ gap: 5 }}>
-                  <View style={s.row}>
-                    <Text style={s.allocLabel}>{i.symbol}</Text>
-                    <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
-                  </View>
-                  <View style={s.track}>
-                    <View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} />
-                  </View>
-                </View>
-              )
-            })}
+      {items && items.length > 0 && (
+        <Pressable style={s.analyticsRow} onPress={() => router.push('/analytics')}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.analyticsTitle}>Portfolio analytics</Text>
+            <Text style={s.faint}>Costs · Allocation · Opportunities</Text>
           </View>
-        )
-      })()}
-
-      {items && items.length > 0 && (() => {
-        const rows = items.map((i) => {
-          const cheaper = i.altEntryBps !== null && i.entryBps !== null && i.altEntryBps < i.entryBps
-          const saving = cheaper ? (i.entryBps as number) - (i.altEntryBps as number) : 0
-          const switching = i.exitBps !== null && i.altEntryBps !== null ? (i.exitBps as number) + (i.altEntryBps as number) : null
-          const net = switching !== null ? saving - switching : null
-          return { i, cheaper, saving, switching, net }
-        })
-        const onCheapest = rows.filter((r) => !r.cheaper).length
-        return (
-          <View style={{ gap: 10 }}>
-            <Text style={s.costKicker}>OPPORTUNITIES</Text>
-            <Text style={s.faint}>
-              {onCheapest} of {rows.length} holdings are already on the cheapest route right now.
-            </Text>
-
-            {rows.map((r) => (
-              <View key={r.i.symbol} style={s.card}>
-                <View style={s.row}>
-                  <Text style={s.symbol}>{r.i.symbol}</Text>
-                  <Text style={[s.faint, !r.cheaper && { color: T.accent }]}>
-                    {r.cheaper ? 'cheaper issuer exists' : 'cheapest route'}
-                  </Text>
-                </View>
-                {r.cheaper && r.switching !== null ? (
-                  <>
-                    <Text style={s.faint}>
-                      {r.i.altSymbol} is {r.saving} bps cheaper to enter. Switching costs {r.switching} bps.
-                    </Text>
-                    <Text style={[s.accent, (r.net ?? 0) < 0 && { color: T.warn }]}>
-                      Net result: {(r.net ?? 0) >= 0 ? '+' : ''}{r.net} bps
-                      {(r.net ?? 0) < 0 ? ' · not worth switching' : ' · switching could pay off'}
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={s.faint}>
-                    {r.cheaper ? 'No exit quote right now, so switching cannot be priced.' : 'You already hold the cheapest issuer for this stock.'}
-                  </Text>
-                )}
-              </View>
-            ))}
-
-            <Text style={s.faint}>Cheapest to buy is not the same as cheapest for you.</Text>
-          </View>
-        )
-      })()}
+          <Text style={s.chev}>›</Text>
+        </Pressable>
+      )}
 
       {hidden > 0.00001 && (
         <View style={s.card}>
@@ -224,6 +138,9 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 13 },
   accent: { color: T.accent, fontSize: 13, fontWeight: '600' },
   costKicker: { color: T.faint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  analyticsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderRadius: 16, padding: 16, marginTop: 4 },
+  analyticsTitle: { color: T.text, fontSize: 16, fontWeight: '700' },
+  chev: { color: T.faint, fontSize: 22 },
   heroRow: { flexDirection: 'row', gap: 16 },
   tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
   allocLabel: { color: T.text, fontSize: 14, fontWeight: '600' },
@@ -236,6 +153,7 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
 
 
 
