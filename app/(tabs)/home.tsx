@@ -11,6 +11,7 @@ import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
 import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
 import { TokenIcon } from '@/components/token-icon'
+import { HoldingInsight } from '@/components/holding-insight'
 
 type Item = HoldingRow & { shares: number; value: number | null; exitBps: number | null }
 
@@ -202,7 +203,18 @@ export default function HomeScreen() {
 
       {error && <Text style={s.warn}>{error}</Text>}
 
-      {top.length > 0 && (
+      {items && items.length > 0 ? (
+        <>
+          <Text style={s.section}>Things worth knowing</Text>
+          {items.slice(0, 3).map((i) => (
+            <HoldingInsight key={i.symbol} holding={i} latest={latest[i.symbol]} />
+          ))}
+          <Pressable style={s.seeAllRow} onPress={() => router.push('/analytics?tab=insights')}>
+            <Text style={s.seeAllText}>See all insights</Text>
+            <Text style={s.chev}>›</Text>
+          </Pressable>
+        </>
+      ) : top.length > 0 ? (
         <>
           <View style={s.sectionRow}>
             <Text style={s.section}><Text style={{ color: T.accent }}>{top.length}</Text> things worth knowing</Text>
@@ -221,7 +233,7 @@ export default function HomeScreen() {
             </Pressable>
           ))}
         </>
-      )}
+      ) : null}
 
       <View style={s.card}>
         <Text style={s.tag}>{market.title}</Text>
@@ -302,6 +314,8 @@ const s = StyleSheet.create({
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
   section: { color: T.text, fontSize: 16, fontWeight: '700' },
   chev: { color: T.faint, fontSize: 20 },
+  seeAllRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 },
+  seeAllText: { color: T.accent, fontSize: 15, fontWeight: '600' },
   insight: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, paddingVertical: 16, paddingHorizontal: 15 },
   insightText: { color: T.dim, fontSize: 14, lineHeight: 20 },
   avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: T.surfaceAlt },
@@ -318,6 +332,12 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 50, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 14, fontWeight: '600' },
 })
+
+
+
+
+
+
 
 
 

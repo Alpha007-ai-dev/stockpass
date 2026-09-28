@@ -92,6 +92,8 @@ export type SeriesPoint = {
   symbol: string
   issuer: string
   entry_bps: number | null
+  exit_bps: number | null
+  buy_px: number | null
   quotable: number
   market_state: string
 }
@@ -121,6 +123,7 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
+
 
 
 

@@ -1,6 +1,6 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
@@ -22,7 +22,8 @@ type Tab = 'overview' | 'costs' | 'exposure' | 'insights' | 'opportunities'
 export default function AnalyticsScreen() {
   const router = useRouter()
   const { account, connect } = useMobileWallet() as any
-  const [tab, setTab] = useState<Tab>('overview')
+  const { tab: initialTab } = useLocalSearchParams<{ tab?: string }>()
+  const [tab, setTab] = useState<Tab>((initialTab as Tab) ?? 'overview')
   const [items, setItems] = useState<Item[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -270,3 +271,4 @@ const s = StyleSheet.create({
   tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
   warn: { color: T.warn, fontSize: 13 },
 })
+
