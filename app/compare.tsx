@@ -5,6 +5,9 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { TokenIcon } from '@/components/token-icon'
 import { isUsable } from '@/lib/cost'
 import { getGroups, Group } from '@/lib/pairs'
+import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
+import { getHoldings } from '@/lib/stats'
 import { compact, getStats, Latest } from '@/lib/stats'
 
 const ISSUER_NOTE: Record<string, string> = {
@@ -20,6 +23,25 @@ export default function CompareScreen() {
   const [group, setGroup] = useState<Group | null>(null)
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [error, setError] = useState<string | null>(null)
+  const { account } = useMobileWallet() as any
+  const [held, setHeld] = useState<{ symbol: string; amount: number } | null>(null)
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        if (await isDemo()) {
+          const d = DEMO_HOLDINGS.find((h) => h.symbol.startsWith(tk))
+          setHeld(d ? { symbol: d.symbol, amount: d.walletAmount } : null)
+          return
+        }
+        const addr = account?.address
+        if (!addr) return
+        const rows = await getHoldings(String(addr))
+        const row = rows.find((r) => r.ticker === tk)
+        setHeld(row ? { symbol: row.symbol, amount: row.walletAmount } : null)
+      } catch {}
+    })()
+  }, [tk, account])
 
   useEffect(() => {
     Promise.all([getStats(), getGroups()])
@@ -125,6 +147,35 @@ export default function CompareScreen() {
         )}
       </View>
 
+      {(() => {
+        if (!held) return null
+        const mineRow = rows.find((r) => r.token.symbol === held.symbol)
+        if (!mineRow?.l) return null
+        const l = mineRow.l
+        const ok = isUsable(l.exit_bps, l.quotable)
+        const shares = held.amount * l.multiplier
+        const value = l.sell_px ? shares * l.sell_px : null
+        const costUsd = ok && value ? (value * (l.exit_bps as number)) / 10000 : null
+        return (
+          <View style={s.switchCard}>
+            <Text style={s.switchKicker}>YOU HOLD {held.symbol}</Text>
+            <Text style={s.body}>
+              {shares.toFixed(4)} {tk}{value ? ` · $${value.toFixed(2)}` : ""}
+            </Text>
+            <View style={s.switchDivider} />
+            <View style={s.row}>
+              <Text style={s.switchLabel}>Cost to exit to USDC</Text>
+              <Text style={[s.switchValue, num]}>{ok ? `${l.exit_bps} bps` : "no quote"}</Text>
+            </View>
+            {costUsd !== null && (
+              <Text style={s.body}>
+                About ${costUsd.toFixed(2)} to sell this position back to USDC right now.
+              </Text>
+            )}
+          </View>
+        )
+      })()}
+
       {multipliers.size > 1 && (
         <View style={s.section}>
           <Text style={s.sectionTitle}>Why the raw prices differ</Text>
@@ -174,6 +225,15 @@ const s = StyleSheet.create({
   note: { color: T.faint, fontSize: 12, lineHeight: 17 },
   banner: { backgroundColor: '#1F2A12', borderRadius: 16, padding: 14, gap: 4 },
   bannerStrong: { color: T.accent, fontSize: 15, fontWeight: '600' },
+  switchCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 9 },
+  switchKicker: { color: T.warn, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  switchDivider: { height: 1, backgroundColor: T.border, marginVertical: 2 },
+  switchLabel: { color: T.text, fontSize: 15, fontWeight: '700' },
+  switchValue: { color: T.warn, fontSize: 22, fontWeight: '800' },
+  switchNote: { color: T.faint, fontSize: 12, fontStyle: 'italic' },
+  label: { color: T.dim, fontSize: 14 },
+  value: { color: T.text, fontSize: 15, fontWeight: '600' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   section: { gap: 6 },
   sectionTitle: { color: T.text, fontSize: 15, fontWeight: '600' },
   body: { color: T.dim, fontSize: 13, lineHeight: 19 },
@@ -181,6 +241,12 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
+
+
+
+
 
 
 

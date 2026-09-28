@@ -2,6 +2,7 @@
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CollateralSection } from '@/components/collateral-section'
+import { NormalizationHero } from '@/components/normalization-hero'
 import { CostTimeline } from '@/components/cost-timeline'
 import { ISSUERS } from '@/constants/issuers'
 import { num, T } from '@/constants/theme'
@@ -133,85 +134,11 @@ export default function PassportScreen() {
           {(() => {
             const peer = others.find((o) => o.ticker === ticker && o.buy_px && mine?.buy_px)
             if (!peer || !mine?.buy_px || !peer.buy_px) return null
-            const rawMine = mine.buy_px * mine.multiplier
-            const rawPeer = peer.buy_px * peer.multiplier
-            const rawGap = Math.round((rawPeer / rawMine - 1) * 10000)
+            const rawGap = Math.round(((peer.buy_px * peer.multiplier) / (mine.buy_px * mine.multiplier) - 1) * 10000)
             const normGap = Math.round((peer.buy_px / mine.buy_px - 1) * 10000)
             if (Math.abs(rawGap - normGap) < 3) return null
-            return (
-              <View style={s.normCard}>
-                <Text style={s.normKicker}>PRICE NORMALIZATION</Text>
-                <View style={s.normRow}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.faint}>Raw token price</Text>
-                    <Text style={[s.normSmall, num]}>${rawMine.toFixed(2)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={s.faint}>Per-share price</Text>
-                    <Text style={[s.normBig, num]}>${mine.buy_px.toFixed(2)}</Text>
-                  </View>
-                </View>
-                <View style={s.normDivider} />
-                <View style={s.gapRow}>
-                  <View>
-                    <Text style={s.faint}>Raw-price gap</Text>
-                    <Text style={[s.gapBad, num]}>{Math.abs(rawGap)} bps</Text>
-                  </View>
-                  <Text style={s.arrow}>&#8594;</Text>
-                  <View>
-                    <Text style={s.faint}>Normalized gap</Text>
-                    <Text style={[s.gapGood, num]}>{Math.abs(normGap)} bps</Text>
-                  </View>
-                </View>
-                <Text style={s.faint}>
-                  Looks {Math.abs(rawGap)} bps apart from {peer.symbol} by raw token price.
-                  After multiplier adjustment: only {Math.abs(normGap)} bps.
-                </Text>
-              </View>
-            )
+            return <NormalizationHero symbol={sym} mine={mine} peer={peer} reference={reference} />
           })()}
-
-          <View style={s.grid2}>
-            <View style={s.box}>
-              <Text style={s.boxLabel}>Normalized price (per share)</Text>
-              <Text style={[s.boxBig, num]}>{mine?.buy_px ? `$${mine.buy_px.toFixed(2)}` : '—'}</Text>
-              <Text style={s.faint}>Raw token price {raw ? `$${raw.toFixed(2)}` : '—'}</Text>
-            </View>
-            <View style={s.box}>
-              <Text style={s.boxLabel}>Entry cost</Text>
-              <Text style={[s.boxBig, num, { color: T.accent }]}>{mine ? costLabel(mine.entry_bps, mine.quotable) : '—'}</Text>
-              <Text style={s.faint}>Exit cost {mine && mine.quotable ? `${mine.exit_bps} bps` : '—'}</Text>
-            </View>
-          </View>
-
-          {reference && mine?.buy_px && (
-            <View style={s.card}>
-              <Text style={s.section}>{reference.stale ? 'Off-market deviation' : 'On-chain premium'}</Text>
-              <View style={s.row}>
-                <Text style={s.label}>Traditional reference</Text>
-                <Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>{sym} per share</Text>
-                <Text style={[s.value, num]}>${mine.buy_px.toFixed(2)}</Text>
-              </View>
-              {reference.stale ? (
-                <Text style={s.faint}>
-                  The traditional market is closed, so this reference is a stale quote. No premium is shown against it.
-                </Text>
-              ) : (
-                <>
-                  <View style={s.row}>
-                    <Text style={s.section}>On-chain premium</Text>
-                    <Text style={[s.gapGood, num]}>{Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps</Text>
-                  </View>
-                  <Text style={s.faint}>
-                    What the on-chain form costs versus the traditional mid price. Separate from the entry cost above.
-                  </Text>
-                </>
-              )}
-            </View>
-          )}
 
           <View style={s.grid2}>
             <View style={s.box}>
@@ -327,11 +254,17 @@ const s = StyleSheet.create({
   boxLabel: { color: T.faint, fontSize: 12 },
   boxBig: { color: T.text, fontSize: 24, fontWeight: '700' },
   boxMid: { color: T.text, fontSize: 18, fontWeight: '600' },
-  normCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1.5, borderColor: T.accent, padding: 16, gap: 10 },
+  normCard: { backgroundColor: '#12180E', borderRadius: 22, borderWidth: 1.5, borderColor: T.accent, padding: 18, gap: 14 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, paddingVertical: 6 },
+  heroSide: { alignItems: 'center' },
+  heroBad: { color: T.down, fontSize: 40, fontWeight: '800', letterSpacing: -1.5, textDecorationLine: 'line-through' },
+  heroGood: { color: T.accent, fontSize: 56, fontWeight: '800', letterSpacing: -2 },
+  heroUnit: { color: T.faint, fontSize: 12, marginTop: 2 },
+  heroArrow: { color: T.dim, fontSize: 26, marginBottom: 14 },
   normKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   normRow: { flexDirection: 'row', gap: 12 },
-  normSmall: { color: T.dim, fontSize: 18, fontWeight: '600', textDecorationLine: 'line-through' },
-  normBig: { color: T.text, fontSize: 24, fontWeight: '700' },
+  normSmall: { color: T.faint, fontSize: 17, fontWeight: '600', textDecorationLine: 'line-through' },
+  normBig: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
   normDivider: { height: 1, backgroundColor: T.border },
   gapRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   arrow: { color: T.faint, fontSize: 22, marginTop: 14 },
@@ -352,6 +285,9 @@ const s = StyleSheet.create({
   faint: { color: T.faint, fontSize: 12 },
   link: { color: T.accent, fontSize: 14, fontWeight: '600' },
 })
+
+
+
 
 
 
