@@ -78,17 +78,16 @@ export default function CompareScreen() {
           {rows.map(({ token, l }) => {
             const ok = !!l && isUsable(l.entry_bps, l.quotable)
             const isBest = best?.token.symbol === token.symbol && usable.length > 1
-            const h = ok ? Math.max(8, Math.round(((l!.entry_bps as number) / maxBps) * 70)) : 0
+            const h = ok ? Math.max(12, Math.round(((l!.entry_bps as number) / maxBps) * 100)) : 0
             return (
               <View key={token.symbol} style={[s.raceCol, isBest && s.raceBest]}>
-                {isBest && <Text style={s.bestTag}>BEST</Text>}
                 <Text style={[s.raceIssuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
                 <Text style={[s.raceCost, num, isBest && { color: T.accent }]}>
                   {ok ? `${l!.entry_bps}` : '—'}
                 </Text>
-                <Text style={s.faint}>{ok ? 'bps' : 'no quote'}</Text>
+                <Text style={s.faint}>{ok ? 'bps' : 'NO QUOTE'}</Text>
                 <View style={s.barWrap}>
-                  <View style={[s.bar, { height: h, backgroundColor: issuerColor(token.issuer) }]} />
+                  <View style={[s.bar, { width: `${h}%`, backgroundColor: issuerColor(token.issuer) }]} />
                 </View>
                 <Text style={[s.racePrice, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
                 <Text style={s.faint}>{l ? `×${l.multiplier.toFixed(4)}` : ''}</Text>
@@ -187,7 +186,7 @@ export default function CompareScreen() {
 
       {best && (
         <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${tk}`)}>
-          <Text style={s.primaryText}>Buy via {best.token.issuer}</Text>
+          <Text style={s.primaryText}>Buy with {best.token.issuer}</Text>
         </Pressable>
       )}
 
@@ -206,11 +205,11 @@ const s = StyleSheet.create({
   race: { flexDirection: 'row', gap: 8 },
   raceCol: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, alignItems: 'center', gap: 3 },
   raceBest: { borderColor: T.accent, borderWidth: 1.5 },
-  bestTag: { color: T.bg, backgroundColor: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.8, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
+  bestTag: { color: T.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
   raceIssuer: { fontSize: 13, fontWeight: '700' },
   raceCost: { color: T.text, fontSize: 34, fontWeight: '700', letterSpacing: -1 },
-  barWrap: { height: 60, justifyContent: 'flex-end', marginVertical: 8 },
-  bar: { width: 26, borderRadius: 6 },
+  barWrap: { height: 6, justifyContent: 'center', marginVertical: 10, alignSelf: 'stretch' },
+  bar: { height: 4, borderRadius: 2 },
   racePrice: { color: T.dim, fontSize: 14, fontWeight: '600' },
   card: { backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, gap: 8 },
   cardBest: { borderColor: T.accent, borderWidth: 1.5, backgroundColor: '#161C12' },
@@ -223,8 +222,8 @@ const s = StyleSheet.create({
   fill: { height: 6, borderRadius: 3 },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
   note: { color: T.faint, fontSize: 13, lineHeight: 19 },
-  banner: { backgroundColor: '#1F2A12', borderRadius: 16, padding: 14, gap: 4 },
-  bannerStrong: { color: T.accent, fontSize: 15, fontWeight: '600' },
+  banner: { paddingVertical: 14, gap: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: T.border },
+  bannerStrong: { color: T.text, fontSize: 16, fontWeight: '600' },
   switchCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 9 },
   switchKicker: { color: T.warn, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   switchDivider: { height: 1, backgroundColor: T.border, marginVertical: 2 },
@@ -241,6 +240,8 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+
 
 
 
