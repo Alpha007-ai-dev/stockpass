@@ -160,17 +160,18 @@ export default function MarketScreen() {
                 <Text style={s.symbol}>{token.symbol}</Text>
                 <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
               </View>
-              <Text style={[s.status, { color: st.color }]}>{st.dot ? '● ' : '○ '}{st.label}</Text>
+              <View style={{ alignItems: 'flex-end', gap: 3 }}>
+                <Text style={[s.price, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
+                <Text style={[s.status, { color: st.color }]}>{st.dot ? '● ' : '○ '}{st.label}</Text>
+              </View>
             </View>
 
             <View style={s.cardBottom}>
               <View style={s.metric}>
-                <Text style={s.metricLabel}>entry</Text>
-                <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>{ok ? `${l!.entry_bps} bps` : '—'}</Text>
-              </View>
-              <View style={s.metric}>
-                <Text style={s.metricLabel}>exit</Text>
-                <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>{ok ? `${l!.exit_bps} bps` : '—'}</Text>
+                <Text style={s.metricLabel}>entry/exit</Text>
+                <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>
+                  {!ok ? '—' : l!.entry_bps === l!.exit_bps ? `${l!.entry_bps} bps` : `${l!.entry_bps} / ${l!.exit_bps} bps`}
+                </Text>
               </View>
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 {spark ? (
@@ -217,6 +218,7 @@ const s = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
   issuer: { fontSize: 13, fontWeight: '600', marginTop: 1 },
+  price: { color: T.text, fontSize: 17, fontWeight: '700' },
   status: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
   cardBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 22 },
   metric: { gap: 1 },
@@ -226,3 +228,5 @@ const s = StyleSheet.create({
 
   warn: { color: T.warn, fontSize: 13 },
 })
+
+
