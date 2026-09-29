@@ -32,3 +32,4 @@ export const MARKET_LABEL: Record<MarketState, { title: string; subtitle: string
   closed: { title: 'US MARKET CLOSED', subtitle: 'Wall Street is closed - tokenized stocks are still moving' },
   weekend: { title: 'WEEKEND', subtitle: 'Wall Street is closed all weekend - tokens keep trading' },
 }
+

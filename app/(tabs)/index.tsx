@@ -32,6 +32,7 @@ export default function MarketScreen() {
   const router = useRouter()
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [groups, setGroups] = useState<Group[]>([])
+  const [hist, setHist] = useState<Record<string, History>>({})
   const [sparks, setSparks] = useState<Record<string, number[]>>({})
   const [filter, setFilter] = useState<string>('all')
   const [mapFilter, setMapFilter] = useState<MapFilter>('all')
@@ -51,12 +52,15 @@ export default function MarketScreen() {
       const l: Record<string, Latest> = {}
       stats.latest.forEach((r) => { l[r.symbol] = r })
       setLatest(l)
+      const h: Record<string, History> = {}
+      stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
+      setHist(h)
       setGroups(allGroups)
     } catch (e) {
       setError((e as Error).message)
     }
     setLoading(false)
-  }, [])
+  }, [state])
 
   useEffect(() => { load() }, [load])
 
@@ -75,7 +79,7 @@ export default function MarketScreen() {
   }, [groups, latest, sparks, filter, query])
 
   useEffect(() => {
-    const visible = rows.slice(0, 12).map((r) => r.token)
+    const visible = rows.slice(0, 30).map((r) => r.token)
     visible.forEach(async (t) => {
       if (sparks[t.symbol]) return
       try {
@@ -170,14 +174,24 @@ export default function MarketScreen() {
               <View style={s.metric}>
                 <Text style={s.metricLabel}>entry/exit</Text>
                 <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>
-                  {!ok ? '—' : l!.entry_bps === l!.exit_bps ? `${l!.entry_bps} bps` : `${l!.entry_bps} / ${l!.exit_bps} bps`}
+                  {!ok ? '—' : l!.entry_bps < 0 ? '~0 bps' : l!.entry_bps === l!.exit_bps ? `${l!.entry_bps} bps` : `${l!.entry_bps} / ${l!.exit_bps} bps`}
                 </Text>
               </View>
+              {(() => {
+                const h = hist[token.symbol]
+                if (!h || h.samples < 3 || h.avg_entry === null) return null
+                return (
+                  <View style={s.metric}>
+                    <Text style={s.metricLabel}>usual</Text>
+                    <Text style={[s.metricValue, num, { color: T.dim }]}>{h.avg_entry.toFixed(0)} bps</Text>
+                  </View>
+                )
+              })()}
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 {spark ? (
                   <Spark values={spark} color={issuerColor(token.issuer)} />
                 ) : ok ? (
-                  <View style={{ width: 64, height: 24 }} />
+                  <Text style={s.collecting}>collecting</Text>
                 ) : (
                   <Text style={s.noQuote}>No executable quote</Text>
                 )}
@@ -225,8 +239,17 @@ const s = StyleSheet.create({
   metricLabel: { color: T.faint, fontSize: 12 },
   metricValue: { color: T.text, fontSize: 19, fontWeight: '700' },
   noQuote: { color: T.faint, fontSize: 12 },
+  collecting: { color: T.faint, fontSize: 11, fontStyle: 'italic' },
 
   warn: { color: T.warn, fontSize: 13 },
 })
+
+
+
+
+
+
+
+
 
 
