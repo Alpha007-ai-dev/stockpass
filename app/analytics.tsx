@@ -2,18 +2,21 @@
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
+import { getHoldings, getSeries, getStats, HoldingRow, Latest } from '@/lib/stats'
 
 type Item = HoldingRow & {
   shares: number
   value: number | null
   entryBps: number | null
   exitBps: number | null
+  entryDelta: number | null
   altSymbol: string | null
+  altIssuer: string | null
   altEntryBps: number | null
 }
 
@@ -21,8 +24,8 @@ type Tab = 'overview' | 'costs' | 'exposure' | 'insights' | 'opportunities'
 
 export default function AnalyticsScreen() {
   const router = useRouter()
-  const { account, connect } = useMobileWallet() as any
   const { tab: initialTab } = useLocalSearchParams<{ tab?: string }>()
+  const { account, connect } = useMobileWallet() as any
   const [tab, setTab] = useState<Tab>((initialTab as Tab) ?? 'overview')
   const [items, setItems] = useState<Item[] | null>(null)
   const [busy, setBusy] = useState(false)
@@ -48,14 +51,15 @@ export default function AnalyticsScreen() {
         rows = await getHoldings(String(addr))
       }
 
-      setItems(rows.map((r) => {
+      const base: Item[] = rows.map((r) => {
         const l = latest.get(r.symbol)
-        const peers = groups.find((g) => g.ticker === r.ticker)?.tokens ?? []
-        const alt = peers
+        const peers = (groups.find((g) => g.ticker === r.ticker)?.tokens ?? [])
           .filter((p) => p.symbol !== r.symbol)
-          .map((p) => latest.get(p.symbol))
-          .filter((x) => x && isUsable(x.entry_bps, x.quotable)) as Latest[]
-        const cheapest = alt.length ? alt.reduce((a, b) => ((a.entry_bps as number) <= (b.entry_bps as number) ? a : b)) : null
+          .map((p) => ({ token: p, l: latest.get(p.symbol) }))
+          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
+        const cheapest = peers.length
+          ? peers.reduce((a, b) => ((a.l!.entry_bps as number) <= (b.l!.entry_bps as number) ? a : b))
+          : null
         const shares = r.walletAmount * (l?.multiplier ?? 1)
         return {
           ...r,
@@ -63,10 +67,22 @@ export default function AnalyticsScreen() {
           value: l?.sell_px ? shares * l.sell_px : null,
           entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
           exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
-          altSymbol: cheapest ? cheapest.symbol : null,
-          altEntryBps: cheapest ? (cheapest.entry_bps as number) : null,
+          entryDelta: null,
+          altSymbol: cheapest ? cheapest.token.symbol : null,
+          altIssuer: cheapest ? cheapest.token.issuer : null,
+          altEntryBps: cheapest ? (cheapest.l!.entry_bps as number) : null,
         }
-      }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0)))
+      }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+      setItems(base)
+
+      const withDelta = await Promise.all(base.map(async (i) => {
+        try {
+          const pts = (await getSeries(i.ticker, 24)).filter((p) => p.symbol === i.symbol && p.quotable && p.entry_bps !== null)
+          if (pts.length < 2 || i.entryBps === null) return i
+          return { ...i, entryDelta: i.entryBps - (pts[0].entry_bps as number) }
+        } catch { return i }
+      }))
+      setItems(withDelta)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -89,6 +105,8 @@ export default function AnalyticsScreen() {
   const byIssuer: Record<string, number> = {}
   items?.forEach((i) => { byIssuer[i.issuer] = (byIssuer[i.issuer] ?? 0) + (i.value ?? 0) })
 
+  const insights = (items ?? []).filter((i) => i.entryBps === null || (i.entryDelta !== null && Math.abs(i.entryDelta) >= 2))
+
   const tabs: [Tab, string][] = [
     ['overview', 'Overview'], ['costs', 'Costs'], ['exposure', 'Exposure'],
     ['insights', 'Insights'], ['opportunities', 'Opportunities'],
@@ -102,10 +120,9 @@ export default function AnalyticsScreen() {
         <Text style={s.backText}>‹ Wallet</Text>
       </Pressable>
 
-      <Text style={s.title}>Portfolio analytics</Text>
-      <Text style={s.sub}>What your ownership actually costs</Text>
+      <Text style={s.title}>Portfolio Analytics</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabs} contentContainerStyle={{ gap: 6 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
         {tabs.map(([key, label]) => (
           <Pressable key={key} onPress={() => setTab(key)} style={[s.tab, tab === key && s.tabOn]}>
             <Text style={[s.tabText, tab === key && s.tabTextOn]}>{label}</Text>
@@ -117,126 +134,192 @@ export default function AnalyticsScreen() {
       {error && <Text style={s.warn}>{error}</Text>}
 
       {items && tab === 'overview' && (
-        <View style={{ gap: 16 }}>
-          <View>
-            <Text style={s.label}>Portfolio value</Text>
+        <>
+          <View style={s.heroCard}>
+            <Text style={s.kicker}>TOTAL VALUE</Text>
             <Text style={[s.hero, num]}>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            <Text style={s.faint}>{items.length} assets · {new Set(items.map((i) => i.issuer)).size} issuers</Text>
+            <Text style={s.tiny}>{items.length} assets · {Object.keys(byIssuer).length} issuers</Text>
           </View>
-          <View style={s.split}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>Average entry</Text>
-              <Text style={[s.big, num]}>{avgEntry !== null ? `${avgEntry.toFixed(1)} bps` : '—'}</Text>
-              <Text style={s.tiny}>at current quotes</Text>
+
+          <View style={s.pairRow}>
+            <View style={[s.card, { flex: 1 }]}>
+              <Text style={s.kicker}>ENTRY COST</Text>
+              <Text style={[s.metric, num]}>{avgEntry !== null ? `${avgEntry.toFixed(1)} bps` : '—'}</Text>
+              <Text style={s.tiny}>weighted average</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.label}>Estimated exit</Text>
-              <Text style={[s.big, num]}>${exitCost.toFixed(2)}</Text>
-              <Text style={s.tiny}>{avgExit !== null ? `${avgExit.toFixed(1)} bps average` : ''}</Text>
+            <View style={[s.card, { flex: 1 }]}>
+              <Text style={s.kicker}>EXIT COST</Text>
+              <Text style={[s.metric, num]}>{avgExit !== null ? `${avgExit.toFixed(1)} bps` : '—'}</Text>
+              <Text style={s.tiny}>weighted average</Text>
             </View>
           </View>
-          <Text style={s.faint}>
-            {priced.length} of {items.length} holdings executable right now. Estimates from live quotes, not commitments.
-          </Text>
-        </View>
+
+          <View style={s.card}>
+            <Text style={s.kicker}>ESTIMATED EXECUTION COST</Text>
+            <Text style={[s.hero, num, { fontSize: 30 }]}>${exitCost.toFixed(2)}</Text>
+            <Text style={s.tiny}>
+              What it would cost to sell every position back to USDC at current quotes.
+              {'\n'}{priced.length} of {items.length} holdings executable right now. Estimate, not a commitment.
+            </Text>
+          </View>
+        </>
       )}
 
       {items && tab === 'costs' && (
-        <View style={{ gap: 4 }}>
+        <>
           {items.map((i) => (
-            <View key={i.symbol} style={s.row}>
-              <View style={{ flex: 1 }}>
-                <Text style={s.rowTitle}>{i.symbol}</Text>
-                <Text style={s.faint}>{i.value !== null ? `$${i.value.toFixed(2)}` : 'no quote'}</Text>
+            <View key={i.symbol} style={s.card}>
+              <View style={s.rowHead}>
+                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={34} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.symbol}>{i.symbol}</Text>
+                  <Text style={[s.issuerText, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
+                </View>
+                <Text style={[s.value, num]}>{i.value !== null ? `$${i.value.toFixed(2)}` : '—'}</Text>
               </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[s.rowValue, num]}>{i.exitBps !== null ? `${i.exitBps} bps` : '—'}</Text>
-                <Text style={s.faint}>
-                  {i.value !== null && i.exitBps !== null ? `$${((i.value * i.exitBps) / 10000).toFixed(2)} to exit` : ''}
-                </Text>
+              <View style={s.metricsRow}>
+                <View style={s.metricCell}>
+                  <Text style={s.tinyLabel}>entry</Text>
+                  <Text style={[s.metricSmall, num]}>{i.entryBps !== null ? `${i.entryBps} bps` : '—'}</Text>
+                </View>
+                <View style={s.metricCell}>
+                  <Text style={s.tinyLabel}>exit</Text>
+                  <Text style={[s.metricSmall, num]}>{i.exitBps !== null ? `${i.exitBps} bps` : '—'}</Text>
+                </View>
+                <View style={[s.metricCell, { flex: 1, alignItems: 'flex-end' }]}>
+                  <Text style={s.tinyLabel}>cost to exit</Text>
+                  <Text style={[s.metricSmall, num]}>
+                    {i.value !== null && i.exitBps !== null ? `$${((i.value * i.exitBps) / 10000).toFixed(2)}` : '—'}
+                  </Text>
+                </View>
               </View>
             </View>
           ))}
-          <View style={[s.row, { borderBottomWidth: 0, marginTop: 6 }]}>
-            <Text style={s.rowTitle}>Total</Text>
-            <Text style={[s.rowValue, num, { color: T.accent }]}>${exitCost.toFixed(2)}</Text>
+          <View style={s.card}>
+            <View style={s.row}>
+              <Text style={s.totalLabel}>Total estimated exit</Text>
+              <Text style={[s.totalValue, num]}>${exitCost.toFixed(2)}</Text>
+            </View>
           </View>
-        </View>
+        </>
       )}
 
       {items && tab === 'exposure' && (
-        <View style={{ gap: 14 }}>
-          <Text style={s.label}>By issuer</Text>
-          {Object.entries(byIssuer).sort((a, b) => b[1] - a[1]).map(([issuer, v]) => {
-            const pct = total > 0 ? (v / total) * 100 : 0
-            return (
-              <View key={issuer} style={{ gap: 5 }}>
-                <View style={s.line}>
-                  <Text style={s.rowTitle}>{issuer}</Text>
-                  <Text style={[s.rowValue, num]}>{pct.toFixed(1)}%</Text>
+        <>
+          <View style={s.card}>
+            <Text style={s.kicker}>BY ISSUER</Text>
+            {Object.entries(byIssuer).sort((a, b) => b[1] - a[1]).map(([issuer, v]) => {
+              const pct = total > 0 ? (v / total) * 100 : 0
+              return (
+                <View key={issuer} style={{ gap: 6, marginTop: 8 }}>
+                  <View style={s.row}>
+                    <Text style={s.allocLabel}>{issuer}</Text>
+                    <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
+                  </View>
+                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(issuer) }]} /></View>
                 </View>
-                <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(issuer) }]} /></View>
-              </View>
-            )
-          })}
+              )
+            })}
+          </View>
 
-          <Text style={[s.label, { marginTop: 8 }]}>By holding</Text>
-          {items.map((i) => {
-            const pct = total > 0 ? ((i.value ?? 0) / total) * 100 : 0
-            return (
-              <View key={i.symbol} style={{ gap: 5 }}>
-                <View style={s.line}>
-                  <Text style={s.rowTitle}>{i.symbol}</Text>
-                  <Text style={[s.rowValue, num]}>{pct.toFixed(1)}%</Text>
+          <View style={s.card}>
+            <Text style={s.kicker}>BY ASSET</Text>
+            {items.map((i) => {
+              const pct = total > 0 ? ((i.value ?? 0) / total) * 100 : 0
+              return (
+                <View key={i.symbol} style={{ gap: 6, marginTop: 8 }}>
+                  <View style={s.row}>
+                    <Text style={s.allocLabel}>{i.symbol}</Text>
+                    <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
+                  </View>
+                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} /></View>
                 </View>
-                <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} /></View>
-              </View>
-            )
-          })}
-        </View>
+              )
+            })}
+          </View>
+        </>
       )}
 
       {items && tab === 'insights' && (
-        <View style={{ gap: 10 }}>
-          <Text style={s.faint}>
-            Not enough history yet. StockPass compares your holdings against its own measurements over time, and needs a
-            few days of data per token before it can show what changed.
-          </Text>
-        </View>
+        insights.length > 0 ? (
+          insights.map((i) => (
+            <View key={i.symbol} style={s.card}>
+              <View style={s.rowHead}>
+                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={34} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.symbol}>{i.symbol}</Text>
+                  <Text style={[s.issuerText, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
+                </View>
+              </View>
+              <Text style={[s.insightText, i.entryBps === null ? { color: T.faint } : { color: i.entryDelta! < 0 ? T.accent : T.down }]}>
+                {i.entryBps === null
+                  ? 'No executable quote right now'
+                  : `Entry cost ${i.entryDelta! < 0 ? '↓' : '↑'} ${Math.abs(i.entryDelta!)} bps vs 24h ago`}
+              </Text>
+            </View>
+          ))
+        ) : (
+          <View style={s.card}>
+            <Text style={s.tiny}>
+              Nothing changed meaningfully in the last 24 hours, or there is not enough history yet for these holdings.
+            </Text>
+          </View>
+        )
       )}
 
       {items && tab === 'opportunities' && (
-        <View style={{ gap: 12 }}>
+        <>
           {items.map((i) => {
             const cheaper = i.altEntryBps !== null && i.entryBps !== null && i.altEntryBps < i.entryBps
             const saving = cheaper ? (i.entryBps as number) - (i.altEntryBps as number) : 0
             const switching = i.exitBps !== null && i.altEntryBps !== null ? i.exitBps + i.altEntryBps : null
             const net = switching !== null ? saving - switching : null
             return (
-              <View key={i.symbol} style={s.opp}>
-                <View style={s.line}>
-                  <Text style={s.rowTitle}>{i.symbol}</Text>
-                  <Text style={[s.faint, !cheaper && { color: T.accent }]}>
-                    {cheaper ? 'cheaper issuer exists' : 'cheapest route'}
+              <View key={i.symbol} style={s.card}>
+                <View style={s.rowHead}>
+                  <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={34} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.symbol}>{i.symbol}</Text>
+                    <Text style={[s.issuerText, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
+                  </View>
+                  <Text style={[s.tiny, !cheaper && { color: T.accent }]}>
+                    {cheaper ? 'alternative exists' : 'cheapest route'}
                   </Text>
                 </View>
+
                 {cheaper && switching !== null ? (
                   <>
-                    <Text style={s.faint}>{i.altSymbol} is {saving} bps cheaper to enter. Switching costs {switching} bps.</Text>
-                    <Text style={[s.netGood, (net ?? 0) < 0 && s.netBad]}>
-                      Net result {(net ?? 0) >= 0 ? '+' : ''}{net} bps · {(net ?? 0) < 0 ? 'keep current position' : 'switching could pay off'}
+                    <View style={s.switchRow}>
+                      <View style={s.switchCell}>
+                        <Text style={s.tinyLabel}>current exit</Text>
+                        <Text style={[s.metricSmall, num]}>{i.exitBps} bps</Text>
+                      </View>
+                      <View style={s.switchCell}>
+                        <Text style={s.tinyLabel}>{i.altSymbol} entry</Text>
+                        <Text style={[s.metricSmall, num]}>{i.altEntryBps} bps</Text>
+                      </View>
+                      <View style={[s.switchCell, { alignItems: 'flex-end', flex: 1 }]}>
+                        <Text style={s.tinyLabel}>switching cost</Text>
+                        <Text style={[s.metricSmall, num, { color: T.warn }]}>{switching} bps</Text>
+                      </View>
+                    </View>
+                    <Text style={s.tiny}>
+                      {i.altSymbol} is {saving} bps cheaper to enter, but switching requires selling this position and
+                      entering the alternative. Net result {net! >= 0 ? '+' : ''}{net} bps.
                     </Text>
                   </>
                 ) : (
-                  <Text style={s.faint}>
-                    {cheaper ? 'No exit quote right now, so switching cannot be priced.' : 'You already hold the cheapest issuer for this stock.'}
+                  <Text style={s.tiny}>
+                    {cheaper
+                      ? 'No exit quote right now, so switching cannot be priced.'
+                      : 'You already hold the cheapest issuer for this stock.'}
                   </Text>
                 )}
               </View>
             )
           })}
-          <Text style={s.faint}>Cheapest to buy is not the same as cheapest for you.</Text>
-        </View>
+          <Text style={s.tiny}>Cheapest to buy is not the same as cheapest for you.</Text>
+        </>
       )}
     </ScrollView>
   )
@@ -244,31 +327,44 @@ export default function AnalyticsScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
-  content: { padding: 20, paddingBottom: 40, gap: 14 },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
-  title: { color: T.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.6 },
-  sub: { color: T.dim, fontSize: 14 },
-  tabs: { marginTop: 4 },
-  tab: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 14, borderWidth: 1, borderColor: T.border },
+  title: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
+
+  tab: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, borderWidth: 1, borderColor: T.border },
   tabOn: { backgroundColor: T.accent, borderColor: T.accent },
   tabText: { color: T.dim, fontSize: 13, fontWeight: '600' },
   tabTextOn: { color: T.bg, fontWeight: '700' },
-  label: { color: T.faint, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 },
-  hero: { color: T.text, fontSize: 38, fontWeight: '800', letterSpacing: -1.2, marginTop: 4 },
-  big: { color: T.text, fontSize: 26, fontWeight: '700', letterSpacing: -0.4, marginTop: 3 },
-  split: { flexDirection: 'row', gap: 16, borderTopWidth: 1, borderBottomWidth: 1, borderColor: T.border, paddingVertical: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: T.border },
-  line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
-  rowTitle: { color: T.text, fontSize: 16, fontWeight: '600' },
-  rowValue: { color: T.text, fontSize: 16, fontWeight: '700' },
-  track: { height: 6, borderRadius: 3, backgroundColor: T.border },
-  fill: { height: 6, borderRadius: 3 },
-  opp: { gap: 5, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: T.border },
-  netGood: { color: T.accent, fontSize: 14, fontWeight: '600' },
-  netBad: { color: T.warn },
-  faint: { color: T.faint, fontSize: 13, lineHeight: 19 },
-  tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
+
+  heroCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 18, gap: 4 },
+  card: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16, gap: 8 },
+  pairRow: { flexDirection: 'row', gap: 11 },
+  kicker: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  hero: { color: T.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2, marginTop: 4 },
+  metric: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 3 },
+  metricSmall: { color: T.text, fontSize: 17, fontWeight: '700' },
+  tiny: { color: T.faint, fontSize: 13, lineHeight: 18 },
+  tinyLabel: { color: T.faint, fontSize: 12 },
+
+  rowHead: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  symbol: { color: T.text, fontSize: 16, fontWeight: '700' },
+  issuerText: { fontSize: 13, fontWeight: '600' },
+  value: { color: T.text, fontSize: 16, fontWeight: '700' },
+  metricsRow: { flexDirection: 'row', gap: 24, marginTop: 2 },
+  metricCell: { gap: 1 },
+  switchRow: { flexDirection: 'row', gap: 20, marginTop: 4 },
+  switchCell: { gap: 1 },
+
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  allocLabel: { color: T.text, fontSize: 15, fontWeight: '600' },
+  allocPct: { color: T.dim, fontSize: 15, fontWeight: '700' },
+  track: { height: 7, borderRadius: 4, backgroundColor: T.border },
+  fill: { height: 7, borderRadius: 4 },
+
+  insightText: { fontSize: 15, fontWeight: '600' },
+  totalLabel: { color: T.text, fontSize: 16, fontWeight: '700' },
+  totalValue: { color: T.accent, fontSize: 24, fontWeight: '800' },
+
   warn: { color: T.warn, fontSize: 13 },
 })
-
