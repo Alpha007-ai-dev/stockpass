@@ -232,9 +232,16 @@ export default function PassportScreen() {
       )}
 
       {ok && (
-        <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${ticker}`)}>
-          <Text style={s.primaryText}>Buy {sym}</Text>
-        </Pressable>
+        <View style={s.ctaRow}>
+          <Pressable style={[s.primary, { flex: 1 }]} onPress={() => router.push(`/buy?symbol=${sym}`)}>
+            <Text style={s.primaryText}>Buy {sym}</Text>
+          </Pressable>
+          {balance !== null && balance > 0 && (
+            <Pressable style={[s.secondary, { flex: 1 }]} onPress={() => router.push(`/sell?symbol=${sym}`)}>
+              <Text style={s.secondaryText}>Sell</Text>
+            </Pressable>
+          )}
+        </View>
       )}
 
       <Text style={s.tiny}>
@@ -283,6 +290,10 @@ const s = StyleSheet.create({
   aboutRow: { gap: 2, paddingVertical: 5 },
   aboutValue: { color: T.text, fontSize: 14 },
 
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  ctaRow: { flexDirection: 'row', gap: 11, marginTop: 6 },
+  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  secondaryText: { color: T.text, fontSize: 16, fontWeight: '700' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+

@@ -12,10 +12,12 @@ export default function RootLayout() {
         <Stack.Screen name="passport" />
         <Stack.Screen name="compare" />
         <Stack.Screen name="buy" />
+        <Stack.Screen name="sell" />
         <Stack.Screen name="analytics" />
       </Stack>
       <StatusBar style="light" />
     </AppProviders>
   )
 }
+
 

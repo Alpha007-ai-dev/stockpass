@@ -85,9 +85,9 @@ export type HoldingRow = {
 
 export async function getHoldings(owner: string): Promise<HoldingRow[]> {
   const res = await fetch(`${BASE}/holdings?owner=${owner}`)
-  const json = await res.json()
-  if (!res.ok) throw new Error((json as any)?.error ?? `HTTP ${res.status}`)
-  return json as HoldingRow[]
+  const json: any = await res.json()
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`)
+  return Array.isArray(json) ? (json as HoldingRow[]) : ((json?.holdings ?? []) as HoldingRow[])
 }
 
 
@@ -134,3 +134,11 @@ export async function getCollateral(): Promise<Collateral[]> {
 
 
 
+
+
+export async function getUsdcBalance(owner: string): Promise<number> {
+  const res = await fetch(`${BASE}/holdings?owner=${owner}`)
+  const json: any = await res.json()
+  if (!res.ok) return 0
+  return Number(json?.usdc ?? 0)
+}

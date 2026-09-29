@@ -1,26 +1,26 @@
-﻿import { useCallback, useState } from 'react'
+﻿import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
-import { issuerColor, num, T } from '@/constants/theme'
 import { TokenIcon } from '@/components/token-icon'
-import { getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
-import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
+import { issuerColor, num, T } from '@/constants/theme'
+import { isUsable } from '@/lib/cost'
+import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
+import { getHoldings, getStats, getUsdcBalance, HoldingRow, Latest } from '@/lib/stats'
 
 type Item = HoldingRow & {
   shares: number
   value: number | null
   exitBps: number | null
-  entryBps: number | null
-  altSymbol: string | null
-  altEntryBps: number | null
 }
 
 export default function WalletScreen() {
   const router = useRouter()
-  const { account, connect } = useMobileWallet() as any
+  const { account, connect, disconnect } = useMobileWallet() as any
   const [items, setItems] = useState<Item[] | null>(null)
+  const [usdc, setUsdc] = useState<number | null>(null)
+  const [demo, setDemoState] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,10 +28,13 @@ export default function WalletScreen() {
     setBusy(true)
     setError(null)
     try {
-      const demo = await isDemo()
+      const asDemo = await isDemo()
+      setDemoState(asDemo)
+      const stats = await getStats()
+      const latest = new Map<string, Latest>(stats.latest.map((l) => [l.symbol, l]))
+
       let rows: HoldingRow[]
-      let stats = await getStats()
-      if (demo) {
+      if (asDemo) {
         const groups = await getGroups()
         const all = groups.flatMap((g) => g.tokens)
         rows = DEMO_HOLDINGS.map((d) => {
@@ -42,128 +45,173 @@ export default function WalletScreen() {
         const addr = account?.address ?? (await connect())?.address
         if (!addr) throw new Error('Wallet not connected')
         rows = await getHoldings(String(addr))
+        getUsdcBalance(String(addr)).then(setUsdc).catch(() => {})
       }
-      const latest = new Map<string, Latest>(stats.latest.map((l) => [l.symbol, l]))
 
-      const list: Item[] = rows.map((r) => {
-        const mine = latest.get(r.symbol)
-        const altSymbol = r.issuer === 'Ondo' ? `${r.ticker}x` : `${r.ticker}on`
-        const alt = latest.get(altSymbol)
+      setItems(rows.map((r) => {
+        const l = latest.get(r.symbol)
+        const shares = r.walletAmount * (l?.multiplier ?? 1)
         return {
           ...r,
-          shares: r.walletAmount * (mine?.multiplier ?? 1),
-          value: mine?.sell_px ? r.walletAmount * (mine.multiplier ?? 1) * mine.sell_px : null,
-          exitBps: mine?.quotable ? mine.exit_bps : null,
-          entryBps: mine?.quotable ? mine.entry_bps : null,
-          altSymbol: alt ? altSymbol : null,
-          altEntryBps: alt?.quotable ? alt.entry_bps : null,
+          shares,
+          value: l?.sell_px ? shares * l.sell_px : null,
+          exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
         }
-      })
-      setItems(list.sort((a, b) => b.shares - a.shares))
+      }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0)))
     } catch (e) {
       setError((e as Error).message)
     }
     setBusy(false)
   }, [account, connect])
 
+  useEffect(() => { isDemo().then((d) => { setDemoState(d); if (d) scan() }) }, [scan])
+
+  const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
+  const issuers = new Set(items?.map((i) => i.issuer)).size
   const hidden = items?.reduce((n, i) => n + (i.shares - i.walletAmount), 0) ?? 0
+  const addr = account?.address ? String(account.address) : null
+  const shortAddr = addr ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : null
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.content}>
-      <Text style={s.title}>What you really own</Text>
-      <Text style={s.sub}>Wallets show raw token counts. StockPass applies each issuer's multiplier.</Text>
+      <View style={s.header}>
+        <Text style={s.title}>Wallet</Text>
+        {demo && <Text style={s.demoTag}>DEMO</Text>}
+      </View>
 
-      <Pressable style={s.primary} onPress={scan} disabled={busy}>
-        {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{items ? 'Scan again' : 'Scan my wallet'}</Text>}
-      </Pressable>
-
-      {error && <Text style={s.error}>{error}</Text>}
-      {items?.length === 0 && <Text style={s.faint}>No tokenized stocks in this wallet yet.</Text>}
-
-      {items && items.length > 0 && (
-        <Pressable style={s.analyticsRow} onPress={() => router.push('/analytics')}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.analyticsTitle}>Portfolio analytics</Text>
-            <Text style={s.faint}>Costs · Allocation · Opportunities</Text>
-          </View>
-          <Text style={s.chev}>›</Text>
-        </Pressable>
-      )}
-
-      {hidden > 0.00001 && (
-        <View style={s.card}>
-          <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet doesn't show</Text>
-          <Text style={s.faint}>Reinvested dividends and corporate actions live in the multiplier.</Text>
+      {total !== null ? (
+        <View style={s.heroCard}>
+          <Text style={s.kicker}>TOTAL VALUE</Text>
+          <Text style={[s.hero, num]}>
+            ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </Text>
+          <Text style={s.tiny}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
+        </View>
+      ) : (
+        <View style={s.heroCard}>
+          <Text style={s.kicker}>YOUR HOLDINGS</Text>
+          <Text style={s.tiny}>
+            Wallets show raw token counts. StockPass applies each issuer's multiplier to show what you really own.
+          </Text>
+          <Pressable style={s.primary} onPress={scan} disabled={busy}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
+          </Pressable>
         </View>
       )}
 
-      {items?.map((i) => {
-        const cheaper = i.entryBps !== null && i.altEntryBps !== null && i.altEntryBps < i.entryBps
-        return (
-          <Pressable key={i.symbol} style={s.card} onPress={() => router.push(`/passport?symbol=${i.symbol}`)}>
-            <View style={s.row}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={36} />
-                <View style={{ gap: 2 }}>
-                  <Text style={s.symbol}>{i.symbol}</Text>
-                  <Text style={s.faint}>{i.issuer}</Text>
-                </View>
+      {error && <Text style={s.error}>{error}</Text>}
+
+      {usdc !== null && usdc > 0 && (
+        <View style={s.rowCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.kicker}>USDC BALANCE</Text>
+            <Text style={[s.metric, num]}>
+              ${usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+          </View>
+          <Text style={s.tiny}>available to buy</Text>
+        </View>
+      )}
+
+      {items && items.length > 0 && (
+        <>
+          <Text style={s.sectionLabel}>HOLDINGS</Text>
+
+          {items.map((i) => (
+            <Pressable key={i.symbol} style={s.card} onPress={() => router.push(`/passport?symbol=${i.symbol}`)}>
+              <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={40} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={s.symbol}>{i.symbol}</Text>
+                <Text style={[s.issuer, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                <Text style={[s.shares, num]}>{i.shares.toFixed(4)} {i.ticker}</Text>
-                <Text style={[s.faint, num]}>wallet shows {i.walletAmount.toFixed(4)}</Text>
+                <Text style={[s.value, num]}>{i.value !== null ? `$${i.value.toFixed(2)}` : '—'}</Text>
+                <Text style={[s.qty, num]}>{i.walletAmount.toFixed(4)} {i.symbol}</Text>
+                <Text style={s.tiny}>{i.exitBps !== null ? `exit ${i.exitBps} bps` : 'no quote'}</Text>
               </View>
+              <Text style={s.chev}>›</Text>
+            </Pressable>
+          ))}
+
+          {hidden > 0.00001 && (
+            <View style={s.noteCard}>
+              <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet does not show</Text>
+              <Text style={s.tiny}>
+                Wallets display raw token counts. Reinvested dividends live in each issuer's multiplier.
+              </Text>
             </View>
-            <View style={s.foot}>
-              <Text style={s.faint}>Exit cost {i.entryBps !== null ? `${i.entryBps} bps` : 'no quote'}</Text>
-              {cheaper && <Text style={s.accent}>{i.altSymbol} is {i.entryBps! - i.altEntryBps!} bps cheaper</Text>}
+          )}
+
+          <Pressable style={s.rowCard} onPress={() => router.push('/analytics')}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.analyticsTitle}>Portfolio Analytics</Text>
+              <Text style={s.tiny}>Costs · Exposure · Opportunities</Text>
             </View>
+            <Text style={s.chev}>›</Text>
           </Pressable>
-        )
-      })}
+        </>
+      )}
+
+      {items?.length === 0 && (
+        <View style={s.noteCard}>
+          <Text style={s.tiny}>No tokenized stocks in this wallet yet.</Text>
+        </View>
+      )}
+
+      {addr && !demo && (
+        <View style={s.rowCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.kicker}>CONNECTED</Text>
+            <Text style={[s.addr, num]}>{shortAddr}</Text>
+          </View>
+          <Pressable onPress={() => { disconnect?.(); setItems(null); setUsdc(null) }}>
+            <Text style={s.disconnect}>Disconnect</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {items && (
+        <Pressable style={s.secondary} onPress={scan} disabled={busy}>
+          {busy ? <ActivityIndicator color={T.text} /> : <Text style={s.secondaryText}>Refresh</Text>}
+        </Pressable>
+      )}
     </ScrollView>
   )
 }
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
-  content: { padding: 20, paddingBottom: 40, gap: T.gap },
-  title: { color: T.text, fontSize: 28, fontWeight: '700', letterSpacing: -0.6, marginTop: 8 },
-  sub: { color: T.dim, fontSize: 13 },
-  card: { backgroundColor: T.surface, borderRadius: 16, padding: 16, gap: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  symbol: { color: T.text, fontSize: 17, fontWeight: '600' },
-  shares: { color: T.accent, fontSize: 17, fontWeight: '600' },
-  foot: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingTop: 6 },
-  faint: { color: T.faint, fontSize: 13 },
-  accent: { color: T.accent, fontSize: 13, fontWeight: '600' },
-  costKicker: { color: T.faint, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  analyticsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderRadius: 16, padding: 16, marginTop: 4 },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
+
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  title: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  demoTag: { color: T.warn, fontSize: 11, fontWeight: '800', letterSpacing: 1, borderWidth: 1, borderColor: '#4A3A18', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+
+  heroCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 18, gap: 4 },
+  kicker: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  hero: { color: T.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2, marginTop: 4 },
+  metric: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 3 },
+  tiny: { color: T.faint, fontSize: 13, lineHeight: 18 },
+
+  sectionLabel: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginTop: 12, marginBottom: 1 },
+
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14 },
+  rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16 },
+  noteCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16, gap: 5 },
+
+  symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
+  issuer: { fontSize: 13, fontWeight: '600' },
+  value: { color: T.text, fontSize: 17, fontWeight: '700' },
+  qty: { color: T.dim, fontSize: 13 },
+  chev: { color: T.faint, fontSize: 18 },
+  accent: { color: T.accent, fontSize: 14, fontWeight: '600' },
   analyticsTitle: { color: T.text, fontSize: 16, fontWeight: '700' },
-  chev: { color: T.faint, fontSize: 22 },
-  heroRow: { flexDirection: 'row', gap: 16 },
-  tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
-  allocLabel: { color: T.text, fontSize: 14, fontWeight: '600' },
-  allocPct: { color: T.dim, fontSize: 14, fontWeight: '600' },
-  track: { height: 6, borderRadius: 3, backgroundColor: T.border },
-  fill: { height: 6, borderRadius: 3 },
-  costBig: { color: T.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
-  costSmall: { color: T.text, fontSize: 15, fontWeight: '600' },
+  addr: { color: T.text, fontSize: 16, fontWeight: '600', marginTop: 3 },
+  disconnect: { color: T.warn, fontSize: 14, fontWeight: '600' },
+
   error: { color: T.warn, fontSize: 13 },
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  primary: { backgroundColor: T.accent, borderRadius: 12, height: 50, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
+  secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  secondaryText: { color: T.text, fontSize: 15, fontWeight: '600' },
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
