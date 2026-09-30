@@ -55,7 +55,7 @@ export default function SellScreen() {
   const amount = balance !== null ? (balance * pct) / 100 : null
   const shares = amount !== null && latest ? amount * latest.multiplier : null
   const grossUsd = shares !== null && latest?.sell_px ? shares * latest.sell_px : null
-  const exitCostUsd = grossUsd !== null && ok ? (grossUsd * (latest!.exit_bps as number)) / 10000 : null
+  const exitCostUsd = grossUsd !== null && ok ? (grossUsd * Math.max(0, latest!.exit_bps as number)) / 10000 : null
   const feeUsd = grossUsd !== null ? (grossUsd * PLATFORM_FEE_BPS) / 10000 : null
   const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
     ? grossUsd - exitCostUsd - feeUsd - NETWORK_FEE_USD
@@ -143,7 +143,7 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>${grossUsd.toFixed(2)}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>Exit cost ({ok ? latest!.exit_bps : '—'} bps)</Text>
+                <Text style={s.label}>Exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
                 <Text style={[s.value, num]}>{exitCostUsd !== null ? `-$${exitCostUsd.toFixed(2)}` : '—'}</Text>
               </View>
               <View style={s.row}>
@@ -212,4 +212,5 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
 

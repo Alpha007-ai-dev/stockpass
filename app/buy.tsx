@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
@@ -8,9 +8,9 @@ import { isUsable } from '@/lib/cost'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
 import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '@/lib/swap'
-import { getStats, Latest, TokenRow } from '@/lib/stats'
+import { getStats, getUsdcBalance, Latest, TokenRow } from '@/lib/stats'
 
-const SIZE_USD = 1000
+const DEFAULT_SIZE = 1000
 const NETWORK_FEE_USD = 0.01
 const MIN_SAVING_BPS = 5
 
@@ -24,6 +24,8 @@ export default function BuyScreen() {
   const [options, setOptions] = useState<Option[] | null>(null)
   const [selected, setSelected] = useState<Option | null>(null)
   const [quote, setQuote] = useState<Quote | null>(null)
+  const [sizeText, setSizeText] = useState(String(DEFAULT_SIZE))
+  const [usdc, setUsdc] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -46,8 +48,14 @@ export default function BuyScreen() {
       .catch((e) => setStatus((e as Error).message))
   }, [tk, symbol])
 
+  useEffect(() => {
+    const addr = account?.address
+    if (addr) getUsdcBalance(String(addr)).then(setUsdc).catch(() => {})
+  }, [account])
+
+  const SIZE_USD = Math.max(0, Number(sizeText.replace(/[^0-9.]/g, '')) || 0)
   const alternative = options?.find((o) => o.token.symbol !== selected?.token.symbol) ?? null
-  const issuerCostUsd = selected ? (selected.entry / 10000) * SIZE_USD : null
+  const issuerCostUsd = selected ? (Math.max(0, selected.entry) / 10000) * SIZE_USD : null
   const feeUsd = (PLATFORM_FEE_BPS / 10000) * SIZE_USD
   const totalUsd = issuerCostUsd !== null ? issuerCostUsd + feeUsd + NETWORK_FEE_USD : null
   const totalBps = totalUsd !== null ? (totalUsd / SIZE_USD) * 10000 : null
@@ -116,8 +124,35 @@ export default function BuyScreen() {
         <>
           <View style={s.card}>
             <Text style={s.kicker}>YOU PAY</Text>
-            <Text style={[s.hero, num]}>${SIZE_USD.toLocaleString()}</Text>
-            <Text style={s.tiny}>USDC</Text>
+            <View style={s.inputRow}>
+              <Text style={s.dollar}>$</Text>
+              <TextInput
+                value={sizeText}
+                onChangeText={(t) => { setSizeText(t); setQuote(null) }}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={T.faint}
+                style={[s.input, num]}
+              />
+              <Text style={s.inputUnit}>USDC</Text>
+            </View>
+            <View style={s.quickRow}>
+              {[100, 500, 1000].map((v) => (
+                <Pressable key={v} onPress={() => { setSizeText(String(v)); setQuote(null) }} style={s.quick}>
+                  <Text style={s.quickText}>${v}</Text>
+                </Pressable>
+              ))}
+              {usdc !== null && usdc > 0 && (
+                <Pressable onPress={() => { setSizeText(usdc.toFixed(2)); setQuote(null) }} style={s.quick}>
+                  <Text style={s.quickText}>Max</Text>
+                </Pressable>
+              )}
+            </View>
+            {usdc !== null && (
+              <Text style={s.tiny}>
+                Balance ${usdc.toFixed(2)} USDC{SIZE_USD > usdc ? ' · not enough for this size' : ''}
+              </Text>
+            )}
 
             <View style={s.divider} />
 
@@ -131,7 +166,7 @@ export default function BuyScreen() {
           <View style={s.card}>
             <Text style={s.kicker}>COST BREAKDOWN</Text>
             <View style={s.row}>
-              <Text style={s.label}>Issuer cost ({selected.entry} bps)</Text>
+              <Text style={s.label}>Issuer cost ({selected.entry < 0 ? '~0' : selected.entry} bps)</Text>
               <Text style={[s.value, num]}>${issuerCostUsd!.toFixed(2)}</Text>
             </View>
             <View style={s.row}>
@@ -186,7 +221,7 @@ export default function BuyScreen() {
             </View>
           )}
 
-          <Pressable style={s.primary} onPress={quote ? sign : prepare} disabled={busy}>
+          <Pressable style={[s.primary, SIZE_USD <= 0 && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0}>
             {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? 'Review and sign' : 'Review Purchase'}</Text>}
           </Pressable>
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
@@ -214,6 +249,13 @@ const s = StyleSheet.create({
   hero: { color: T.text, fontSize: 32, fontWeight: '800', letterSpacing: -1 },
   heroUnit: { color: T.dim, fontSize: 18, fontWeight: '600' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  dollar: { color: T.text, fontSize: 30, fontWeight: '800' },
+  input: { flex: 1, color: T.text, fontSize: 32, fontWeight: '800', letterSpacing: -1, padding: 0 },
+  inputUnit: { color: T.dim, fontSize: 16, fontWeight: '600' },
+  quickRow: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  quick: { borderWidth: 1, borderColor: T.border, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8 },
+  quickText: { color: T.dim, fontSize: 14, fontWeight: '600' },
 
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   label: { color: T.dim, fontSize: 15 },
@@ -230,3 +272,5 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
+
+

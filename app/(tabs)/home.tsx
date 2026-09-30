@@ -11,7 +11,8 @@ import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
 import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
-import { getHoldings, getSeries, getStats, HoldingRow, Latest } from '@/lib/stats'
+import { getHoldings, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
+import { InsightCard } from '@/components/insight-card'
 
 type Item = HoldingRow & {
   shares: number
@@ -19,6 +20,9 @@ type Item = HoldingRow & {
   entryBps: number | null
   exitBps: number | null
   entryDelta: number | null
+  altSymbol: string | null
+  altIssuer: string | null
+  altEntryBps: number | null
 }
 
 export default function HomeScreen() {
@@ -26,6 +30,7 @@ export default function HomeScreen() {
   const { account, connect } = useMobileWallet() as any
   const [items, setItems] = useState<Item[] | null>(null)
   const [latest, setLatest] = useState<Record<string, Latest>>({})
+  const [hist, setHist] = useState<Record<string, History>>({})
   const [last, setLast] = useState<Purchase | null>(null)
   const [prev, setPrev] = useState<Snapshot | null>(null)
   const [demo, setDemoState] = useState(false)
@@ -44,6 +49,9 @@ export default function HomeScreen() {
       const map: Record<string, Latest> = {}
       stats.latest.forEach((r) => { map[r.symbol] = r })
       setLatest(map)
+      const h: Record<string, History> = {}
+      stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
+      setHist(h)
 
       let rows: HoldingRow[]
       if (asDemo) {
@@ -61,16 +69,27 @@ export default function HomeScreen() {
         rows = await getHoldings(String(addr))
       }
 
+      const groupsForAlt = await getGroups()
       const base: Item[] = rows.map((r) => {
         const l = map[r.symbol]
         const shares = r.walletAmount * (l?.multiplier ?? 1)
+        const peers = (groupsForAlt.find((g) => g.ticker === r.ticker)?.tokens ?? [])
+          .filter((p) => p.symbol !== r.symbol)
+          .map((p) => ({ token: p, l: map[p.symbol] }))
+          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
+        const cheapest = peers.length
+          ? peers.reduce((a, b) => ((a.l!.entry_bps as number) <= (b.l!.entry_bps as number) ? a : b))
+          : null
         return {
           ...r,
           shares,
-          value: l?.buy_px ? shares * l.buy_px : null,
+          value: l?.sell_px ? shares * l.sell_px : null,
           entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
           exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
           entryDelta: null,
+          altSymbol: cheapest ? cheapest.token.symbol : null,
+          altIssuer: cheapest ? cheapest.token.issuer : null,
+          altEntryBps: cheapest ? (cheapest.l!.entry_bps as number) : null,
         }
       }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
       setItems(base)
@@ -182,36 +201,9 @@ export default function HomeScreen() {
         <>
           <Text style={s.sectionLabel}>THINGS WORTH KNOWING</Text>
 
-          {items.slice(0, 4).map((i) => {
-            const delta = i.entryDelta
-            const hasDelta = delta !== null && Math.abs(delta) >= 1
-            return (
-              <Pressable key={i.symbol} style={s.card} onPress={() => router.push(`/passport?symbol=${i.symbol}`)}>
-                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={40} />
-
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={s.symbol}>{i.symbol}</Text>
-                  <Text style={s.issuer}>{i.issuer}</Text>
-                </View>
-
-                <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                  <Text style={[s.entry, num, i.entryBps === null && { color: T.faint }]}>
-                    {i.entryBps !== null ? `${i.entryBps} bps` : '—'}
-                  </Text>
-                  {i.exitBps !== null && <Text style={[s.exit, num]}>{i.exitBps} bps</Text>}
-                  {i.entryBps === null ? (
-                    <Text style={s.noQuote}>No executable quote</Text>
-                  ) : hasDelta ? (
-                    <Text style={[s.delta, { color: delta! < 0 ? T.accent : T.down }]}>
-                      Entry cost {delta! < 0 ? '↓' : '↑'} {Math.abs(delta!)} bps
-                    </Text>
-                  ) : null}
-                </View>
-
-                <Text style={s.chev}>›</Text>
-              </Pressable>
-            )
-          })}
+          {items.slice(0, 4).map((i) => (
+            <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} />
+          ))}
         </>
       )}
 
@@ -301,3 +293,5 @@ const s = StyleSheet.create({
   secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 48, alignItems: 'center', justifyContent: 'center' },
   secondaryText: { color: T.text, fontSize: 15, fontWeight: '600' },
 })
+
+
