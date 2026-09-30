@@ -1,0 +1,162 @@
+# StockPass
+
+**What you really pay to own a stock on-chain.**
+
+A Solana Mobile app that measures the real cost of owning tokenized equities. Everyone shows you the token price. StockPass shows you what it actually costs to buy it, hold it, exit it, and what you can do with it once you own it.
+
+Built for the CLOCK IN hackathon (Radiants / Solana Mobile).
+
+---
+
+## The problem
+
+A tokenized stock looks simple. It is not.
+
+**1. Your wallet lies.** Tokenized equities use the Token-2022 scaled-UI-amount extension. Your wallet shows the raw token count; the real share count is that number multiplied by an on-chain multiplier that changes when dividends are reinvested. Holding 10.56 SPYx is not holding 10.56 shares.
+
+**2. Token prices are not comparable.** Two issuers of the same stock apply different multipliers. Raw prices can look ~41 bps apart when the real per-share difference is ~4 bps. The rest is token scaling, not market disagreement.
+
+**3. Price is not cost.** What you pay is the executable round-trip cost on-chain. In our measurements that ranges from 9 to 90+ bps depending on issuer, stock and time of day — and it is invisible on any price chart.
+
+**4. Sometimes there is no market at all.** Many tokens have no executable quote, especially outside US market hours. A price that cannot be traded is not a price.
+
+---
+
+## What the app does
+
+| Screen | Question it answers |
+|---|---|
+| **Home** | What should I know right now about what I own? |
+| **Markets** | What can I buy, and what does entry cost? |
+| **DeFi** | What can I do with what I own? |
+| **Wallet** | What exactly do I own? |
+| **Passport** | What exactly is this token? |
+| **Compare** | Which issuer is currently cheaper? |
+| **Buy / Sell** | What will this transaction actually cost me? |
+| **Portfolio Analytics** | What does my ownership actually cost me? |
+
+### Signature features
+
+- **Price normalization** — raw token price → per-share price, with the multiplier read live from the chain. The 41 bps → 4 bps moment.
+- **Cost to go on-chain** — traditional reference price → market deviation → execution cost → total. Three separate metrics, never conflated.
+- **Switching cost** — a cheaper issuer is not automatically better for an existing holder. Exit + re-entry is priced explicitly.
+- **DeFi utility** — which of your holdings are accepted as collateral, at what LTV and borrow rate, and which are not accepted at all.
+- **Marketability** — LIVE / LIMITED / NO MARKET, derived from executable quote availability, not from a made-up health score.
+
+---
+
+## What we measured
+
+All numbers below come from our own collector, not from documentation.
+
+### Execution cost by issuer (round trip, $1,000 size)
+
+| | Weekday (market open) | Weekend |
+|---|---|---|
+| xStocks | 22–26 bps | 22–27 bps |
+| Ondo | 32–37 bps | 41–53 bps |
+| Backpack | 25 bps | 25–30 bps |
+
+Ondo's cost roughly doubles when US markets are closed. xStocks stays flat.
+
+### Normalized price difference between issuers
+
+Typically **0–7 bps** with markets open. Weekend outliers up to 25 bps. The apparent 41 bps gap on SPY was almost entirely token scaling, not price disagreement.
+
+### Switching is almost always loss-making
+
+Every observed issuer switch cost more than it saved: **−13 to −84 bps**. This is why the app shows switching cost explicitly instead of recommending "the cheapest issuer".
+
+### No executable quote is common
+
+Many smaller tokens return no quote at all, especially on weekends. One token (TSMx) showed a 467 bps round trip — not a price, a broken market. The app labels these rather than pretending they are tradable.
+
+### Collateral: same token, different terms
+
+SPYx is accepted on two Kamino markets at the same time:
+
+| Market | Max LTV | Borrow APY |
+|---|---|---|
+| Kamino xStocks Market | 73% | 4.44% |
+| Kamino Sentora xStocks | 72% | 1.01% |
+
+A **4.4× difference** in borrowing cost for the identical token. Ondo tokens are not accepted as collateral in either market.
+
+---
+
+## Architecture
+
+```
+Solana Mobile (Seeker)
+        │
+   React Native / Expo SDK 55
+   Expo Router · Solana Kit · Mobile Wallet Adapter
+        │
+        ├── Jupiter Ultra API ──── executable buy/sell quotes
+        ├── Solana RPC ─────────── Token-2022 multiplier, supply, holdings
+        ├── Kamino public API ──── collateral terms
+        └── StockPass Collector ── historical measurements
+                │
+        Cloudflare Worker + D1
+        every 5 minutes, rotating across 110+ tokens
+```
+
+The collector is a separate repo: [stockpass-collector](https://github.com/Alpha007-ai-dev/stockpass-collector)
+
+### Issuers tracked
+
+- **xStocks** (Backed Assets JE) — 55 stocks
+- **Ondo Global Markets** — 55 stocks
+- **Backpack Securities** — 11 stocks
+
+The app is issuer-agnostic: adding a fourth issuer requires no UI changes.
+
+---
+
+## Running it
+
+```bash
+npm install
+npx expo run:android
+```
+
+Requires a Solana Mobile device or an Android device with a Mobile Wallet Adapter compatible wallet installed.
+
+The app talks to a deployed collector. No API keys are needed on the client — all keys live in the Worker.
+
+### Demo mode
+
+Tap **Explore with a demo portfolio** on Home. This loads four real tokens with real live prices and multipliers, using sample quantities. It is clearly labelled as a demo, and buying is disabled in this mode.
+
+---
+
+## Fee
+
+StockPass takes **5 bps** on swaps it routes, charged on the USDC side. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
+
+We started at 10 bps and lowered it: in our measurements 10 bps frequently consumed the entire advantage the app had found, which made the core feature pointless.
+
+---
+
+## What we deliberately did not do
+
+- **No invented data.** Where a metric cannot be measured, the app shows `—` or "No executable quote" instead of a plausible-looking number.
+- **No purchase-relative P&L.** We have no purchase history, so we never claim one. Portfolio change is labelled "since last snapshot".
+- **No risk or health scores.** Every number shown is measured or derived from a measurement.
+- **No DeFi execution.** The DeFi tab is informational with outbound links. StockPass does not deposit or borrow on your behalf.
+- **Supply is not liquidity.** We show token supply as supply, and never imply it means tradability.
+
+---
+
+## Known limitations
+
+- Measurements are taken at a fixed $1,000 size. Larger or smaller trades may differ, though our earlier tests across $100 / $1,000 / $10,000 showed minimal variation.
+- The traditional reference feed uses a free IEX-based tier, which does not cover the full US market. Stale or wide quotes are flagged and excluded rather than shown as a premium.
+- US market holidays are not handled yet in the market-state logic.
+- Each token is measured roughly every 45 minutes, so the app shows recent, not real-time, historical context. Live quotes at the moment of trading come directly from Jupiter.
+
+---
+
+## Licence
+
+MIT
