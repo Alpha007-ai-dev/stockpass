@@ -11,7 +11,7 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { compact, getCollateral, getHoldings, getStats, getUnderlying, History, Latest, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
+import { compact, getCollateral, getHoldings, getStats, getReliability, getUnderlying, History, Latest, TokenReliability, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 
 type Tab = 'overview' | 'costs' | 'details'
@@ -36,6 +36,7 @@ export default function PassportScreen() {
   const [markets, setMarkets] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [under, setUnder] = useState<{ profile: UnderlyingProfile | null; events: UnderlyingEvent[] }>({ profile: null, events: [] })
+  const [rel, setRel] = useState<TokenReliability | null>(null)
 
   const isOndo = sym.endsWith('on')
   const isBp = sym.endsWith('bp')
@@ -62,6 +63,7 @@ export default function PassportScreen() {
       .catch(() => {})
 
     getUnderlying(ticker).then(setUnder).catch(() => {})
+    getReliability(sym).then(setRel).catch(() => {})
   }, [sym, ticker])
 
   useEffect(() => {
@@ -180,9 +182,41 @@ export default function PassportScreen() {
           )}
 
           <View style={s.card}>
-            <Text style={s.kicker}>AVAILABILITY</Text>
-            <Text style={[s.metric, num]}>{avail !== null ? `${(avail * 100).toFixed(0)}%` : '—'}</Text>
-            <Text style={s.tiny}>{samples} measurements at $1,000 test size</Text>
+            <Text style={s.kicker}>MEASURED RELIABILITY</Text>
+
+            {rel?.open && rel.open.min_entry !== null && rel.open.max_entry !== null && (
+              <View style={s.row}>
+                <Text style={s.label}>Typical entry</Text>
+                <Text style={[s.value, num]}>
+                  {rel.open.min_entry === rel.open.max_entry
+                    ? `${rel.open.min_entry} bps`
+                    : `${rel.open.min_entry}–${rel.open.max_entry} bps`}
+                </Text>
+              </View>
+            )}
+
+            {rel?.open?.avg_entry !== null && rel?.open?.avg_entry !== undefined && (
+              <View style={s.row}>
+                <Text style={s.label}>Average entry</Text>
+                <Text style={[s.value, num]}>{rel.open.avg_entry.toFixed(1)} bps</Text>
+              </View>
+            )}
+
+            <View style={s.row}>
+              <Text style={s.label}>Quote availability</Text>
+              <Text style={[s.value, num, rel?.overall?.availability !== null && rel?.overall?.availability !== undefined && rel.overall.availability < 70 && { color: T.warn }]}>
+                {rel?.overall?.availability !== null && rel?.overall?.availability !== undefined
+                  ? `${rel.overall.availability}%`
+                  : avail !== null ? `${(avail * 100).toFixed(0)}%` : '—'}
+              </Text>
+            </View>
+
+            <Text style={s.tiny}>
+              {rel?.open?.samples ? `${rel.open.samples} measurements during open market` : `${samples} measurements`}
+              {rel?.overall?.samples ? ` · ${rel.overall.samples} in total` : ''}
+              {rel?.open?.since ? `, since ${new Date(rel.open.since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}
+              . Measured at a $1,000 test size.
+            </Text>
           </View>
         </>
       )}

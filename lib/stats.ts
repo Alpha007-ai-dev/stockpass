@@ -171,3 +171,21 @@ export async function getUnderlying(ticker: string): Promise<{
   const json: any = await res.json()
   return { profile: json?.profile ?? null, events: json?.events ?? [] }
 }
+export type TokenReliability = {
+  open: {
+    samples: number
+    availability: number | null
+    min_entry: number | null
+    max_entry: number | null
+    avg_entry: number | null
+    since: number | null
+  } | null
+  overall: { samples: number; availability: number | null } | null
+}
+
+export async function getReliability(symbol: string): Promise<TokenReliability | null> {
+  const res = await fetch(`${BASE}/reliability?symbol=${symbol}`)
+  if (!res.ok) return null
+  const json: any = await res.json()
+  return { open: json?.open ?? null, overall: json?.overall ?? null }
+}

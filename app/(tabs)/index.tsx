@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
@@ -9,6 +9,7 @@ import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups, Group } from '@/lib/pairs'
 import { getSeries, getStats, History, Latest, SeriesPoint, TokenRow } from '@/lib/stats'
+import { EarningsIcon } from '@/components/event-icons'
 
 type Row = { token: TokenRow; l: Latest | undefined; spark: number[] | null }
 
@@ -33,6 +34,7 @@ export default function MarketScreen() {
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [groups, setGroups] = useState<Group[]>([])
   const [hist, setHist] = useState<Record<string, History>>({})
+  const [events, setEvents] = useState<Record<string, { date: string; detail: string | null }>>({})
   const [sparks, setSparks] = useState<Record<string, number[]>>({})
   const [filter, setFilter] = useState<string>('all')
   const [mapFilter, setMapFilter] = useState<MapFilter>('all')
@@ -63,6 +65,20 @@ export default function MarketScreen() {
   }, [state])
 
   useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    fetch('https://stockpass-collector.stockpass-dev.workers.dev/underlying')
+      .then((r) => r.json())
+      .then((j: any) => {
+        const m: Record<string, { date: string; detail: string | null }> = {}
+        for (const e of j?.upcoming ?? []) {
+          if (e.kind !== 'earnings') continue
+          if (!m[e.ticker]) m[e.ticker] = { date: e.event_date, detail: e.detail ?? null }
+        }
+        setEvents(m)
+      })
+      .catch(() => {})
+  }, [])
 
   const rows = useMemo(() => {
     const q = query.trim().toUpperCase()
@@ -170,6 +186,22 @@ export default function MarketScreen() {
               </View>
             </View>
 
+            {(() => {
+              const ev = events[token.ticker]
+              if (!ev) return null
+              const days = Math.round((new Date(ev.date + 'T12:00:00Z').getTime() - Date.now()) / 86400000)
+              if (days < 0 || days > 30) return null
+              return (
+                <View style={s.eventBadge}>
+                  <EarningsIcon size={15} color="#A78BFA" />
+                  <Text style={s.eventText}>
+                    Earnings {new Date(ev.date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                    {days <= 7 ? ` · in ${days}d` : ''}
+                  </Text>
+                </View>
+              )
+            })()}
+
             <View style={s.cardBottom}>
               <View style={s.metric}>
                 <Text style={s.metricLabel}>entry/exit</Text>
@@ -234,6 +266,8 @@ const s = StyleSheet.create({
   issuer: { fontSize: 13, fontWeight: '600', marginTop: 1 },
   price: { color: T.text, fontSize: 17, fontWeight: '700' },
   status: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
+  eventBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', backgroundColor: '#1E1A2E', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  eventText: { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
   cardBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 22 },
   metric: { gap: 1 },
   metricLabel: { color: T.faint, fontSize: 12 },
