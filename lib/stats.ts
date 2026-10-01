@@ -1,4 +1,4 @@
-﻿const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev'
+const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev'
 
 export type Latest = {
   symbol: string
@@ -141,4 +141,33 @@ export async function getUsdcBalance(owner: string): Promise<number> {
   const json: any = await res.json()
   if (!res.ok) return 0
   return Number(json?.usdc ?? 0)
+}
+
+export type UnderlyingProfile = {
+  ticker: string
+  name: string | null
+  industry: string | null
+  exchange: string | null
+  country: string | null
+  market_cap: number | null
+  employees: number | null
+  ipo: string | null
+  weburl: string | null
+}
+
+export type UnderlyingEvent = {
+  kind: string
+  event_date: string
+  detail: string | null
+  amount: number | null
+}
+
+export async function getUnderlying(ticker: string): Promise<{
+  profile: UnderlyingProfile | null
+  events: UnderlyingEvent[]
+}> {
+  const res = await fetch(`${BASE}/underlying?ticker=${ticker}`)
+  if (!res.ok) return { profile: null, events: [] }
+  const json: any = await res.json()
+  return { profile: json?.profile ?? null, events: json?.events ?? [] }
 }

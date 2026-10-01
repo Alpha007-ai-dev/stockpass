@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CostTimeline } from '@/components/cost-timeline'
@@ -6,11 +6,12 @@ import { NormalizationHero } from '@/components/normalization-hero'
 import { TokenIcon } from '@/components/token-icon'
 import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
+import { EarningsIcon } from '@/components/event-icons'
 import { issuerColor, num, T } from '@/constants/theme'
 import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { compact, getCollateral, getHoldings, getStats, History, Latest, TokenRow } from '@/lib/stats'
+import { compact, getCollateral, getHoldings, getStats, getUnderlying, History, Latest, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 
 type Tab = 'overview' | 'costs' | 'details'
@@ -34,6 +35,7 @@ export default function PassportScreen() {
   const [balance, setBalance] = useState<number | null>(null)
   const [markets, setMarkets] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [under, setUnder] = useState<{ profile: UnderlyingProfile | null; events: UnderlyingEvent[] }>({ profile: null, events: [] })
 
   const isOndo = sym.endsWith('on')
   const isBp = sym.endsWith('bp')
@@ -58,6 +60,8 @@ export default function PassportScreen() {
     getCollateral()
       .then((c) => setMarkets(c.filter((m) => m.symbol === sym).length))
       .catch(() => {})
+
+    getUnderlying(ticker).then(setUnder).catch(() => {})
   }, [sym, ticker])
 
   useEffect(() => {
@@ -229,13 +233,53 @@ export default function PassportScreen() {
 
           {(() => {
             const si = stockInfo(ticker)
-            if (!si) return null
+            const p = under.profile
+            const earn = under.events.find((e) => e.kind === 'earnings' && e.event_date >= new Date().toISOString().slice(0, 10))
+            if (!si && !p) return null
+            const cap = p?.market_cap ? (p.market_cap >= 1e6 ? `$${(p.market_cap / 1e6).toFixed(2)}T` : `$${(p.market_cap / 1e3).toFixed(1)}B`) : null
             return (
               <View style={s.card}>
                 <Text style={s.kicker}>THE UNDERLYING</Text>
-                <Text style={s.underName}>{si.name}</Text>
-                <Text style={s.underMeta}>{si.kind} · {si.exchange} · {si.sector}</Text>
-                <Text style={s.underText}>{si.summary}</Text>
+                <Text style={s.underName}>{si?.name ?? p?.name}</Text>
+                {si && <Text style={s.underMeta}>{si.kind} · {si.exchange} · {si.sector}</Text>}
+                {si && <Text style={s.underText}>{si.summary}</Text>}
+
+                {p && (
+                  <>
+                    <View style={s.divider} />
+                    {cap && (
+                      <View style={s.row}>
+                        <Text style={s.label}>Market cap</Text>
+                        <Text style={[s.value, num]}>{cap}</Text>
+                      </View>
+                    )}
+                    {p.industry && (
+                      <View style={s.row}>
+                        <Text style={s.label}>Industry</Text>
+                        <Text style={s.value}>{p.industry}</Text>
+                      </View>
+                    )}
+                    {p.ipo && (
+                      <View style={s.row}>
+                        <Text style={s.label}>Listed since</Text>
+                        <Text style={[s.value, num]}>{p.ipo.slice(0, 4)}</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                {earn && (
+                  <View style={s.eventRow}>
+                    <EarningsIcon size={22} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.eventTitle}>Next earnings</Text>
+                      <Text style={s.tiny}>
+                        {new Date(earn.event_date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {earn.detail ? ` · ${earn.detail}` : ''}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
             )
           })()}
@@ -309,6 +353,8 @@ const s = StyleSheet.create({
   fill: { height: 7, borderRadius: 4, backgroundColor: T.accent },
   barValue: { color: T.text, fontSize: 13, width: 28, textAlign: 'right' },
 
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, marginTop: 6 },
+  eventTitle: { color: T.text, fontSize: 15, fontWeight: '700' },
   accrued: { color: T.accent, fontSize: 16, fontWeight: '600', marginTop: 2 },
   underName: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   underMeta: { color: T.accent, fontSize: 14, fontWeight: '600' },
