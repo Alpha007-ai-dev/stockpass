@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CostTimeline } from '@/components/cost-timeline'
@@ -188,7 +188,15 @@ export default function PassportScreen() {
           <View style={s.card}>
             <Text style={s.kicker}>OWNERSHIP</Text>
             <Text style={[s.metric, num]}>1 token = {mine.multiplier.toFixed(4)} shares</Text>
-            <Text style={s.tiny}>Read on-chain from the Token-2022 multiplier.</Text>
+            {mine.multiplier > 1.0001 && (
+              <Text style={s.accrued}>
+                +{((mine.multiplier - 1) * 100).toFixed(2)}% has accrued into the token since launch
+              </Text>
+            )}
+            <Text style={s.tiny}>
+              Read on-chain from the Token-2022 multiplier. Reinvested dividends raise it over time, so the same
+              token represents more shares than it did at launch.
+            </Text>
             {shares !== null && (
               <>
                 <View style={s.divider} />
@@ -301,6 +309,7 @@ const s = StyleSheet.create({
   fill: { height: 7, borderRadius: 4, backgroundColor: T.accent },
   barValue: { color: T.text, fontSize: 13, width: 28, textAlign: 'right' },
 
+  accrued: { color: T.accent, fontSize: 16, fontWeight: '600', marginTop: 2 },
   underName: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   underMeta: { color: T.accent, fontSize: 14, fontWeight: '600' },
   underText: { color: T.dim, fontSize: 15, lineHeight: 22, marginTop: 4 },
