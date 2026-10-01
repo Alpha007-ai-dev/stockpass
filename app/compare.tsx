@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { issuerColor, num, T } from '@/constants/theme'
 import { TokenIcon } from '@/components/token-icon'
-import { isUsable } from '@/lib/cost'
+import { bpsLabel, isUsable } from '@/lib/cost'
 import { getGroups, Group } from '@/lib/pairs'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
@@ -114,7 +114,7 @@ export default function CompareScreen() {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.cost, num, isBest && s.accent]}>
-                  {!l ? 'collecting' : ok ? `${l.entry_bps} bps` : l.quotable ? 'no real market' : 'no quote'}
+                  {!l ? 'collecting' : ok ? bpsLabel(l.entry_bps) : l.quotable ? 'no real market' : 'no quote'}
                 </Text>
                 <Text style={s.faint}>entry cost</Text>
               </View>
@@ -164,7 +164,7 @@ export default function CompareScreen() {
             <View style={s.switchDivider} />
             <View style={s.row}>
               <Text style={s.switchLabel}>Cost to exit to USDC</Text>
-              <Text style={[s.switchValue, num]}>{ok ? `${l.exit_bps} bps` : "no quote"}</Text>
+              <Text style={[s.switchValue, num]}>{ok ? bpsLabel(l.exit_bps) : 'no quote'}</Text>
             </View>
             {costUsd !== null && (
               <Text style={s.body}>

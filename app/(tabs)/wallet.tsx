@@ -1,10 +1,10 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
-import { isUsable } from '@/lib/cost'
+import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { getHoldings, getStats, getUsdcBalance, HoldingRow, Latest } from '@/lib/stats'
@@ -127,7 +127,7 @@ export default function WalletScreen() {
               <View style={{ alignItems: 'flex-end', gap: 2 }}>
                 <Text style={[s.value, num]}>{i.value !== null ? `$${i.value.toFixed(2)}` : '—'}</Text>
                 <Text style={[s.qty, num]}>{i.walletAmount.toFixed(4)} {i.symbol}</Text>
-                <Text style={s.tiny}>{i.exitBps !== null ? `exit ${i.exitBps} bps` : 'no quote'}</Text>
+                <Text style={s.tiny}>{i.exitBps !== null ? 'exit ' + bpsLabel(i.exitBps) : 'no quote'}</Text>
               </View>
               <Text style={s.chev}>›</Text>
             </Pressable>

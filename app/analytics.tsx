@@ -1,10 +1,10 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
-import { isUsable } from '@/lib/cost'
+import { bpsLabel, bpsValue, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { getHoldings, getSeries, getStats, HoldingRow, Latest } from '@/lib/stats'
@@ -180,16 +180,16 @@ export default function AnalyticsScreen() {
               <View style={s.metricsRow}>
                 <View style={s.metricCell}>
                   <Text style={s.tinyLabel}>entry</Text>
-                  <Text style={[s.metricSmall, num]}>{i.entryBps !== null ? `${i.entryBps} bps` : '—'}</Text>
+                  <Text style={[s.metricSmall, num]}>{bpsLabel(i.entryBps)}</Text>
                 </View>
                 <View style={s.metricCell}>
                   <Text style={s.tinyLabel}>exit</Text>
-                  <Text style={[s.metricSmall, num]}>{i.exitBps !== null ? `${i.exitBps} bps` : '—'}</Text>
+                  <Text style={[s.metricSmall, num]}>{bpsLabel(i.exitBps)}</Text>
                 </View>
                 <View style={[s.metricCell, { flex: 1, alignItems: 'flex-end' }]}>
                   <Text style={s.tinyLabel}>cost to exit</Text>
                   <Text style={[s.metricSmall, num]}>
-                    {i.value !== null && i.exitBps !== null ? `$${((i.value * i.exitBps) / 10000).toFixed(2)}` : '—'}
+                    {i.value !== null && i.exitBps !== null ? `$${((i.value * bpsValue(i.exitBps)) / 10000).toFixed(2)}` : '—'}
                   </Text>
                 </View>
               </View>
@@ -292,11 +292,11 @@ export default function AnalyticsScreen() {
                     <View style={s.switchRow}>
                       <View style={s.switchCell}>
                         <Text style={s.tinyLabel}>current exit</Text>
-                        <Text style={[s.metricSmall, num]}>{i.exitBps} bps</Text>
+                        <Text style={[s.metricSmall, num]}>{bpsLabel(i.exitBps)}</Text>
                       </View>
                       <View style={s.switchCell}>
                         <Text style={s.tinyLabel}>{i.altSymbol} entry</Text>
-                        <Text style={[s.metricSmall, num]}>{i.altEntryBps} bps</Text>
+                        <Text style={[s.metricSmall, num]}>{bpsLabel(i.altEntryBps)}</Text>
                       </View>
                       <View style={[s.switchCell, { alignItems: 'flex-end', flex: 1 }]}>
                         <Text style={s.tinyLabel}>switching cost</Text>

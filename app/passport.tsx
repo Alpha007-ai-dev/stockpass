@@ -1,12 +1,13 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
 import { TokenIcon } from '@/components/token-icon'
 import { ISSUERS } from '@/constants/issuers'
+import { stockInfo } from '@/constants/stock-info'
 import { issuerColor, num, T } from '@/constants/theme'
-import { isUsable } from '@/lib/cost'
+import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { compact, getCollateral, getHoldings, getStats, History, Latest, TokenRow } from '@/lib/stats'
@@ -117,13 +118,13 @@ export default function PassportScreen() {
           <View style={s.pairRow}>
             <View style={[s.card, { flex: 1 }]}>
               <Text style={s.kicker}>ENTRY COST</Text>
-              <Text style={[s.metric, num, { color: T.accent }]}>{ok ? `${mine.entry_bps} bps` : '—'}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${((mine.entry_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
+              <Text style={[s.metric, num, { color: T.accent }]}>{!ok ? '—' : (mine.entry_bps as number) < 0 ? '~0 bps' : `${mine.entry_bps} bps`}</Text>
+              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
             </View>
             <View style={[s.card, { flex: 1 }]}>
               <Text style={s.kicker}>EXIT COST</Text>
-              <Text style={[s.metric, num]}>{ok ? `${mine.exit_bps} bps` : '—'}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${((mine.exit_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
+              <Text style={[s.metric, num]}>{!ok ? '—' : (mine.exit_bps as number) < 0 ? '~0 bps' : `${mine.exit_bps} bps`}</Text>
+              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
             </View>
           </View>
 
@@ -138,7 +139,7 @@ export default function PassportScreen() {
                   {reference.stale ? 'market closed' : `${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps`}
                 </Text>
               </View>
-              <View style={s.row}><Text style={s.label}>Execution cost</Text><Text style={[s.value, num]}>{ok ? `${mine.entry_bps} bps` : '—'}</Text></View>
+              <View style={s.row}><Text style={s.label}>Execution cost</Text><Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text></View>
 
               {!reference.stale && ok && (
                 <View style={s.totalBox}>
@@ -218,6 +219,19 @@ export default function PassportScreen() {
             </Pressable>
           )}
 
+          {(() => {
+            const si = stockInfo(ticker)
+            if (!si) return null
+            return (
+              <View style={s.card}>
+                <Text style={s.kicker}>THE UNDERLYING</Text>
+                <Text style={s.underName}>{si.name}</Text>
+                <Text style={s.underMeta}>{si.kind} · {si.exchange} · {si.sector}</Text>
+                <Text style={s.underText}>{si.summary}</Text>
+              </View>
+            )
+          })()}
+
           <View style={s.card}>
             <Text style={s.kicker}>ABOUT</Text>
             {[['Issuer', info.legalName], ['Backing', info.backing], ['Dividends', info.dividends],
@@ -287,6 +301,9 @@ const s = StyleSheet.create({
   fill: { height: 7, borderRadius: 4, backgroundColor: T.accent },
   barValue: { color: T.text, fontSize: 13, width: 28, textAlign: 'right' },
 
+  underName: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  underMeta: { color: T.accent, fontSize: 14, fontWeight: '600' },
+  underText: { color: T.dim, fontSize: 15, lineHeight: 22, marginTop: 4 },
   aboutRow: { gap: 2, paddingVertical: 5 },
   aboutValue: { color: T.text, fontSize: 14 },
 

@@ -1,7 +1,8 @@
-﻿import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { bpsLabel, bpsValue } from '@/lib/cost'
 import { History } from '@/lib/stats'
 
 export type InsightItem = {
@@ -42,7 +43,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined): { text:
 
   // 2. A mostani kilépési költség a szokásoshoz képest
   if (value && usual !== null) {
-    const now = (value * i.exitBps) / 10000
+    const now = (value * bpsValue(i.exitBps)) / 10000
     const usualUsd = (value * usual) / 10000
     const delta = now - usualUsd
     if (Math.abs(delta) >= 0.5) {
@@ -56,7 +57,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined): { text:
 
   // 3. Csak a mostani érték
   if (value) {
-    return { text: `Exit would cost ~${usd((value * i.exitBps) / 10000)} today.`, tone: 'muted' }
+    return { text: `Exit would cost ~${usd((value * bpsValue(i.exitBps)) / 10000)} today.`, tone: 'muted' }
   }
 
   // 4. Ő a legolcsóbb
@@ -64,7 +65,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined): { text:
     return { text: `You hold the cheapest issuer for ${i.ticker} right now.`, tone: 'accent' }
   }
 
-  return { text: `Entry ${i.entryBps} bps · exit ${i.exitBps} bps.`, tone: 'muted' }
+  return { text: 'Entry ' + bpsLabel(i.entryBps) + ' · exit ' + bpsLabel(i.exitBps) + '.', tone: 'muted' }
 }
 
 export function InsightCard({ item, hist }: { item: InsightItem; hist: History | undefined }) {
@@ -82,7 +83,7 @@ export function InsightCard({ item, hist }: { item: InsightItem; hist: History |
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={[s.entry, num, item.entryBps === null && { color: T.faint }]}>
-            {item.entryBps !== null ? `${item.entryBps} bps` : '—'}
+            {bpsLabel(item.entryBps)}
           </Text>
           <Text style={s.entryLabel}>entry</Text>
         </View>
