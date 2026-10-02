@@ -7,7 +7,7 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { bpsLabel, bpsValue, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { getHoldings, getSeries, getStats, HoldingRow, Latest } from '@/lib/stats'
+import { getHoldings, getIssuerReliability, getSeries, getStats, HoldingRow, IssuerReliability, Latest, WeakToken } from '@/lib/stats'
 
 type Item = HoldingRow & {
   shares: number
@@ -20,7 +20,7 @@ type Item = HoldingRow & {
   altEntryBps: number | null
 }
 
-type Tab = 'overview' | 'costs' | 'exposure' | 'insights' | 'opportunities'
+type Tab = 'overview' | 'costs' | 'exposure' | 'opportunities'
 
 export default function AnalyticsScreen() {
   const router = useRouter()
@@ -30,6 +30,7 @@ export default function AnalyticsScreen() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rel, setRel] = useState<{ issuers: IssuerReliability[]; weakest: WeakToken[]; meta: any } | null>(null)
 
   const load = useCallback(async () => {
     setBusy(true)
@@ -90,6 +91,7 @@ export default function AnalyticsScreen() {
   }, [account, connect])
 
   useEffect(() => { load() }, [load])
+  useEffect(() => { getIssuerReliability().then(setRel).catch(() => {}) }, [])
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? 0
   const priced = items?.filter((i) => i.exitBps !== null && i.value !== null) ?? []
@@ -109,7 +111,7 @@ export default function AnalyticsScreen() {
 
   const tabs: [Tab, string][] = [
     ['overview', 'Overview'], ['costs', 'Costs'], ['exposure', 'Exposure'],
-    ['insights', 'Insights'], ['opportunities', 'Opportunities'],
+    ['opportunities', 'Opportunities'],
   ]
 
   return (
@@ -240,32 +242,6 @@ export default function AnalyticsScreen() {
         </>
       )}
 
-      {items && tab === 'insights' && (
-        insights.length > 0 ? (
-          insights.map((i) => (
-            <View key={i.symbol} style={s.card}>
-              <View style={s.rowHead}>
-                <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={34} />
-                <View style={{ flex: 1 }}>
-                  <Text style={s.symbol}>{i.symbol}</Text>
-                  <Text style={[s.issuerText, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
-                </View>
-              </View>
-              <Text style={[s.insightText, i.entryBps === null ? { color: T.faint } : { color: i.entryDelta! < 0 ? T.accent : T.down }]}>
-                {i.entryBps === null
-                  ? 'No executable quote right now'
-                  : `Entry cost ${i.entryDelta! < 0 ? '↓' : '↑'} ${Math.abs(i.entryDelta!)} bps vs 24h ago`}
-              </Text>
-            </View>
-          ))
-        ) : (
-          <View style={s.card}>
-            <Text style={s.tiny}>
-              Nothing changed meaningfully in the last 24 hours, or there is not enough history yet for these holdings.
-            </Text>
-          </View>
-        )
-      )}
 
       {items && tab === 'opportunities' && (
         <>
@@ -321,6 +297,7 @@ export default function AnalyticsScreen() {
           <Text style={s.tiny}>Cheapest to buy is not the same as cheapest for you.</Text>
         </>
       )}
+
     </ScrollView>
   )
 }

@@ -206,3 +206,47 @@ export async function getPricesAgo(
   const json: any = await res.json()
   return json?.then ?? {}
 }
+export type IssuerReliability = {
+  issuer: string
+  samples: number
+  tokens: number
+  availability: number
+  avg_entry: number | null
+  reliable_tokens: number
+  never_quotable: number
+}
+
+export type WeakToken = {
+  symbol: string
+  issuer: string
+  samples: number
+  quotable_count: number
+  availability: number
+}
+
+export async function getIssuerReliability(): Promise<{
+  issuers: IssuerReliability[]
+  weakest: WeakToken[]
+  meta: { total: number; tokens: number; updated_at: number | null } | null
+}> {
+  const res = await fetch(`${BASE}/reliability`)
+  if (!res.ok) return { issuers: [], weakest: [], meta: null }
+  const json: any = await res.json()
+  return { issuers: json?.issuers ?? [], weakest: json?.weakest ?? [], meta: json?.meta ?? null }
+}
+export type TokenRel = {
+  symbol: string
+  ticker: string | null
+  issuer: string
+  samples: number
+  quotable_count: number
+  availability: number
+  avg_entry: number | null
+}
+
+export async function getTokenReliability(): Promise<TokenRel[]> {
+  const res = await fetch(`${BASE}/reliability?all=1`)
+  if (!res.ok) return []
+  const json: any = await res.json()
+  return json?.tokens ?? []
+}

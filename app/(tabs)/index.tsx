@@ -3,6 +3,7 @@ import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View 
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
 import { CostMap, MapFilter } from '@/components/cost-map'
+import { ReliabilityMap } from '@/components/reliability-map'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
@@ -39,7 +40,7 @@ export default function MarketScreen() {
   const [filter, setFilter] = useState<string>('all')
   const [mapFilter, setMapFilter] = useState<MapFilter>('all')
   const [query, setQuery] = useState('')
-  const [view, setView] = useState<'list' | 'map'>('list')
+  const [view, setView] = useState<'list' | 'map' | 'issuers'>('list')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const state = getMarketState()
@@ -136,9 +137,9 @@ export default function MarketScreen() {
           </View>
 
           <View style={s.toggle}>
-            {(['list', 'map'] as const).map((v) => (
+            {(['list', 'map', 'issuers'] as const).map((v) => (
               <Pressable key={v} onPress={() => setView(v)} style={[s.toggleBtn, view === v && s.toggleOn]}>
-                <Text style={[s.toggleText, view === v && s.toggleTextOn]}>{v === 'list' ? 'Assets' : 'Cost map'}</Text>
+                <Text style={[s.toggleText, view === v && s.toggleTextOn]}>{v === 'list' ? 'Assets' : v === 'map' ? 'Cost map' : 'Issuers'}</Text>
               </Pressable>
             ))}
           </View>
@@ -161,8 +162,10 @@ export default function MarketScreen() {
                 ))}
               </View>
             </>
-          ) : (
+          ) : view === 'map' ? (
             <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
+          ) : (
+            <ReliabilityMap />
           )}
 
           {error && <Text style={s.warn}>{error}</Text>}
