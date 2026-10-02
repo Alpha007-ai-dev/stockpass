@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
@@ -132,44 +132,70 @@ export default function DefiScreen() {
                   <Text style={s.tiny}>{r.markets.length} market{r.markets.length === 1 ? '' : 's'}</Text>
                 </View>
 
-                {r.markets.map((m) => (
-                  <View key={m.market} style={[s.marketBlock, r.markets.length > 1 && best.market === m.market && s.marketBest]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={s.marketName}>{m.market}</Text>
-                      {r.markets.length > 1 && best.market === m.market && (
-                        <Text style={s.bestTag}>LOWEST RATE</Text>
-                      )}
+                {r.markets.map((m) => {
+                  const biggest = r.markets.reduce((a, b) => (a.marketUsd >= b.marketUsd ? a : b))
+                  const isBest = r.markets.length > 1 && best.market === m.market
+                  const isBiggest = r.markets.length > 1 && biggest.market === m.market && biggest.market !== best.market
+                  const solo = r.markets.length === 1
+                  if (isBest || isBiggest || solo) {
+                    return (
+                      <View key={m.market} style={[s.marketBlock, isBest && s.marketBest, isBiggest && s.marketBig]}>
+                        <View style={s.lineRow}>
+                          <Text style={s.marketName}>{m.market}</Text>
+                          {isBest && <Text style={s.bestTag}>LOWEST RATE</Text>}
+                          {isBiggest && <Text style={s.bigTag}>LARGEST MARKET</Text>}
+                        </View>
+                        <View style={s.marketMetrics}>
+                          <View>
+                            <Text style={[s.ltv, num]}>{Math.round(m.maxLtv * 100)}%</Text>
+                            <Text style={s.tinyLabel}>max LTV</Text>
+                          </View>
+                          <View>
+                            <Text style={[s.apy, num, isBest && { color: T.accent }]}>{(m.borrowApy * 100).toFixed(2)}%</Text>
+                            <Text style={s.tinyLabel}>borrow APY</Text>
+                          </View>
+                          <View>
+                            <Text style={[s.apy, num, { color: m.supplyApy >= 0.005 ? T.accent : T.dim }]}>{(m.supplyApy * 100).toFixed(2)}%</Text>
+                            <Text style={s.tinyLabel}>supply APY</Text>
+                          </View>
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                            <Text style={[s.size, num]}>${(m.marketUsd / 1e6).toFixed(1)}M</Text>
+                            <Text style={s.tinyLabel}>market size</Text>
+                          </View>
+                        </View>
+                        <View style={s.tagRow}>
+                          <Text style={s.tag}>Collateral ✓</Text>
+                          <Text style={s.tag}>Borrow ✓</Text>
+                        </View>
+                      </View>
+                    )
+                  }
+                  return (
+                    <View key={m.market} style={s.marketRow}>
+                      <Text style={s.marketRowName} numberOfLines={1}>{m.market}</Text>
+                      <Text style={[s.marketRowDetail, num]}>
+                        {Math.round(m.maxLtv * 100)}% LTV · {(m.borrowApy * 100).toFixed(2)}% borrow · {(m.supplyApy * 100).toFixed(2)}% supply · ${(m.marketUsd / 1e6).toFixed(1)}M
+                      </Text>
                     </View>
-                    <View style={s.marketMetrics}>
-                      <View>
-                        <Text style={[s.ltv, num]}>{Math.round(m.maxLtv * 100)}%</Text>
-                        <Text style={s.tinyLabel}>max LTV</Text>
-                      </View>
-                      <View>
-                        <Text style={[s.apy, num, best.market === m.market && { color: T.accent }]}>
-                          {(m.borrowApy * 100).toFixed(2)}%
-                        </Text>
-                        <Text style={s.tinyLabel}>borrow APY</Text>
-                      </View>
-                      <View>
-                        <Text style={[s.apy, num, { color: m.supplyApy >= 0.005 ? T.accent : T.dim }]}>
-                          {(m.supplyApy * 100).toFixed(2)}%
-                        </Text>
-                        <Text style={s.tinyLabel}>supply APY</Text>
-                      </View>
-                      <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                        <Text style={[s.size, num]}>${(m.marketUsd / 1e6).toFixed(1)}M</Text>
-                        <Text style={s.tinyLabel}>market size</Text>
-                      </View>
-                    </View>
-                  </View>
-                ))}
+                  )
+                })}
 
                 {r.markets.length > 1 && (
                   <Text style={s.tiny}>
                     Same token, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the expensive one.
                   </Text>
                 )}
+
+                {r.markets.length > 1 && (() => {
+                  const biggest = r.markets.reduce((a, b) => (a.marketUsd >= b.marketUsd ? a : b))
+                  if (biggest.market === best.market) return null
+                  return (
+                    <Text style={s.tiny}>
+                      Rates move with how much of a market is borrowed. The cheaper one here is also the smaller one
+                      (${(best.marketUsd / 1e6).toFixed(1)}M against ${(biggest.marketUsd / 1e6).toFixed(1)}M), so its rate may be less settled.
+                    </Text>
+                  )
+                })()}
 
                 <Pressable onPress={() => Linking.openURL('https://app.kamino.finance/')}>
                   <Text style={s.link}>Open in Kamino ›</Text>
@@ -246,7 +272,16 @@ const s = StyleSheet.create({
 
   marketBlock: { backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, gap: 8 },
   marketBest: { borderWidth: 1.5, borderColor: T.accent },
+  marketBig: { borderWidth: 1.5, borderColor: T.borderBright },
+  bigTag: { color: T.dim, fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
   bestTag: { color: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
+  lineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  tagRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
+  tag: { color: T.accent, fontSize: 12, fontWeight: '600', backgroundColor: '#1A2410', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, overflow: 'hidden' },
+  marketRow: { gap: 3, paddingVertical: 11, borderTopWidth: 1, borderTopColor: T.border },
+  marketRowName: { color: T.text, fontSize: 14, fontWeight: '600' },
+  marketRowDetail: { color: T.dim, fontSize: 13 },
+  marketRowValue: { color: T.text, fontSize: 15, fontWeight: '600' },
   marketName: { color: T.dim, fontSize: 13, fontWeight: '600' },
   marketMetrics: { flexDirection: 'row', gap: 18, alignItems: 'flex-start' },
   ltv: { color: T.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
