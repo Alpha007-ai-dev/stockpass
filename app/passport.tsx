@@ -181,43 +181,61 @@ export default function PassportScreen() {
             </View>
           )}
 
-          <View style={s.card}>
-            <Text style={s.kicker}>MEASURED RELIABILITY</Text>
+          {(() => {
+            const o = rel?.open
+            const a = rel?.overall
+            const blocks: { label: string; now: number | null; tMin: number | null; tMax: number | null; oMin: number | null; oMax: number | null }[] = [
+              { label: 'ENTRY COST', now: ok && mine ? (mine.entry_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_entry ?? null, oMax: a?.max_entry ?? null },
+              { label: 'EXIT COST', now: ok && mine ? (mine.exit_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_exit ?? null, oMax: a?.max_exit ?? null },
+            ]
+            const range = (lo: number | null, hi: number | null) =>
+              lo === null || hi === null ? '—' : lo === hi ? `${lo} bps` : `${lo}–${hi} bps`
+            return (
+              <>
+                {blocks.map((b) => (
+                  <View key={b.label} style={s.card}>
+                    <Text style={s.kicker}>{b.label}</Text>
+                    <View style={s.row}>
+                      <Text style={s.label}>Today</Text>
+                      <Text style={[s.metric, num, b.now === null && { color: T.faint }]}>
+                        {b.now === null ? '—' : b.now < 0 ? '~0 bps' : `${b.now} bps`}
+                      </Text>
+                    </View>
+                    <View style={s.row}>
+                      <Text style={s.label}>Typical (open market)</Text>
+                      <Text style={[s.value, num]}>{range(b.tMin, b.tMax)}</Text>
+                    </View>
+                    <View style={s.row}>
+                      <Text style={s.label}>Observed range</Text>
+                      <Text style={[s.value, num, { color: T.dim }]}>{range(b.oMin, b.oMax)}</Text>
+                    </View>
+                    {b.now !== null && b.now > 0 && (
+                      <View style={s.estBox}>
+                        <Text style={s.tiny}>Estimated cost</Text>
+                        <Text style={[s.estValue, num]}>~${(b.now / 10).toFixed(2)}</Text>
+                        <Text style={s.tiny}>for a $1,000 position</Text>
+                      </View>
+                    )}
+                  </View>
+                ))}
 
-            {rel?.open && rel.open.min_entry !== null && rel.open.max_entry !== null && (
-              <View style={s.row}>
-                <Text style={s.label}>Typical entry</Text>
-                <Text style={[s.value, num]}>
-                  {rel.open.min_entry === rel.open.max_entry
-                    ? `${rel.open.min_entry} bps`
-                    : `${rel.open.min_entry}–${rel.open.max_entry} bps`}
-                </Text>
-              </View>
-            )}
-
-            {rel?.open?.avg_entry !== null && rel?.open?.avg_entry !== undefined && (
-              <View style={s.row}>
-                <Text style={s.label}>Average entry</Text>
-                <Text style={[s.value, num]}>{rel.open.avg_entry.toFixed(1)} bps</Text>
-              </View>
-            )}
-
-            <View style={s.row}>
-              <Text style={s.label}>Quote availability</Text>
-              <Text style={[s.value, num, rel?.overall?.availability !== null && rel?.overall?.availability !== undefined && rel.overall.availability < 70 && { color: T.warn }]}>
-                {rel?.overall?.availability !== null && rel?.overall?.availability !== undefined
-                  ? `${rel.overall.availability}%`
-                  : avail !== null ? `${(avail * 100).toFixed(0)}%` : '—'}
-              </Text>
-            </View>
-
-            <Text style={s.tiny}>
-              {rel?.open?.samples ? `${rel.open.samples} measurements during open market` : `${samples} measurements`}
-              {rel?.overall?.samples ? ` · ${rel.overall.samples} in total` : ''}
-              {rel?.open?.since ? `, since ${new Date(rel.open.since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}
-              . Measured at a $1,000 test size.
-            </Text>
-          </View>
+                <View style={s.card}>
+                  <View style={s.row}>
+                    <Text style={s.label}>Quote availability</Text>
+                    <Text style={[s.value, num, a?.availability !== null && a?.availability !== undefined && a.availability < 70 && { color: T.warn }]}>
+                      {a?.availability !== null && a?.availability !== undefined ? `${a.availability}%` : '—'}
+                    </Text>
+                  </View>
+                  <Text style={s.tiny}>
+                    {a?.samples ?? samples} observations
+                    {o?.samples ? ` · ${o.samples} during open market` : ''}
+                    {o?.since ? `, since ${new Date(o.since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}
+                    . Measured at a $1,000 test size.
+                  </Text>
+                </View>
+              </>
+            )
+          })()}
         </>
       )}
 
@@ -389,6 +407,8 @@ const s = StyleSheet.create({
 
   eventRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, marginTop: 6 },
   eventTitle: { color: T.text, fontSize: 15, fontWeight: '700' },
+  estBox: { backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, marginTop: 6, gap: 1 },
+  estValue: { color: T.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
   accrued: { color: T.accent, fontSize: 16, fontWeight: '600', marginTop: 2 },
   underName: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
   underMeta: { color: T.accent, fontSize: 14, fontWeight: '600' },

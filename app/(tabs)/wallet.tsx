@@ -120,15 +120,22 @@ export default function WalletScreen() {
           {items.map((i) => (
             <Pressable key={i.symbol} style={s.card} onPress={() => router.push(`/passport?symbol=${i.symbol}`)}>
               <TokenIcon icon={i.icon} symbol={i.symbol} label={i.ticker} issuer={i.issuer} size={40} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={s.symbol}>{i.symbol}</Text>
-                <Text style={[s.issuer, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
+
+              <View style={{ flex: 1, gap: 3 }}>
+                <View style={s.lineRow}>
+                  <Text style={s.symbol}>{i.symbol}</Text>
+                  <Text style={[s.value, num]}>{i.value !== null ? `$${i.value.toFixed(2)}` : '—'}</Text>
+                </View>
+                <View style={s.lineRow}>
+                  <Text style={[s.issuer, { color: issuerColor(i.issuer) }]}>{i.issuer}</Text>
+                  <Text style={[s.qty, num]}>{i.walletAmount.toFixed(4)} {i.symbol}</Text>
+                </View>
+                <View style={s.lineRow}>
+                  <Text style={s.tiny}>{i.shares.toFixed(2)} {i.ticker} equivalent</Text>
+                  <Text style={s.tiny}>{i.exitBps !== null ? `exit ${bpsLabel(i.exitBps)}` : 'no quote'}</Text>
+                </View>
               </View>
-              <View style={{ alignItems: 'flex-end', gap: 2 }}>
-                <Text style={[s.value, num]}>{i.value !== null ? `$${i.value.toFixed(2)}` : '—'}</Text>
-                <Text style={[s.qty, num]}>{i.walletAmount.toFixed(4)} {i.symbol}</Text>
-                <Text style={s.tiny}>{i.exitBps !== null ? 'exit ' + bpsLabel(i.exitBps) : 'no quote'}</Text>
-              </View>
+
               <Text style={s.chev}>›</Text>
             </Pressable>
           ))}
@@ -199,6 +206,7 @@ const s = StyleSheet.create({
   rowCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16 },
   noteCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16, gap: 5 },
 
+  lineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 },
   symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
   issuer: { fontSize: 13, fontWeight: '600' },
   value: { color: T.text, fontSize: 17, fontWeight: '700' },

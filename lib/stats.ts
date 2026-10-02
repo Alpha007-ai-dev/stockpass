@@ -180,7 +180,14 @@ export type TokenReliability = {
     avg_entry: number | null
     since: number | null
   } | null
-  overall: { samples: number; availability: number | null } | null
+  overall: {
+    samples: number
+    availability: number | null
+    min_entry: number | null
+    max_entry: number | null
+    min_exit: number | null
+    max_exit: number | null
+  } | null
 }
 
 export async function getReliability(symbol: string): Promise<TokenReliability | null> {
