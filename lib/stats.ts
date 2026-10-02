@@ -189,3 +189,13 @@ export async function getReliability(symbol: string): Promise<TokenReliability |
   const json: any = await res.json()
   return { open: json?.open ?? null, overall: json?.overall ?? null }
 }
+export async function getPricesAgo(
+  symbols: string[],
+  hours = 24
+): Promise<Record<string, { px: number; ts: number }>> {
+  if (!symbols.length) return {}
+  const res = await fetch(`${BASE}/prices?symbols=${symbols.join(',')}&hours=${hours}`)
+  if (!res.ok) return {}
+  const json: any = await res.json()
+  return json?.then ?? {}
+}

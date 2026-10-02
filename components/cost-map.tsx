@@ -1,4 +1,4 @@
-﻿import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { costTint, ISSUER_COLOR, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
@@ -87,7 +87,7 @@ export function CostMap({
             <Pressable key={t.ticker} style={[s.tile, { backgroundColor: c.bg }, t.age > 2400 && s.stale]}
               onPress={() => router.push(`/compare?ticker=${t.ticker}`)}>
               <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>{t.ticker}</Text>
-              <Text style={[s.tileCost, num, { color: c.fg }]}>{t.cost === null ? '—' : t.cost}</Text>
+              <Text style={[s.tileCost, num, { color: c.fg }]}>{t.cost === null ? '—' : t.cost < 0 ? '~0' : t.cost}</Text>
               <Text style={[s.tileUnit, { color: c.fg }]}>{t.cost === null ? 'no quote' : `bps · ${t.count}`}</Text>
             </Pressable>
           )

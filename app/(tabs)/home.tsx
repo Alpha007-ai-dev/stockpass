@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
@@ -11,7 +11,7 @@ import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
 import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
-import { getHoldings, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
+import { getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
 import { InsightCard } from '@/components/insight-card'
 
 type Item = HoldingRow & {
@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [hist, setHist] = useState<Record<string, History>>({})
+  const [ago, setAgo] = useState<Record<string, { px: number; ts: number }>>({})
   const [last, setLast] = useState<Purchase | null>(null)
   const [prev, setPrev] = useState<Snapshot | null>(null)
   const [demo, setDemoState] = useState(false)
@@ -102,6 +103,7 @@ export default function HomeScreen() {
         } catch { return i }
       }))
       setItems(withDelta)
+      getPricesAgo(base.map((i) => i.symbol), 24).then(setAgo).catch(() => {})
     } catch (e) {
       setError((e as Error).message)
     }
@@ -162,12 +164,30 @@ export default function HomeScreen() {
             <Text style={[s.heroValue, num]}>
               ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
-            {change !== null && (
-              <Text style={[s.heroChange, num, { color: change >= 0 ? T.accent : T.down }]}>
-                {change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(2)}
-                <Text style={s.heroChangeLabel}> since last snapshot</Text>
-              </Text>
-            )}
+            {(() => {
+              const matched = items!.filter((i) => i.value !== null && ago[i.symbol])
+              if (matched.length) {
+                const nowVal = matched.reduce((n, i) => n + (i.value as number), 0)
+                const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
+                const d = nowVal - thenVal
+                const pct = thenVal > 0 ? (d / thenVal) * 100 : 0
+                return (
+                  <Text style={[s.heroChange, num, { color: d >= 0 ? T.accent : T.down }]}>
+                    {d >= 0 ? '+' : '-'}${Math.abs(d).toFixed(2)} ({d >= 0 ? '+' : ''}{pct.toFixed(2)}%)
+                    <Text style={s.heroChangeLabel}>  24h</Text>
+                  </Text>
+                )
+              }
+              if (change !== null) {
+                return (
+                  <Text style={[s.heroChange, num, { color: change >= 0 ? T.accent : T.down }]}>
+                    {change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(2)}
+                    <Text style={s.heroChangeLabel}> since last snapshot</Text>
+                  </Text>
+                )
+              }
+              return null
+            })()}
             <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
           </View>
           <PortfolioSpark tickers={items!.map((i) => i.ticker)} />
