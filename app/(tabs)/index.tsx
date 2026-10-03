@@ -166,7 +166,7 @@ export default function MarketScreen() {
           ) : view === 'map' ? (
             <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
           ) : (
-            <ReliabilityMap />
+            <ReliabilityMap latest={latest} />
           )}
 
           {error && <ErrorState message={error} onRetry={load} />}

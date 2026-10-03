@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { issuerColor, num, T } from '@/constants/theme'
-import { getTokenReliability, TokenRel } from '@/lib/stats'
+import { getTokenReliability, Latest, TokenRel } from '@/lib/stats'
 
 const TILE = 44
 
@@ -13,9 +13,11 @@ function band(a: number) {
   return { bg: '#181A18', fg: '#7A8078' }
 }
 
-export function ReliabilityMap() {
+export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) {
   const router = useRouter()
   const [tokens, setTokens] = useState<TokenRel[] | null>(null)
+  const [mode, setMode] = useState<'history' | 'now'>('history')
+  const hasNow = latest && Object.keys(latest).length > 0
 
   useEffect(() => {
     getTokenReliability().then(setTokens).catch(() => setTokens([]))
@@ -29,12 +31,27 @@ export function ReliabilityMap() {
   return (
     <View style={{ gap: 18 }}>
       <View style={s.intro}>
-        <Text style={s.introTitle}>How often can you actually trade?</Text>
+        <Text style={s.introTitle}>
+          {mode === 'now' ? 'What can you trade right now?' : 'How often can you actually trade?'}
+        </Text>
         <Text style={s.faint}>
-          Each tile is one token, coloured by the share of all our measurements where an executable quote existed.
-          This is the track record, not what is tradeable right now — on weekends roughly half the market goes quiet.
+          {mode === 'now'
+            ? 'Each tile is one token. Green means an executable quote exists at this moment.'
+            : 'Each tile is one token, coloured by the share of all our measurements where an executable quote existed. This is the track record, not what is tradeable right now.'}
         </Text>
       </View>
+
+      {hasNow && (
+        <View style={s.toggle}>
+          {(['history', 'now'] as const).map((m) => (
+            <Pressable key={m} onPress={() => setMode(m)} style={[s.toggleBtn, mode === m && s.toggleOn]}>
+              <Text style={[s.toggleText, mode === m && s.toggleTextOn]}>
+                {m === 'history' ? 'Track record' : 'Right now'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
 
       {issuers.map((issuer) => {
         const list = tokens
@@ -42,6 +59,7 @@ export function ReliabilityMap() {
           .sort((a, b) => b.availability - a.availability)
         const reliable = list.filter((t) => t.availability >= 80).length
         const avg = list.reduce((n, t) => n + t.availability, 0) / Math.max(1, list.length)
+        const liveCount = list.filter((t) => latest?.[t.symbol]?.quotable).length
 
         return (
           <View key={issuer} style={{ gap: 9 }}>
@@ -51,13 +69,16 @@ export function ReliabilityMap() {
                 <Text style={s.issuer}>{issuer}</Text>
               </View>
               <Text style={[s.headStat, num]}>
-                {reliable}/{list.length} <Text style={s.faint}>reliable · {avg.toFixed(0)}% avg</Text>
+                {mode === 'now'
+                  ? <>{liveCount}/{list.length} <Text style={s.faint}>tradeable now</Text></>
+                  : <>{reliable}/{list.length} <Text style={s.faint}>reliable · {avg.toFixed(0)}% avg</Text></>}
               </Text>
             </View>
 
             <View style={s.grid}>
               {list.map((t) => {
-                const c = band(t.availability)
+                const liveOk = mode === 'now' ? !!latest?.[t.symbol]?.quotable : null
+                const c = band(liveOk === null ? t.availability : liveOk ? 100 : 0)
                 return (
                   <Pressable
                     key={t.symbol}
@@ -66,7 +87,9 @@ export function ReliabilityMap() {
                     <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>
                       {t.ticker ?? t.symbol}
                     </Text>
-                    <Text style={[s.tilePct, num, { color: c.fg }]}>{t.availability}%</Text>
+                    <Text style={[s.tilePct, num, { color: c.fg }]}>
+                      {liveOk === null ? `${t.availability}%` : liveOk ? 'live' : '—'}
+                    </Text>
                   </Pressable>
                 )
               })}
@@ -87,6 +110,11 @@ export function ReliabilityMap() {
 
 const s = StyleSheet.create({
   intro: { gap: 5 },
+  toggle: { flexDirection: 'row', backgroundColor: T.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.border },
+  toggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
+  toggleOn: { backgroundColor: T.accent },
+  toggleText: { color: T.dim, fontSize: 14, fontWeight: '600' },
+  toggleTextOn: { color: T.bg, fontWeight: '700' },
   introTitle: { color: T.text, fontSize: 17, fontWeight: '700' },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   headLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
