@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
@@ -59,7 +59,8 @@ export default function BuyScreen() {
   const feeUsd = (PLATFORM_FEE_BPS / 10000) * SIZE_USD
   const totalUsd = issuerCostUsd !== null ? issuerCostUsd + feeUsd + NETWORK_FEE_USD : null
   const totalBps = totalUsd !== null ? (totalUsd / SIZE_USD) * 10000 : null
-  const savingBps = selected && alternative ? alternative.entry - (selected.entry + PLATFORM_FEE_BPS) : null
+  // The StockPass fee applies to either issuer, so it cancels out of the comparison.
+  const savingBps = selected && alternative ? alternative.entry - selected.entry : null
 
   const prepare = useCallback(async () => {
     if (!selected) return

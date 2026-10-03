@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { issuerColor, num, T } from '@/constants/theme'
@@ -31,8 +31,8 @@ export function ReliabilityMap() {
       <View style={s.intro}>
         <Text style={s.introTitle}>How often can you actually trade?</Text>
         <Text style={s.faint}>
-          Each tile is one token, coloured by the share of our measurements where an executable quote existed.
-          A wider catalogue is not automatically a better one.
+          Each tile is one token, coloured by the share of all our measurements where an executable quote existed.
+          This is the track record, not what is tradeable right now — on weekends roughly half the market goes quiet.
         </Text>
       </View>
 
