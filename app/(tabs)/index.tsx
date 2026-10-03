@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
 import { CostMap, MapFilter } from '@/components/cost-map'
@@ -47,7 +48,8 @@ export default function MarketScreen() {
   const state = getMarketState()
   const market = MARKET_LABEL[state]
   const open = state === 'open'
-
+
+  const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -145,7 +147,7 @@ export default function MarketScreen() {
   return (
     <FlatList
       style={s.screen}
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       data={view === 'list' ? rows : []}
       keyExtractor={(r) => r.token.symbol}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={T.dim} />}

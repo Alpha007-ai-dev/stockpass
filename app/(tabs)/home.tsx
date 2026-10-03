@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const [demo, setDemoState] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const insets = useSafeAreaInsets()
   const state = getMarketState()
   const market = MARKET_LABEL[state]
   const open = state === 'open'
@@ -123,24 +125,26 @@ export default function HomeScreen() {
   }, [scan])
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
-  const change = total !== null && prev && prev.total > 0 ? total - prev.total : null
+  // Only compare against a snapshot taken in the same mode, so switching between
+  // the demo portfolio and a real wallet never shows a fabricated change.
+  const change = total !== null && prev && prev.demo === demo && prev.total > 0 ? total - prev.total : null
   const issuers = new Set(items?.map((i) => i.issuer)).size
 
   useEffect(() => {
     if (total === null || total <= 0) return
-    if (prev && Date.now() - prev.at < 60 * 60 * 1000) return
-    savePortfolio(total).then(() => getLastPortfolio().then(setPrev))
-  }, [total, prev])
+    if (prev && prev.demo === demo && Date.now() - prev.at < 60 * 60 * 1000) return
+    savePortfolio(total, demo).then(() => getLastPortfolio().then(setPrev))
+  }, [total, prev, demo])
 
   const startDemo = async () => { await setDemo(true); setDemoState(true); scan(true) }
-  const exitDemo = async () => { await setDemo(false); setDemoState(false); setItems(null) }
+  const exitDemo = async () => { await setDemo(false); setDemoState(false); setItems(null); setPrev(null) }
 
   const allLatest = Object.values(latest)
   const entries = allLatest.filter((l) => isUsable(l.entry_bps, l.quotable)).map((l) => l.entry_bps as number).sort((a, b) => a - b)
   const tracked = new Set(allLatest.map((l) => l.ticker)).size
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={() => scan()} tintColor={T.dim} />}>
 
       {demo && (

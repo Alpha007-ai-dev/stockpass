@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
@@ -62,6 +63,7 @@ export default function BuyScreen() {
   // The StockPass fee applies to either issuer, so it cancels out of the comparison.
   const savingBps = selected && alternative ? alternative.entry - selected.entry : null
 
+
   const prepare = useCallback(async () => {
     if (!selected) return
     setBusy(true); setStatus(null)
@@ -74,6 +76,8 @@ export default function BuyScreen() {
     setBusy(false)
   }, [selected])
 
+
+  const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote || !selected) return
     setBusy(true); setStatus(null)
@@ -101,7 +105,7 @@ export default function BuyScreen() {
   }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, tk])
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}>
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>

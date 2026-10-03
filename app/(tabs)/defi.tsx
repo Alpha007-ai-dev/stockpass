@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
@@ -20,7 +21,8 @@ export default function DefiScreen() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+
+  const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setBusy(true)
     setError(null)
@@ -69,7 +71,7 @@ export default function DefiScreen() {
   const collateralValue = supported.reduce((n, r) => n + (r.value ?? 0), 0)
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}>
 
       <View style={s.header}>

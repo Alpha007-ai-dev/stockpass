@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
@@ -79,6 +80,7 @@ export default function SellScreen() {
     setBusy(false)
   }, [token, amount])
 
+  const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote) return
     setBusy(true); setStatus(null)
@@ -94,7 +96,7 @@ export default function SellScreen() {
   }, [quote, account, connect, signAndSendTransaction])
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}>
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>

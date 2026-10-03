@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
@@ -22,6 +23,7 @@ const STATE_LABEL: Record<string, string> = {
 
 export default function PassportScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { symbol } = useLocalSearchParams<{ symbol?: string }>()
   const sym = symbol ?? 'SPYx'
   const { account } = useMobileWallet() as any
@@ -92,7 +94,7 @@ export default function PassportScreen() {
   const tabs: [Tab, string][] = [['overview', 'Overview'], ['costs', 'Costs'], ['details', 'Details']]
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}>
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>

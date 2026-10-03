@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
@@ -32,7 +33,8 @@ export default function AnalyticsScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rel, setRel] = useState<{ issuers: IssuerReliability[]; weakest: WeakToken[]; meta: any } | null>(null)
-
+
+  const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setBusy(true)
     setError(null)
@@ -116,7 +118,7 @@ export default function AnalyticsScreen() {
   ]
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}>
 
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/wallet'))} style={s.back}>

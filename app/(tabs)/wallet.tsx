@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
 import { bpsLabel, isUsable } from '@/lib/cost'
-import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
+import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { getHoldings, getStats, getUsdcBalance, HoldingRow, Latest } from '@/lib/stats'
 
@@ -25,6 +26,8 @@ export default function WalletScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+
+  const insets = useSafeAreaInsets()
   const scan = useCallback(async () => {
     setBusy(true)
     setError(null)
@@ -74,7 +77,7 @@ export default function WalletScreen() {
   const shortAddr = addr ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : null
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <View style={s.header}>
         <Text style={s.title}>Wallet</Text>
         {demo && <Text style={s.demoTag}>DEMO</Text>}
@@ -176,6 +179,18 @@ export default function WalletScreen() {
             <Text style={s.disconnect}>Disconnect</Text>
           </Pressable>
         </View>
+      )}
+
+      {!demo && (
+        <Pressable
+          style={s.rowCard}
+          onPress={async () => { await setDemo(true); setDemoState(true); setUsdc(null); scan() }}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.analyticsTitle}>Switch to demo portfolio</Text>
+            <Text style={s.tiny}>Real prices, sample amounts</Text>
+          </View>
+          <Text style={s.chev}>›</Text>
+        </Pressable>
       )}
 
       {items && (

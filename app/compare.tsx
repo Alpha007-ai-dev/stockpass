@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { issuerColor, num, T } from '@/constants/theme'
 import { TokenIcon } from '@/components/token-icon'
@@ -8,6 +9,7 @@ import { getGroups, Group } from '@/lib/pairs'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getHoldings } from '@/lib/stats'
+import { PLATFORM_FEE_BPS } from '@/lib/swap'
 import { compact, getStats, Latest } from '@/lib/stats'
 
 const ISSUER_NOTE: Record<string, string> = {
@@ -18,6 +20,7 @@ const ISSUER_NOTE: Record<string, string> = {
 
 export default function CompareScreen() {
   const router = useRouter()
+  const insets = useSafeAreaInsets()
   const { ticker } = useLocalSearchParams<{ ticker?: string }>()
   const tk = ticker ?? 'SPY'
   const [group, setGroup] = useState<Group | null>(null)
@@ -64,7 +67,7 @@ export default function CompareScreen() {
   const multipliers = new Set(rows.filter((r) => r.l).map((r) => r.l!.multiplier.toFixed(4)))
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.content}>
+    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={s.back}>
         <Text style={s.backText}>‹ Back</Text>
       </Pressable>
@@ -166,6 +169,7 @@ export default function CompareScreen() {
               <Text style={s.switchLabel}>Cost to exit to USDC</Text>
               <Text style={[s.switchValue, num]}>{ok ? bpsLabel(l.exit_bps) : 'no quote'}</Text>
             </View>
+            {ok && <Text style={s.body}>Plus the StockPass fee of {PLATFORM_FEE_BPS} bps when you sell through the app.</Text>}
             {costUsd !== null && (
               <Text style={s.body}>
                 About ${costUsd.toFixed(2)} to sell this position back to USDC right now.
