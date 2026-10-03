@@ -97,15 +97,40 @@ export default function MarketScreen() {
   }, [groups, latest, sparks, filter, query])
 
   useEffect(() => {
-    const visible = rows.slice(0, 30).map((r) => r.token)
-    visible.forEach(async (t) => {
-      if (sparks[t.symbol]) return
-      try {
-        const pts = (await getSeries(t.ticker, 24)) as SeriesPoint[]
-        const vals = pts.filter((p) => p.symbol === t.symbol && p.quotable && p.entry_bps !== null).map((p) => p.entry_bps as number)
-        if (vals.length >= 3) setSparks((prev) => ({ ...prev, [t.symbol]: vals.slice(-14) }))
-      } catch {}
-    })
+    let cancelled = false
+    const wanted = rows.filter((r) => !sparks[r.token.symbol]).map((r) => r.token)
+    if (!wanted.length) return
+
+    // One request per ticker, not per token — the series covers every issuer.
+    const tickers = [...new Set(wanted.map((t) => t.ticker))]
+
+    ;(async () => {
+      for (let i = 0; i < tickers.length; i += 8) {
+        if (cancelled) return
+        const batch = tickers.slice(i, i + 8)
+        const results = await Promise.all(
+          batch.map((tk) => getSeries(tk, 48).catch(() => [] as SeriesPoint[])),
+        )
+        if (cancelled) return
+        setSparks((prev) => {
+          const next = { ...prev }
+          results.forEach((pts) => {
+            const bySymbol: Record<string, number[]> = {}
+            ;(pts as SeriesPoint[]).forEach((p) => {
+              if (!p.quotable || p.entry_bps === null) return
+              ;(bySymbol[p.symbol] ??= []).push(p.entry_bps as number)
+            })
+            Object.entries(bySymbol).forEach(([sym, vals]) => {
+              if (vals.length >= 3) next[sym] = vals.slice(-14)
+            })
+          })
+          return next
+        })
+        await new Promise((r) => setTimeout(r, 150))
+      }
+    })()
+
+    return () => { cancelled = true }
   }, [rows.length, filter])
 
   const statusFor = (l: Latest | undefined) => {
