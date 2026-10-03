@@ -8,8 +8,8 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '@/lib/swap'
-import { getHoldings, getStats, Latest, TokenRow } from '@/lib/stats'
+import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { getBalances, getHoldings, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const NETWORK_FEE_USD = 0.01
 const PCTS = [25, 50, 75, 100]
@@ -25,6 +25,7 @@ export default function SellScreen() {
   const [balance, setBalance] = useState<number | null>(null)
   const [pct, setPct] = useState(100)
   const [quote, setQuote] = useState<Quote | null>(null)
+  const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -48,6 +49,7 @@ export default function SellScreen() {
         if (!addr) return
         const rows = await getHoldings(String(addr))
         setBalance(rows.find((r) => r.symbol === sym)?.walletAmount ?? null)
+        getBalances(String(addr)).then((b) => setSkr(b.skr)).catch(() => {})
       } catch {}
     })()
   }, [sym, account])
@@ -57,7 +59,9 @@ export default function SellScreen() {
   const shares = amount !== null && latest ? amount * latest.multiplier : null
   const grossUsd = shares !== null && latest?.sell_px ? shares * latest.sell_px : null
   const exitCostUsd = grossUsd !== null && ok ? (grossUsd * Math.max(0, latest!.exit_bps as number)) / 10000 : null
-  const feeUsd = grossUsd !== null ? (grossUsd * PLATFORM_FEE_BPS) / 10000 : null
+  const feeBps = feeBpsFor(skr)
+  const skrDiscount = feeBps < PLATFORM_FEE_BPS
+  const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
   const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
     ? grossUsd - exitCostUsd - feeUsd - NETWORK_FEE_USD
     : null
@@ -73,6 +77,7 @@ export default function SellScreen() {
         usdc.mint,
         usdc.decimals,
         'USDC',
+        feeBps,
       )
       if (!q) throw new Error('No route available')
       setQuote(q)
@@ -153,9 +158,17 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>-~${NETWORK_FEE_USD.toFixed(2)}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>StockPass fee ({PLATFORM_FEE_BPS} bps)</Text>
+                <Text style={s.label}>StockPass fee ({feeBps} bps)</Text>
                 <Text style={[s.value, num]}>-${feeUsd!.toFixed(2)}</Text>
               </View>
+              {skrDiscount ? (
+                <View style={s.skrRow}>
+                  <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
+                  <Text style={s.skrText}>✓</Text>
+                </View>
+              ) : (
+                <Text style={s.tiny}>Hold {SKR_THRESHOLD} SKR and this fee drops to 2 bps.</Text>
+              )}
               <View style={s.divider} />
               <View style={s.row}>
                 <Text style={s.totalLabel}>You receive</Text>
@@ -204,6 +217,8 @@ const s = StyleSheet.create({
   pctText: { color: T.dim, fontSize: 14, fontWeight: '600' },
   pctTextOn: { color: T.bg, fontWeight: '700' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
+  skrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1A2410', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
+  skrText: { color: T.accent, fontSize: 13, fontWeight: '600' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   label: { color: T.dim, fontSize: 15 },
   value: { color: T.text, fontSize: 16, fontWeight: '600' },

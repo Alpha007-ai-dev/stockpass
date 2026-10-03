@@ -1,4 +1,4 @@
-﻿import { getTransactionDecoder } from '@solana/transactions';
+import { getTransactionDecoder } from '@solana/transactions';
 import { getBase64Encoder } from '@solana/codecs-strings';
 
 export const PLATFORM_FEE_BPS = 5;
@@ -36,7 +36,8 @@ export async function getQuote(
   payAmount: number,
   outputMint: string,
   outDecimals: number,
-  outSymbol?: string
+  outSymbol?: string,
+  feeBps?: number,
 ): Promise<Quote | null> {
   try {
     if (pay.mint === outputMint) return null;
@@ -49,8 +50,7 @@ export async function getQuote(
       '&outputMint=' + outputMint +
       '&amount=' + amount +
       '&slippageBps=50' +
-      (useFee ? '&platformFeeBps=' + PLATFORM_FEE_BPS : '');
-
+      (useFee ? '&platformFeeBps=' + Math.max(0, Math.floor(feeBps ?? PLATFORM_FEE_BPS)) : '');
     const r = await fetch(url);
     const q = await r.json();
     if (!q || q.error || !q.outAmount) return null;
@@ -115,3 +115,12 @@ export function fmtAmount(n: number): string {
 }
 
 
+
+/** StockPass charges 5 bps, reduced to 2 for wallets holding at least 100 SKR.
+ *  Eligibility is based on the wallet's own SKR token balance, not its value. */
+export const SKR_THRESHOLD = 100
+export const SKR_FEE_BPS = 2
+
+export function feeBpsFor(skrBalance: number | null | undefined): number {
+  return (skrBalance ?? 0) >= SKR_THRESHOLD ? SKR_FEE_BPS : PLATFORM_FEE_BPS
+}

@@ -8,8 +8,8 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
-import { buildSwapTx, decodeTx, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote } from '@/lib/swap'
-import { getStats, getUsdcBalance, Latest, TokenRow } from '@/lib/stats'
+import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { getBalances, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const DEFAULT_SIZE = 1000
 const NETWORK_FEE_USD = 0.01
@@ -27,6 +27,7 @@ export default function BuyScreen() {
   const [quote, setQuote] = useState<Quote | null>(null)
   const [sizeText, setSizeText] = useState(String(DEFAULT_SIZE))
   const [usdc, setUsdc] = useState<number | null>(null)
+  const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -51,13 +52,19 @@ export default function BuyScreen() {
 
   useEffect(() => {
     const addr = account?.address
-    if (addr) getUsdcBalance(String(addr)).then(setUsdc).catch(() => {})
+    if (addr) {
+      getBalances(String(addr))
+        .then((b) => { setUsdc(b.usdc); setSkr(b.skr) })
+        .catch(() => {})
+    }
   }, [account])
 
   const SIZE_USD = Math.max(0, Number(sizeText.replace(/[^0-9.]/g, '')) || 0)
   const alternative = options?.find((o) => o.token.symbol !== selected?.token.symbol) ?? null
   const issuerCostUsd = selected ? (Math.max(0, selected.entry) / 10000) * SIZE_USD : null
-  const feeUsd = (PLATFORM_FEE_BPS / 10000) * SIZE_USD
+  const feeBps = feeBpsFor(skr)
+  const skrDiscount = feeBps < PLATFORM_FEE_BPS
+  const feeUsd = (feeBps / 10000) * SIZE_USD
   const totalUsd = issuerCostUsd !== null ? issuerCostUsd + feeUsd + NETWORK_FEE_USD : null
   const totalBps = totalUsd !== null ? (totalUsd / SIZE_USD) * 10000 : null
   // The StockPass fee applies to either issuer, so it cancels out of the comparison.
@@ -69,7 +76,7 @@ export default function BuyScreen() {
     setBusy(true); setStatus(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
-      const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol)
+      const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
       if (!q) throw new Error('No route available')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
@@ -179,9 +186,17 @@ export default function BuyScreen() {
               <Text style={[s.value, num]}>~${NETWORK_FEE_USD.toFixed(2)}</Text>
             </View>
             <View style={s.row}>
-              <Text style={s.label}>StockPass fee ({PLATFORM_FEE_BPS} bps)</Text>
+              <Text style={s.label}>StockPass fee ({feeBps} bps)</Text>
               <Text style={[s.value, num]}>${feeUsd.toFixed(2)}</Text>
             </View>
+            {skrDiscount ? (
+              <View style={s.skrRow}>
+                <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
+                <Text style={s.skrCheck}>✓</Text>
+              </View>
+            ) : (
+              <Text style={s.tiny}>Hold {SKR_THRESHOLD} SKR and this fee drops to 2 bps.</Text>
+            )}
             <View style={s.divider} />
             <View style={s.row}>
               <Text style={s.totalLabel}>Total cost</Text>
@@ -254,6 +269,9 @@ const s = StyleSheet.create({
   hero: { color: T.text, fontSize: 32, fontWeight: '800', letterSpacing: -1 },
   heroUnit: { color: T.dim, fontSize: 18, fontWeight: '600' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
+  skrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1A2410', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
+  skrText: { color: T.accent, fontSize: 13, fontWeight: '600' },
+  skrCheck: { color: T.accent, fontSize: 14, fontWeight: '700' },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   dollar: { color: T.text, fontSize: 30, fontWeight: '800' },
   input: { flex: 1, color: T.text, fontSize: 32, fontWeight: '800', letterSpacing: -1, padding: 0 },
