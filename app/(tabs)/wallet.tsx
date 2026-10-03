@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { ErrorState } from '@/components/error-state'
 import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
@@ -99,7 +100,7 @@ export default function WalletScreen() {
         </View>
       )}
 
-      {error && <Text style={s.error}>{error}</Text>}
+      {error && <ErrorState message={error} onRetry={scan} />}
 
       {usdc !== null && usdc > 0 && (
         <View style={s.rowCard}>

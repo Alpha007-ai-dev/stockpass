@@ -3,6 +3,7 @@ import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, Styl
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { ErrorState } from '@/components/error-state'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { Collateral, getCollateral, getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
@@ -91,7 +92,7 @@ export default function DefiScreen() {
         </>
       )}
 
-      {error && <Text style={s.warn}>{error}</Text>}
+      {error && <ErrorState message={error} onRetry={load} />}
 
       {rows && rows.length > 0 && (
         <>

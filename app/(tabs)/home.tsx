@@ -5,6 +5,7 @@ import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { ErrorState } from '@/components/error-state'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
@@ -215,7 +216,7 @@ export default function HomeScreen() {
         </>
       )}
 
-      {error && <Text style={s.warn}>{error}</Text>}
+      {error && <ErrorState message={error} onRetry={() => scan()} />}
 
       {items && items.length > 0 && (
         <>

@@ -6,6 +6,7 @@ import { CostMap, MapFilter } from '@/components/cost-map'
 import { ReliabilityMap } from '@/components/reliability-map'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { ErrorState } from '@/components/error-state'
 import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups, Group } from '@/lib/pairs'
@@ -168,7 +169,7 @@ export default function MarketScreen() {
             <ReliabilityMap />
           )}
 
-          {error && <Text style={s.warn}>{error}</Text>}
+          {error && <ErrorState message={error} onRetry={load} />}
         </View>
       }
       renderItem={({ item }) => {

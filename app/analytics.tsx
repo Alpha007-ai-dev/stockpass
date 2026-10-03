@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
+import { ErrorState } from '@/components/error-state'
 import { bpsLabel, bpsValue, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
@@ -133,7 +134,7 @@ export default function AnalyticsScreen() {
       </ScrollView>
 
       {!items && busy && <ActivityIndicator color={T.dim} style={{ marginTop: 40 }} />}
-      {error && <Text style={s.warn}>{error}</Text>}
+      {error && <ErrorState message={error} onRetry={load} />}
 
       {items && tab === 'overview' && (
         <>

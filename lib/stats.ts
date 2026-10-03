@@ -40,9 +40,18 @@ export type Reference = {
 export type Stats = { latest: Latest[]; history: History[]; reference?: Reference[] }
 
 export async function getStats(): Promise<Stats> {
-  const res = await fetch(`${BASE}/stats`)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+  let lastError: unknown = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(`${BASE}/stats`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return (await res.json()) as Stats
+    } catch (e) {
+      lastError = e
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 1500))
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Network request failed')
 }
 
 export function compact(n: number): string {
@@ -178,6 +187,9 @@ export type TokenReliability = {
     min_entry: number | null
     max_entry: number | null
     avg_entry: number | null
+    min_exit: number | null
+    max_exit: number | null
+    avg_exit: number | null
     since: number | null
   } | null
   overall: {

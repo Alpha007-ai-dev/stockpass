@@ -186,7 +186,7 @@ export default function PassportScreen() {
             const a = rel?.overall
             const blocks: { label: string; now: number | null; tMin: number | null; tMax: number | null; oMin: number | null; oMax: number | null }[] = [
               { label: 'ENTRY COST', now: ok && mine ? (mine.entry_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_entry ?? null, oMax: a?.max_entry ?? null },
-              { label: 'EXIT COST', now: ok && mine ? (mine.exit_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_exit ?? null, oMax: a?.max_exit ?? null },
+              { label: 'EXIT COST', now: ok && mine ? (mine.exit_bps as number) : null, tMin: o?.min_exit ?? null, tMax: o?.max_exit ?? null, oMin: a?.min_exit ?? null, oMax: a?.max_exit ?? null },
             ]
             const range = (lo: number | null, hi: number | null) =>
               lo === null || hi === null ? '—' : lo === hi ? `${lo} bps` : `${lo}–${hi} bps`
