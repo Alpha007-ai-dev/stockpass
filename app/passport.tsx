@@ -255,6 +255,9 @@ export default function PassportScreen() {
               Read on-chain from the Token-2022 multiplier. Reinvested dividends raise it over time, so the same
               token represents more shares than it did at launch.
             </Text>
+            <Text style={s.tiny}>
+              Divide the token price by this multiplier before comparing issuers. That gives the per-share price.
+            </Text>
             {shares !== null && (
               <>
                 <View style={s.divider} />

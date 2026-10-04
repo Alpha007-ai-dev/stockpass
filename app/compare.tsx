@@ -10,7 +10,7 @@ import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getHoldings } from '@/lib/stats'
 import { PLATFORM_FEE_BPS } from '@/lib/swap'
-import { compact, getStats, Latest } from '@/lib/stats'
+import { compact, getCollateral, getStats, Latest, Collateral } from '@/lib/stats'
 
 const ISSUER_NOTE: Record<string, string> = {
   xStocks: 'Trades in on-chain pools. Dividends via multiplier.',
@@ -28,6 +28,8 @@ export default function CompareScreen() {
   const [error, setError] = useState<string | null>(null)
   const { account } = useMobileWallet() as any
   const [held, setHeld] = useState<{ symbol: string; amount: number } | null>(null)
+  const [collateral, setCollateral] = useState<Collateral[] | null>(null)
+  const [picked, setPicked] = useState<string | null>(null)
 
   useEffect(() => {
     ;(async () => {
@@ -57,10 +59,15 @@ export default function CompareScreen() {
       .catch((e) => setError((e as Error).message))
   }, [tk])
 
+  useEffect(() => {
+    getCollateral().then(setCollateral).catch(() => {})
+  }, [])
+
   const tokens = group?.tokens ?? []
   const rows = tokens.map((t) => ({ token: t, l: latest[t.symbol] as Latest | undefined }))
   const usable = rows.filter((r) => r.l && isUsable(r.l.entry_bps, r.l.quotable)) as { token: any; l: Latest }[]
   const best = usable.length ? usable.reduce((a, b) => (a.l.entry_bps! <= b.l.entry_bps! ? a : b)) : null
+  const chosen = (picked ? usable.find((r) => r.token.symbol === picked) : null) ?? best
   const worst = usable.length > 1 ? usable.reduce((a, b) => (a.l.entry_bps! >= b.l.entry_bps! ? a : b)) : null
   const spread = best && worst ? worst.l.entry_bps! - best.l.entry_bps! : null
   const maxBps = Math.max(1, ...usable.map((r) => r.l.entry_bps!))
@@ -81,9 +88,10 @@ export default function CompareScreen() {
           {rows.map(({ token, l }) => {
             const ok = !!l && isUsable(l.entry_bps, l.quotable)
             const isBest = best?.token.symbol === token.symbol && usable.length > 1
+            const isSelected = chosen?.token.symbol === token.symbol
             const h = ok ? Math.max(12, Math.round(((l!.entry_bps as number) / maxBps) * 100)) : 0
             return (
-              <View key={token.symbol} style={[s.raceCol, isBest && s.raceBest]}>
+              <Pressable key={token.symbol} onPress={() => { if (ok) setPicked(token.symbol) }} style={[s.raceCol, isSelected && s.raceBest]}>
                 <Text style={[s.raceIssuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
                 <Text style={[s.raceCost, num, isBest && { color: T.accent }]}>
                   {ok ? `${l!.entry_bps}` : '—'}
@@ -94,7 +102,7 @@ export default function CompareScreen() {
                 </View>
                 <Text style={[s.racePrice, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
                 <Text style={s.faint}>{l ? `×${l.multiplier.toFixed(4)}` : ''}</Text>
-              </View>
+              </Pressable>
             )
           })}
         </View>
@@ -103,10 +111,12 @@ export default function CompareScreen() {
       {rows.map(({ token, l }) => {
         const ok = !!l && isUsable(l.entry_bps, l.quotable)
         const isBest = best?.token.symbol === token.symbol && usable.length > 1
+        const isSelected = chosen?.token.symbol === token.symbol
+        const markets = collateral ? collateral.filter((c) => c.symbol === token.symbol).length : 0
         const width = ok && l ? Math.max(6, Math.round((l.entry_bps! / maxBps) * 100)) : 0
         return (
-          <Pressable key={token.symbol} style={[s.card, isBest && s.cardBest]}
-            onPress={() => router.push(`/passport?symbol=${token.symbol}`)}>
+          <Pressable key={token.symbol} style={[s.card, isSelected && s.cardBest]}
+            onPress={() => { if (ok) setPicked(token.symbol) }}>
             <View style={s.cardHead}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <TokenIcon icon={token.icon} symbol={token.symbol} label={token.ticker} issuer={token.issuer} size={36} />
@@ -127,11 +137,20 @@ export default function CompareScreen() {
 
             <View style={s.metaRow}>
               <Text style={s.faint}>{l?.buy_px ? `$${l.buy_px.toFixed(2)} per share` : 'no price yet'}</Text>
-              <Text style={s.faint}>{l ? `×` : ''}</Text>
-              <Text style={s.faint}>{l ? `supply ` : ''}</Text>
+              <Text style={s.faint}>{l ? `\u00d7${l.multiplier.toFixed(4)}` : ''}</Text>
             </View>
 
             <Text style={s.note}>{ISSUER_NOTE[token.issuer] ?? ''}</Text>
+            {collateral !== null && (
+              <Text style={[s.note, markets > 0 && { color: T.accent }]}>
+                {markets > 0
+                  ? `\u2713 Accepted on ${markets} lending market${markets === 1 ? '' : 's'}`
+                  : '\u2014 Not accepted as collateral'}
+              </Text>
+            )}
+            <Pressable onPress={() => router.push(`/passport?symbol=${token.symbol}`)}>
+              <Text style={s.faint}>Passport</Text>
+            </Pressable>
           </Pressable>
         )
       })}
@@ -188,9 +207,9 @@ export default function CompareScreen() {
         </View>
       )}
 
-      {best && (
-        <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${tk}`)}>
-          <Text style={s.primaryText}>Buy with {best.token.issuer}</Text>
+      {chosen && (
+        <Pressable style={s.primary} onPress={() => router.push(`/buy?ticker=${tk}&symbol=${chosen.token.symbol}`)}>
+          <Text style={s.primaryText}>Buy with {chosen.token.issuer}</Text>
         </Pressable>
       )}
 

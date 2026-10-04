@@ -1,7 +1,12 @@
-﻿import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { num, T } from '@/constants/theme'
 import { Latest } from '@/lib/stats'
+
+function tokenLabel(row: Latest, fallback: string) {
+  const r = row as Latest & { symbol?: string; issuer?: string }
+  return r.symbol || r.issuer || fallback
+}
 
 export function NormalizationHero({
   symbol, mine, peer, reference,
@@ -13,9 +18,13 @@ export function NormalizationHero({
 }) {
   const rawMine = (mine.buy_px ?? 0) * mine.multiplier
   const rawPeer = (peer.buy_px ?? 0) * peer.multiplier
-  const rawGap = Math.abs(Math.round((rawPeer / rawMine - 1) * 10000))
-  const normGap = Math.abs(Math.round(((peer.buy_px ?? 0) / (mine.buy_px ?? 1) - 1) * 10000))
-  const premium = reference && mine.buy_px ? Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) : null
+  const rawGap = rawMine > 0 ? Math.abs(Math.round((rawPeer / rawMine - 1) * 10000)) : 0
+  const minePx = mine.buy_px ?? 0
+  const peerPx = peer.buy_px ?? 0
+  const normGap = minePx > 0 ? Math.abs(Math.round((peerPx / minePx - 1) * 10000)) : 0
+  const differentAmounts = Math.abs(mine.multiplier - peer.multiplier) > 0.0001
+  const shrinks = differentAmounts && rawGap - normGap >= 3
+  const closed = Boolean(reference?.stale)
 
   return (
     <View style={s.card}>
@@ -33,13 +42,17 @@ export function NormalizationHero({
 
       <Text style={s.kicker}>PRICE NORMALIZATION</Text>
 
-      <View style={s.stack}>
-        <Text style={s.label}>Raw token price</Text>
-        <Text style={[s.raw, num]}>${rawMine.toFixed(2)}</Text>
-        <Text style={s.arrow}>&#8595;</Text>
-        <Text style={s.label}>Normalized per-share price</Text>
-        <Text style={[s.real, num]}>${(mine.buy_px ?? 0).toFixed(2)}</Text>
+      <View style={s.priceRow}>
+        <View style={s.priceBox}>
+          <Text style={s.label}>{symbol}</Text>
+          <Text style={[s.price, num]}>${rawMine.toFixed(2)}</Text>
+        </View>
+        <View style={s.priceBox}>
+          <Text style={s.label}>{tokenLabel(peer, 'Other')}</Text>
+          <Text style={[s.price, num]}>${rawPeer.toFixed(2)}</Text>
+        </View>
       </View>
+      <Text style={s.gapLabel}>RAW TOKEN PRICE</Text>
 
       <View style={s.gapStack}>
         <Text style={[s.gapBad, num]}>{rawGap} bps</Text>
@@ -49,21 +62,15 @@ export function NormalizationHero({
         <Text style={[s.gapLabel, { color: T.accent }]}>NORMALIZED GAP</Text>
       </View>
 
-      {reference && (
-        <View style={s.refRow}>
-          <View style={s.refBox}>
-            <Text style={s.label}>Traditional reference</Text>
-            <Text style={[s.refValue, num]}>${Number(reference.mid).toFixed(2)}</Text>
-            <Text style={s.tiny}>{reference.stale ? '(last close)' : '(live quote)'}</Text>
-          </View>
-          <View style={s.refBox}>
-            <Text style={s.label}>On-chain premium</Text>
-            <Text style={[s.refValue, num, !reference.stale && { color: T.accent }]}>
-              {reference.stale ? '—' : `${premium! >= 0 ? '+' : ''}${premium} bps`}
-            </Text>
-            <Text style={s.tiny}>{reference.stale ? '(market closed)' : '(vs traditional mid)'}</Text>
-          </View>
+      {shrinks && (
+        <View style={s.why}>
+          <Text style={s.whyTitle}>Why does the price difference disappear?</Text>
+          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn't necessarily mean a cheaper stock.</Text>
         </View>
+      )}
+
+      {closed && (
+        <Text style={s.tiny}>Traditional market is closed. These are the last on-chain quotes.</Text>
       )}
     </View>
   )
@@ -71,23 +78,19 @@ export function NormalizationHero({
 
 const s = StyleSheet.create({
   card: { backgroundColor: 'transparent', paddingVertical: 20, gap: 10, overflow: 'hidden' },
-  glow: { position: 'absolute', right: -6, bottom: -6 },
+  glow: { position: 'absolute', right: -6, top: -8 },
   kicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
-  stack: { alignItems: 'center', gap: 2 },
-  gapStack: { alignItems: 'center', gap: 2, marginTop: 4 },
-  left: { flexShrink: 1 },
-  right: { alignItems: 'flex-end', minWidth: 120 },
+  priceRow: { flexDirection: 'row', gap: 12 },
+  priceBox: { flex: 1 },
   label: { color: T.faint, fontSize: 12 },
-  raw: { color: T.faint, fontSize: 24, fontWeight: '600', textDecorationLine: 'line-through' },
-  real: { color: T.text, fontSize: 38, fontWeight: '800', letterSpacing: -1 },
+  price: { color: T.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.6 },
+  gapStack: { alignItems: 'center', gap: 2, marginTop: 4 },
   gapBad: { color: T.faint, fontSize: 26, fontWeight: '800', textDecorationLine: 'line-through' },
   gapGood: { color: T.accent, fontSize: 48, fontWeight: '800', letterSpacing: -1.6 },
   gapLabel: { color: T.faint, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
   arrow: { color: T.dim, fontSize: 20, marginVertical: 4 },
-  refRow: { flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: '#26331A', paddingTop: 12, backgroundColor: '#10160C', marginHorizontal: -18, marginBottom: -18, paddingHorizontal: 18, paddingBottom: 18, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 },
-  refBox: { flex: 1 },
-  refValue: { color: T.text, fontSize: 20, fontWeight: '700', marginTop: 2 },
-  tiny: { color: T.faint, fontSize: 11, marginTop: 1 },
+  why: { gap: 6, borderTopWidth: 1, borderTopColor: '#1F231F', paddingTop: 12, marginTop: 4 },
+  whyTitle: { color: T.text, fontSize: 15, fontWeight: '700' },
+  whyBody: { color: T.dim, fontSize: 13, lineHeight: 18 },
+  tiny: { color: T.faint, fontSize: 11, marginTop: 4 },
 })
-
-

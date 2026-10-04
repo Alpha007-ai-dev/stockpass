@@ -81,7 +81,7 @@ export default function BuyScreen() {
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [selected])
+  }, [selected, SIZE_USD, feeBps])
 
 
   const insets = useSafeAreaInsets()
@@ -109,7 +109,7 @@ export default function BuyScreen() {
       })
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, tk])
+  }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, tk, SIZE_USD])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
