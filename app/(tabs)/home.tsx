@@ -226,7 +226,7 @@ export default function HomeScreen() {
         <>
           <Text style={s.sectionLabel}>THINGS WORTH KNOWING</Text>
 
-          {items.slice(0, 4).map((i) => (
+          {items.filter((i) => i.entryBps !== null).slice(0, 4).map((i) => (
             <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} />
           ))}
         </>
