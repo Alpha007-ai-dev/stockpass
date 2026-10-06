@@ -8,7 +8,7 @@ const W = 320
 const H = 150
 const PAD_L = 34
 const PAD_B = 22
-const GAP_S = 5400
+const GAP_S = 10800
 
 export function CostTimeline({ ticker }: { ticker: string }) {
   const [hours, setHours] = useState(24)
@@ -85,8 +85,8 @@ export function CostTimeline({ ticker }: { ticker: string }) {
           <Path key={se.issuer} d={se.d} stroke={se.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
         ))}
         {series.map((se) =>
-          se.pts.slice(-1).map((p) => (
-            <Circle key={se.issuer} cx={px(p.ts)} cy={py(p.entry_bps as number)} r={4.5} fill={se.color} />
+          se.pts.map((p, i) => (
+            <Circle key={`${se.issuer}-${p.ts}`} cx={px(p.ts)} cy={py(p.entry_bps as number)} r={i === se.pts.length - 1 ? 4.5 : 2} fill={se.color} />
           )),
         )}
       </Svg>
