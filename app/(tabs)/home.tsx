@@ -33,6 +33,7 @@ export default function HomeScreen() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [latest, setLatest] = useState<Record<string, Latest>>({})
   const [hist, setHist] = useState<Record<string, History>>({})
+  const [allHist, setAllHist] = useState<History[]>([])
   const [ago, setAgo] = useState<Record<string, { px: number; ts: number }>>({})
   const [last, setLast] = useState<Purchase | null>(null)
   const [prev, setPrev] = useState<Snapshot | null>(null)
@@ -56,6 +57,7 @@ export default function HomeScreen() {
       const h: Record<string, History> = {}
       stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
       setHist(h)
+      setAllHist(stats.history)
 
       let rows: HoldingRow[]
       if (asDemo) {
@@ -219,6 +221,7 @@ export default function HomeScreen() {
           </Pressable>
         </>
       )}
+      <DailyBrief latest={latest} history={allHist} />
 
       {error && <ErrorState message={error} onRetry={() => scan()} />}
 
@@ -269,8 +272,66 @@ export default function HomeScreen() {
   )
 }
 
+
+function DailyBrief({ latest, history }: { latest: Record<string, Latest>; history: History[] }) {
+  const nowTs = Date.now() / 1000
+  const bySymbol = new Map<string, { n: number; q: number }>()
+  let openQ = 0, openSum = 0, offQ = 0, offSum = 0
+  history.forEach((h) => {
+    const q = h.samples * h.availability
+    const b = bySymbol.get(h.symbol) ?? { n: 0, q: 0 }
+    b.n += h.samples
+    b.q += q
+    bySymbol.set(h.symbol, b)
+    if (q > 0 && h.avg_entry !== null) {
+      const v = Math.max(0, h.avg_entry) * q
+      if (h.market_state === 'open') { openQ += q; openSum += v } else { offQ += q; offSum += v }
+    }
+  })
+
+  let turnaround: { symbol: string; pct: number } | null = null
+  for (const [symbol, b] of Array.from(bySymbol.entries())) {
+    const l = latest[symbol]
+    if (!l || b.n < 50 || !isUsable(l.entry_bps, l.quotable) || nowTs - l.ts > 5400) continue
+    const pct = Math.round((b.q / b.n) * 100)
+    if (pct < 50 && (turnaround === null || pct < turnaround.pct)) turnaround = { symbol, pct }
+  }
+
+  const bps = (v: number) => (v < 0.5 ? '~0 bps' : `${Math.round(v)} bps`)
+  let regime: { openBps: number; offBps: number; pct: number; higher: boolean } | null = null
+  if (openQ >= 50 && offQ >= 50) {
+    const openBps = openSum / openQ
+    const offBps = offSum / offQ
+    if (openBps > 0 && Math.abs(offBps - openBps) / openBps >= 0.2) {
+      regime = { openBps, offBps, pct: Math.round((Math.abs(offBps - openBps) / openBps) * 100), higher: offBps > openBps }
+    }
+  }
+
+  return (
+    <View style={s.briefCard}>
+      <Text style={s.briefKicker}>DAILY BRIEF</Text>
+      {turnaround && (
+        <Text style={s.briefText}>
+          {turnaround.symbol} has a quote right now, but over the last 30 days it was quotable only {turnaround.pct}% of the time.
+          <Text style={s.briefNote}> Historical pattern, not a forecast.</Text>
+        </Text>
+      )}
+      {regime && (
+        <Text style={s.briefText}>
+          Outside US market hours entry costs have averaged {bps(regime.offBps)}, against {bps(regime.openBps)} during the open session ({regime.pct}% {regime.higher ? 'higher' : 'lower'}).
+          <Text style={s.briefNote}> Historical pattern, not a forecast.</Text>
+        </Text>
+      )}
+      {!turnaround && !regime && <Text style={s.briefText}>Not enough observations yet.</Text>}
+    </View>
+  )
+}
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: T.bg },
+  briefCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 8, marginBottom: 12 },
+  briefKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  briefText: { color: T.text, fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  briefNote: { color: T.faint, fontSize: 13 },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
 
   demoBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: T.surfaceAlt, borderWidth: 1, borderColor: '#4A3A18', borderRadius: 999, paddingVertical: 8, paddingHorizontal: 14 },
