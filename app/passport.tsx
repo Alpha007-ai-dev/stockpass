@@ -190,8 +190,9 @@ export default function PassportScreen() {
               { label: 'ENTRY COST', now: ok && mine ? (mine.entry_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_entry ?? null, oMax: a?.max_entry ?? null },
               { label: 'EXIT COST', now: ok && mine ? (mine.exit_bps as number) : null, tMin: o?.min_exit ?? null, tMax: o?.max_exit ?? null, oMin: a?.min_exit ?? null, oMax: a?.max_exit ?? null },
             ]
-            const range = (lo: number | null, hi: number | null) =>
-              lo === null || hi === null ? '—' : lo === hi ? `${lo} bps` : `${lo}–${hi} bps`
+            const range = (lo0: number | null, hi0: number | null) => rawRange(lo0 === null ? null : Math.max(0, lo0), hi0 === null ? null : Math.max(0, hi0))
+            const rawRange = (lo: number | null, hi: number | null) =>
+              lo === null || hi === null ? '—' : hi === 0 ? '~0 bps' : lo === hi ? `${lo} bps` : `${lo === 0 ? '~0' : lo}–${hi} bps`
             return (
               <>
                 {blocks.map((b) => (
