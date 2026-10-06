@@ -205,7 +205,7 @@ export default function PassportScreen() {
                       </Text>
                     </View>
                     <View style={s.row}>
-                      <Text style={s.label}>Typical (open market)</Text>
+                      <Text style={s.label}>Open-market range</Text>
                       <Text style={[s.value, num]}>{range(b.tMin, b.tMax)}</Text>
                     </View>
                     <View style={s.row}>
