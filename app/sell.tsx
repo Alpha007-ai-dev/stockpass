@@ -63,7 +63,7 @@ export default function SellScreen() {
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
   const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
-    ? grossUsd - exitCostUsd - feeUsd - NETWORK_FEE_USD
+    ? grossUsd - feeUsd - NETWORK_FEE_USD
     : null
 
   const prepare = useCallback(async () => {
@@ -146,12 +146,12 @@ export default function SellScreen() {
             <View style={s.card}>
               <Text style={s.kicker}>COST BREAKDOWN</Text>
               <View style={s.row}>
-                <Text style={s.label}>Gross proceeds</Text>
+                <Text style={s.label}>Proceeds at executable price</Text>
                 <Text style={[s.value, num]}>${grossUsd.toFixed(2)}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>Exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
-                <Text style={[s.value, num]}>{exitCostUsd !== null ? `-$${exitCostUsd.toFixed(2)}` : '—'}</Text>
+                <Text style={s.label}>Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
+                <Text style={[s.value, num]}>{exitCostUsd !== null ? `~$${exitCostUsd.toFixed(2)}` : '—'}</Text>
               </View>
               <View style={s.row}>
                 <Text style={s.label}>Network fee (est.)</Text>
@@ -181,6 +181,7 @@ export default function SellScreen() {
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
               <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text></View>
+              {netUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}</Text></View>)}
               <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
               <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
             </View>

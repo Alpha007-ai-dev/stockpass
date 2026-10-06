@@ -84,7 +84,7 @@ export function CostMap({
         {tiles.map((t) => {
           const c = tint(t.cost)
           return (
-            <Pressable key={t.ticker} style={[s.tile, { backgroundColor: c.bg }, t.age > 2400 && s.stale]}
+            <Pressable key={t.ticker} style={[s.tile, { backgroundColor: c.bg }, t.age > 5400 && s.stale]}
               onPress={() => router.push(`/compare?ticker=${t.ticker}`)}>
               <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>{t.ticker}</Text>
               <Text style={[s.tileCost, num, { color: c.fg }]}>{t.cost === null ? '—' : t.cost < 0 ? '~0' : t.cost}</Text>
