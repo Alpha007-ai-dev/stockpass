@@ -85,8 +85,6 @@ export default function PassportScreen() {
   }, [sym, account])
 
   const ok = mine ? isUsable(mine.entry_bps, mine.quotable) : false
-  const cheaperPeer = mine && peer && ok && isUsable(peer.entry_bps, peer.quotable) && mine.buy_px && peer.buy_px && peer.buy_px < mine.buy_px * 0.9995 ? peer : null
-  const buySym = cheaperPeer ? cheaperPeer.symbol : sym
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
   const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < 200)
@@ -359,8 +357,8 @@ export default function PassportScreen() {
 
       {ok && (
         <View style={s.ctaRow}>
-          <Pressable style={[s.primary, { flex: 1 }]} onPress={() => router.push(`/buy?symbol=${buySym}`)}>
-            <Text style={s.primaryText}>Buy {buySym}</Text>
+          <Pressable style={[s.primary, { flex: 1 }]} onPress={() => router.push(`/buy?symbol=${sym}`)}>
+            <Text style={s.primaryText}>Buy {sym}</Text>
           </Pressable>
           {balance !== null && balance > 0 && (
             <Pressable style={[s.secondary, { flex: 1 }]} onPress={() => router.push(`/sell?symbol=${sym}`)}>
@@ -370,7 +368,6 @@ export default function PassportScreen() {
         </View>
       )}
 
-      {cheaperPeer && (<Pressable onPress={() => router.push(`/buy?symbol=${sym}`)}><Text style={s.tiny}>Buy {sym} instead ›</Text></Pressable>)}
       <Text style={s.tiny}>
         {error ?? (mine ? `Measured ${(() => { const m = Math.max(0, Math.round((Date.now() / 1000 - mine.ts) / 60)); return m < 90 ? `${m} min ago` : `${Math.round(m / 60)} h ago` })()}` : 'Loading…')}
       </Text>
