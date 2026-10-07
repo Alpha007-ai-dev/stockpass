@@ -168,7 +168,7 @@ export default function SellScreen() {
               <View style={s.divider} />
               <View style={s.row}>
                 <Text style={s.totalLabel}>Est. receive</Text>
-                <Text style={[s.totalValue, num]}>${netUsd!.toFixed(2)}<Text style={s.tiny}> USDC</Text></Text>
+                <Text style={[s.totalValue, num]}>{netUsd!.toFixed(2)}<Text style={s.tiny}> USDC</Text></Text>
               </View>
               <View style={s.row}>
                 <Text style={s.tiny}>Network fee, paid in SOL (est.)</Text>
@@ -227,7 +227,7 @@ const s = StyleSheet.create({
   value: { color: T.text, fontSize: 16, fontWeight: '600' },
   small: { color: T.dim, fontSize: 14 },
   totalLabel: { color: T.text, fontSize: 16, fontWeight: '700' },
-  totalValue: { color: T.accent, fontSize: 26, fontWeight: '800', letterSpacing: -0.6 },
+  totalValue: { color: T.accent, fontSize: 20, fontWeight: '800', letterSpacing: -0.6 },
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
