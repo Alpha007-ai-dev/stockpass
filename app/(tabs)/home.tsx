@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRouter } from 'expo-router'
@@ -39,6 +39,7 @@ export default function HomeScreen() {
   const [last, setLast] = useState<Purchase | null>(null)
   const [prev, setPrev] = useState<Snapshot | null>(null)
   const [demo, setDemoState] = useState(false)
+  const modeRef = useRef<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const insets = useSafeAreaInsets()
@@ -120,7 +121,7 @@ export default function HomeScreen() {
   useEffect(() => {
     getLastPortfolio().then(setPrev)
     getLastPurchase().then(setLast)
-    isDemo().then((d) => { setDemoState(d); if (d) scan(true) })
+    isDemo().then((d) => { modeRef.current = d; setDemoState(d); if (d) scan(true) })
     getStats().then((s) => {
       const map: Record<string, Latest> = {}
       s.latest.forEach((r) => { map[r.symbol] = r })
@@ -140,8 +141,18 @@ export default function HomeScreen() {
     savePortfolio(total, demo).then(() => getLastPortfolio().then(setPrev))
   }, [total, prev, demo])
 
-  const startDemo = async () => { await setDemo(true); setDemoState(true); scan(true) }
-  const exitDemo = async () => { await setDemo(false); setDemoState(false); setItems(null); setPrev(null) }
+  const startDemo = async () => { await setDemo(true); modeRef.current = true; setDemoState(true); scan(true) }
+  // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
+  useFocusEffect(useCallback(() => {
+    isDemo().then((d) => {
+      if (modeRef.current === null || d === modeRef.current) return
+      modeRef.current = d
+      setDemoState(d); setItems(null); setAgo({})
+      getLastPortfolio().then(setPrev)
+      if (d || account?.address) scan(d)
+    })
+  }, [account, scan]))
+  const exitDemo = async () => { await setDemo(false); modeRef.current = false; setDemoState(false); setItems(null); setPrev(null) }
 
   const allLatest = Object.values(latest)
   const entries = allLatest.filter((l) => isUsable(l.entry_bps, l.quotable)).map((l) => l.entry_bps as number).sort((a, b) => a - b)

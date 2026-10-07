@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { PortfolioSpark } from '@/components/portfolio-spark'
@@ -25,6 +25,7 @@ export default function WalletScreen() {
   const [items, setItems] = useState<Item[] | null>(null)
   const [usdc, setUsdc] = useState<number | null>(null)
   const [demo, setDemoState] = useState(false)
+  const modeRef = useRef<boolean | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [ago, setAgo] = useState<Record<string, { px: number; ts: number }>>({})
@@ -73,7 +74,17 @@ export default function WalletScreen() {
     setBusy(false)
   }, [account, connect])
 
-  useEffect(() => { isDemo().then((d) => { setDemoState(d); if (d) scan() }) }, [scan])
+  useEffect(() => { isDemo().then((d) => { modeRef.current = d; setDemoState(d); if (d) scan() }) }, [scan])
+
+  // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
+  useFocusEffect(useCallback(() => {
+    isDemo().then((d) => {
+      if (modeRef.current === null || d === modeRef.current) return
+      modeRef.current = d
+      setDemoState(d); setItems(null); setUsdc(null); setAgo({})
+      if (d || account?.address) scan()
+    })
+  }, [account, scan]))
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
   const issuers = new Set(items?.map((i) => i.issuer)).size
@@ -206,7 +217,7 @@ export default function WalletScreen() {
       {!demo && (
         <Pressable
           style={s.rowCard}
-          onPress={async () => { await setDemo(true); setDemoState(true); setUsdc(null); scan() }}>
+          onPress={async () => { await setDemo(true); modeRef.current = true; setDemoState(true); setUsdc(null); scan() }}>
           <View style={{ flex: 1 }}>
             <Text style={s.analyticsTitle}>Switch to demo portfolio</Text>
             <Text style={s.tiny}>Real prices, sample amounts</Text>
