@@ -85,6 +85,7 @@ export default function SellScreen() {
     setBusy(false)
   }, [token, amount])
 
+  const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (netUsd !== null && quote.outUi < netUsd * 0.9))
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote) return
@@ -189,10 +190,11 @@ export default function SellScreen() {
             </View>
           )}
 
-          <Pressable style={s.primary} onPress={quote ? sign : prepare} disabled={busy || !ok}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? 'Review and sign' : 'Review Sale'}</Text>}
+          <Pressable style={[s.primary, blocked && { opacity: 0.35 }]} onPress={quote ? sign : prepare} disabled={busy || !ok || blocked}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}</Text>}
           </Pressable>
           {!ok && <Text style={s.tiny}>No executable quote right now, so this position cannot be priced.</Text>}
+          {blocked && <Text style={[s.tiny, { color: T.down }]}>This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.</Text>}
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
       )}
