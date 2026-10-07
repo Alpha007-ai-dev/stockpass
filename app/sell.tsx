@@ -63,7 +63,7 @@ export default function SellScreen() {
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
   const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
-    ? grossUsd - feeUsd - NETWORK_FEE_USD
+    ? grossUsd - feeUsd
     : null
 
   const prepare = useCallback(async () => {
@@ -154,10 +154,6 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>{exitCostUsd !== null ? `~$${exitCostUsd.toFixed(2)}` : '—'}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>Network fee (est.)</Text>
-                <Text style={[s.value, num]}>-~${NETWORK_FEE_USD.toFixed(2)}</Text>
-              </View>
-              <View style={s.row}>
                 <Text style={s.label}>StockPass fee ({feeBps} bps)</Text>
                 <Text style={[s.value, num]}>-${feeUsd!.toFixed(2)}</Text>
               </View>
@@ -171,8 +167,12 @@ export default function SellScreen() {
               )}
               <View style={s.divider} />
               <View style={s.row}>
-                <Text style={s.totalLabel}>You receive</Text>
-                <Text style={[s.totalValue, num]}>${netUsd!.toFixed(2)}</Text>
+                <Text style={s.totalLabel}>Est. receive</Text>
+                <Text style={[s.totalValue, num]}>${netUsd!.toFixed(2)}<Text style={s.tiny}> USDC</Text></Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.tiny}>Network fee, paid in SOL (est.)</Text>
+                <Text style={[s.tiny, num]}>~${NETWORK_FEE_USD.toFixed(2)}</Text>
               </View>
             </View>
           )}
@@ -181,9 +181,11 @@ export default function SellScreen() {
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
               <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text></View>
+              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.raw?.routePlan?.[0]?.swapInfo?.label ?? '-'}</Text></View>
               {netUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}</Text></View>)}
               <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
               <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
+              {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Our measurements use Jupiter Ultra quotes, which can route through market makers. This swap uses the standard Jupiter router.</Text>)}
             </View>
           )}
 
