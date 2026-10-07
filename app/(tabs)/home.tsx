@@ -210,7 +210,16 @@ export default function HomeScreen() {
             })()}
             <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
           </View>
-          <PortfolioSpark tickers={items!.map((i) => i.ticker)} />
+          <PortfolioSpark
+            tickers={items!.map((i) => i.ticker)}
+            up={(() => {
+              const m = items!.filter((i) => i.value !== null && ago[i.symbol])
+              if (!m.length) return undefined
+              const now = m.reduce((n, i) => n + (i.value as number), 0)
+              const then = m.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
+              return now - then >= 0
+            })()}
+          />
         </View>
       ) : (
         <View style={s.heroCard}>

@@ -4,8 +4,9 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { T } from '@/constants/theme'
 import { getSeries } from '@/lib/stats'
 
-export function PortfolioSpark({ tickers, width = 96, height = 44 }: {
+export function PortfolioSpark({ tickers, up: upProp, width = 96, height = 44 }: {
   tickers: string[]
+  up?: boolean
   width?: number
   height?: number
 }) {
@@ -43,7 +44,7 @@ export function PortfolioSpark({ tickers, width = 96, height = 44 }: {
   const coords = points.map((v, i) => [i * step, height - 4 - ((v - min) / span) * (height - 10)])
   const d = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
   const fill = `${d} L${width},${height} L0,${height} Z`
-  const up = points[points.length - 1] >= points[0]
+  const up = upProp ?? points[points.length - 1] >= points[0]
   const color = up ? T.accent : T.down
 
   return (
