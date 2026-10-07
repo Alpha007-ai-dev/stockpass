@@ -1,6 +1,8 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { num, T } from '@/constants/theme'
+import { isUsable } from '@/lib/cost'
 import { Latest } from '@/lib/stats'
 
 function tokenLabel(row: Latest, fallback: string) {
@@ -25,6 +27,10 @@ export function NormalizationHero({
   const differentAmounts = Math.abs(mine.multiplier - peer.multiplier) > 0.0001
   const shrinks = differentAmounts && rawGap - normGap >= 3
   const closed = Boolean(reference?.stale)
+  const router = useRouter()
+  const bothOk = isUsable(mine.entry_bps, mine.quotable) && isUsable(peer.entry_bps, peer.quotable)
+  const peerCheaper = bothOk && normGap >= 5 && peerPx < minePx
+  const mineCheaper = bothOk && normGap >= 5 && minePx < peerPx
 
   return (
     <View style={s.card}>
@@ -62,9 +68,18 @@ export function NormalizationHero({
         <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>{shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} ({(normGap / 100).toFixed(2)}%)</Text>
       </View>
 
+      {peerCheaper && (
+        <Pressable onPress={() => router.push(`/passport?symbol=${peer.symbol}`)}>
+          <Text style={s.cheaper}>{tokenLabel(peer, 'Other')} is {normGap} bps cheaper to buy right now, entry costs included. View it ›</Text>
+        </Pressable>
+      )}
+      {mineCheaper && (
+        <Text style={s.cheaper}>{symbol} is {normGap} bps cheaper to buy right now, entry costs included.</Text>
+      )}
+
       {shrinks && (
         <View style={s.why}>
-          <Text style={s.whyTitle}>Why does the price difference disappear?</Text>
+          <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
           <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn't necessarily mean a cheaper stock.</Text>
         </View>
       )}
@@ -93,4 +108,5 @@ const s = StyleSheet.create({
   whyTitle: { color: T.text, fontSize: 15, fontWeight: '700' },
   whyBody: { color: T.dim, fontSize: 13, lineHeight: 18 },
   tiny: { color: T.faint, fontSize: 11, marginTop: 4 },
+  cheaper: { color: T.accent, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 6 },
 })
