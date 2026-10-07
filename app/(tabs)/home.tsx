@@ -41,6 +41,7 @@ export default function HomeScreen() {
   const [demo, setDemoState] = useState(false)
   const modeRef = useRef<boolean | null>(null)
   const lastScan = useRef(0)
+  const statsAt = useRef(Date.now())
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const insets = useSafeAreaInsets()
@@ -150,6 +151,15 @@ export default function HomeScreen() {
       if (modeRef.current === null) return
       if (d === modeRef.current) {
         if (lastScan.current > 0 && Date.now() - lastScan.current > 60000 && (d || account?.address)) scan(d)
+        else if (Date.now() - statsAt.current > 60000) {
+          // No portfolio to rescan: still keep the Daily Brief inputs current.
+          statsAt.current = Date.now()
+          getStats().then((st) => {
+            const map: Record<string, Latest> = {}
+            st.latest.forEach((r) => { map[r.symbol] = r })
+            setLatest(map); setAllHist(st.history)
+          }).catch(() => {})
+        }
         return
       }
       modeRef.current = d
@@ -160,6 +170,8 @@ export default function HomeScreen() {
   }, [account, scan]))
   const exitDemo = async () => { await setDemo(false); modeRef.current = false; setDemoState(false); setItems(null); setPrev(null) }
 
+  // The collector measures each token about every 50 minutes, so anything older than 90 minutes is not a current reading.
+  const isFresh = (l?: Latest) => !!l && Date.now() / 1000 - l.ts <= 5400
   const allLatest = Object.values(latest)
   const entries = allLatest.filter((l) => isUsable(l.entry_bps, l.quotable)).map((l) => l.entry_bps as number).sort((a, b) => a - b)
   const tracked = new Set(allLatest.map((l) => l.ticker)).size
@@ -257,7 +269,7 @@ export default function HomeScreen() {
         <>
           <Text style={s.sectionLabel}>THINGS WORTH KNOWING</Text>
 
-          {items.filter((i) => i.entryBps !== null).slice(0, 4).map((i) => (
+          {items.filter((i) => i.entryBps !== null && isFresh(latest[i.symbol])).slice(0, 4).map((i) => (
             <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} />
           ))}
         </>
