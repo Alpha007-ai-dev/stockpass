@@ -36,7 +36,7 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
         </Text>
         <Text style={s.faint}>
           {mode === 'now'
-            ? 'Each tile is one token. Green means an executable quote exists at this moment.'
+            ? 'Each tile is one token. Green means a fresh executable quote (under 90 minutes old) exists.'
             : 'Each tile is one token, coloured by the share of all our measurements where an executable quote existed. This is the track record, not what is tradeable right now.'}
         </Text>
       </View>
@@ -58,8 +58,10 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
           .filter((t) => t.issuer === issuer)
           .sort((a, b) => b.availability - a.availability)
         const reliable = list.filter((t) => t.availability >= 80).length
-        const avg = list.reduce((n, t) => n + t.availability, 0) / Math.max(1, list.length)
-        const liveCount = list.filter((t) => latest?.[t.symbol]?.quotable).length
+        const totalN = list.reduce((n, t) => n + t.samples, 0)
+        const quotedN = list.reduce((n, t) => n + t.quotable_count, 0)
+        const avg = totalN > 0 ? (quotedN / totalN) * 100 : 0
+        const liveCount = list.filter((t) => { const l = latest?.[t.symbol]; return l !== undefined && !!l.quotable && Date.now() / 1000 - l.ts < 5400 }).length
 
         return (
           <View key={issuer} style={{ gap: 9 }}>
@@ -71,13 +73,15 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
               <Text style={[s.headStat, num]}>
                 {mode === 'now'
                   ? <>{liveCount}/{list.length} <Text style={s.faint}>tradeable now</Text></>
-                  : <>{reliable}/{list.length} <Text style={s.faint}>reliable · {avg.toFixed(0)}% avg</Text></>}
+                  : <>{avg.toFixed(0)}% <Text style={s.faint}>available</Text></>}
               </Text>
             </View>
 
+            {mode === 'history' && <Text style={s.faint}>{totalN.toLocaleString()} measurements · {reliable}/{list.length} tokens reliable (80%+)</Text>}
             <View style={s.grid}>
               {list.map((t) => {
-                const liveOk = mode === 'now' ? !!latest?.[t.symbol]?.quotable : null
+                const lv = latest?.[t.symbol]
+                const liveOk = mode === 'now' ? lv !== undefined && !!lv.quotable && Date.now() / 1000 - lv.ts < 5400 : null
                 const c = band(liveOk === null ? t.availability : liveOk ? 100 : 0)
                 return (
                   <Pressable
@@ -99,10 +103,10 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
       })}
 
       <View style={s.legend}>
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#6BEF92' }]} /><Text style={s.faint}>80%+</Text></View>
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#F5C451' }]} /><Text style={s.faint}>40–80%</Text></View>
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#FB8A5C' }]} /><Text style={s.faint}>under 40%</Text></View>
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#7A8078' }]} /><Text style={s.faint}>never quotable</Text></View>
+        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#6BEF92' }]} /><Text style={s.faint}>{mode === 'now' ? 'live quote' : '80%+'}</Text></View>
+        {mode === 'history' && <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#F5C451' }]} /><Text style={s.faint}>40–80%</Text></View>}
+        {mode === 'history' && <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#FB8A5C' }]} /><Text style={s.faint}>under 40%</Text></View>}
+        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#7A8078' }]} /><Text style={s.faint}>{mode === 'now' ? 'no fresh quote' : 'never quotable'}</Text></View>
       </View>
     </View>
   )
