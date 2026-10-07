@@ -40,7 +40,7 @@ export function NormalizationHero({
         <Path d="M0,110 C55,106 105,84 150,64 C176,52 196,44 210,40" stroke={T.accent} strokeWidth={1.5} strokeOpacity={0.18} fill="none" />
       </Svg>
 
-      <Text style={s.kicker}>PRICE NORMALIZATION</Text>
+      <Text style={s.kicker}>SAME STOCK, TWO TOKENS</Text>
 
       <View style={s.priceRow}>
         <View style={s.priceBox}>
@@ -52,14 +52,14 @@ export function NormalizationHero({
           <Text style={[s.price, num]}>${rawPeer.toFixed(2)}</Text>
         </View>
       </View>
-      <Text style={s.gapLabel}>RAW TOKEN PRICE</Text>
+      <Text style={s.gapLabel}>PRICE PER TOKEN</Text>
 
       <View style={s.gapStack}>
-        <Text style={[s.gapBad, num]}>{rawGap} bps</Text>
-        <Text style={s.gapLabel}>RAW PRICE GAP</Text>
-        <Text style={s.arrow}>&#8595;</Text>
+        {shrinks && <Text style={[s.gapBad, num]}>{rawGap} bps</Text>}
+        {shrinks && <Text style={s.gapLabel}>PRICE DIFFERENCE AS LISTED</Text>}
+        {shrinks && <Text style={s.arrow}>&#8595;</Text>}
         <Text style={[s.gapGood, num]}>{normGap} bps</Text>
-        <Text style={[s.gapLabel, { color: T.accent }]}>NORMALIZED GAP</Text>
+        <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>{shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} ({(normGap / 100).toFixed(2)}%)</Text>
       </View>
 
       {shrinks && (
@@ -70,7 +70,7 @@ export function NormalizationHero({
       )}
 
       {closed && (
-        <Text style={s.tiny}>Traditional market is closed. These are the last on-chain quotes.</Text>
+        <Text style={s.tiny}>Wall Street is closed, so these are the latest prices we measured on Solana.</Text>
       )}
     </View>
   )

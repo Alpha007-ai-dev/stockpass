@@ -125,33 +125,33 @@ export default function PassportScreen() {
 
           <View style={s.pairRow}>
             <View style={[s.card, { flex: 1 }]}>
-              <Text style={s.kicker}>ENTRY COST</Text>
+              <Text style={s.kicker}>COST TO BUY</Text>
               <Text style={[s.metric, num, { color: T.accent }]}>{!ok ? '—' : (mine.entry_bps as number) < 0 ? '~0 bps' : `${mine.entry_bps} bps`}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
+              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}</Text>
             </View>
             <View style={[s.card, { flex: 1 }]}>
-              <Text style={s.kicker}>EXIT COST</Text>
+              <Text style={s.kicker}>COST TO SELL</Text>
               <Text style={[s.metric, num]}>{!ok ? '—' : (mine.exit_bps as number) < 0 ? '~0 bps' : `${mine.exit_bps} bps`}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} / $1,000` : 'no quote'}</Text>
+              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}</Text>
             </View>
           </View>
 
           {reference && mine.buy_px && (
             <View style={s.card}>
-              <Text style={s.kicker}>COST TO GO ON-CHAIN</Text>
-              <View style={s.row}><Text style={s.label}>Traditional reference</Text><Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text></View>
-              <View style={s.row}><Text style={s.label}>Normalized token price</Text><Text style={[s.value, num]}>${mine.buy_px.toFixed(2)}</Text></View>
+              <Text style={s.kicker}>TOKEN VS. WALL STREET</Text>
+              <View style={s.row}><Text style={s.label}>Stock price on Wall Street</Text><Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text></View>
+              <View style={s.row}><Text style={s.label}>Token price per share</Text><Text style={[s.value, num]}>${mine.buy_px.toFixed(2)}</Text></View>
               <View style={s.row}>
-                <Text style={s.label}>Market deviation</Text>
+                <Text style={s.label}>Token vs. Wall Street</Text>
                 <Text style={[s.value, num]}>
-                  {reference.stale ? 'market closed' : `${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps`}
+                  {reference.stale ? 'Wall Street closed' : `${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps`}
                 </Text>
               </View>
-              <View style={s.row}><Text style={s.label}>Execution cost</Text><Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text></View>
+              <View style={s.row}><Text style={s.label}>Trading cost to buy</Text><Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text></View>
 
               {!reference.stale && ok && (
                 <View style={s.totalBox}>
-                  <Text style={s.kicker}>TOTAL COST TO GO ON-CHAIN</Text>
+                  <Text style={s.kicker}>TOTAL COST VS. WALL STREET PRICE</Text>
                   <Text style={[s.total, num]}>
                     {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) + (mine.entry_bps as number) >= 0 ? '+' : ''}
                     {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) + (mine.entry_bps as number)} bps
@@ -369,7 +369,7 @@ export default function PassportScreen() {
       )}
 
       <Text style={s.tiny}>
-        {error ?? (mine ? `Last measured ${new Date(mine.ts * 1000).toLocaleString()}` : 'Loading…')}
+        {error ?? (mine ? `Measured ${(() => { const m = Math.max(0, Math.round((Date.now() / 1000 - mine.ts) / 60)); return m < 90 ? `${m} min ago` : `${Math.round(m / 60)} h ago` })()}` : 'Loading…')}
       </Text>
     </ScrollView>
   )
