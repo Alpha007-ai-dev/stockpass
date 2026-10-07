@@ -32,11 +32,11 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
     <View style={{ gap: 18 }}>
       <View style={s.intro}>
         <Text style={s.introTitle}>
-          {mode === 'now' ? 'What can you trade right now?' : 'How often can you actually trade?'}
+          {mode === 'now' ? 'What could you trade at the latest check?' : 'How often can you actually trade?'}
         </Text>
         <Text style={s.faint}>
           {mode === 'now'
-            ? 'Each tile is one token. Green means a fresh executable quote (under 90 minutes old) exists.'
+            ? 'Each tile is one token, from its latest measurement (every token is re-measured about every 50 minutes). Green means an executable quote existed then.'
             : 'Each tile is one token, coloured by the share of all our measurements where an executable quote existed. This is the track record, not what is tradeable right now.'}
         </Text>
       </View>
@@ -46,7 +46,7 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
           {(['history', 'now'] as const).map((m) => (
             <Pressable key={m} onPress={() => setMode(m)} style={[s.toggleBtn, mode === m && s.toggleOn]}>
               <Text style={[s.toggleText, mode === m && s.toggleTextOn]}>
-                {m === 'history' ? 'Track record' : 'Right now'}
+                {m === 'history' ? 'Track record' : 'Latest check'}
               </Text>
             </Pressable>
           ))}
@@ -72,7 +72,7 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
               </View>
               <Text style={[s.headStat, num]}>
                 {mode === 'now'
-                  ? <>{liveCount}/{list.length} <Text style={s.faint}>tradeable now</Text></>
+                  ? <>{liveCount}/{list.length} <Text style={s.faint}>tradeable at last check</Text></>
                   : <>{avg.toFixed(0)}% <Text style={s.faint}>available</Text></>}
               </Text>
             </View>
