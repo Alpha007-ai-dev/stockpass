@@ -19,6 +19,7 @@ import { InsightCard } from '@/components/insight-card'
 type Item = HoldingRow & {
   shares: number
   value: number | null
+  buyValue: number | null
   entryBps: number | null
   exitBps: number | null
   entryDelta: number | null
@@ -90,6 +91,7 @@ export default function HomeScreen() {
           ...r,
           shares,
           value: l?.sell_px ? shares * l.sell_px : null,
+          buyValue: l?.buy_px ? shares * l.buy_px : null,
           entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
           exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
           entryDelta: null,
@@ -172,9 +174,9 @@ export default function HomeScreen() {
               ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
             {(() => {
-              const matched = items!.filter((i) => i.value !== null && ago[i.symbol])
+              const matched = items!.filter((i) => i.buyValue !== null && ago[i.symbol])
               if (matched.length) {
-                const nowVal = matched.reduce((n, i) => n + (i.value as number), 0)
+                const nowVal = matched.reduce((n, i) => n + (i.buyValue as number), 0)
                 const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
                 const d = nowVal - thenVal
                 const pct = thenVal > 0 ? (d / thenVal) * 100 : 0

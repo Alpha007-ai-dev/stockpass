@@ -4,16 +4,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
+import { PortfolioSpark } from '@/components/portfolio-spark'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
 import { bpsLabel, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { getHoldings, getStats, getUsdcBalance, HoldingRow, Latest } from '@/lib/stats'
+import { getHoldings, getPricesAgo, getStats, getUsdcBalance, HoldingRow, Latest } from '@/lib/stats'
 
 type Item = HoldingRow & {
   shares: number
   value: number | null
+  buyValue: number | null
   exitBps: number | null
 }
 
@@ -25,6 +27,7 @@ export default function WalletScreen() {
   const [demo, setDemoState] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [ago, setAgo] = useState<Record<string, { px: number; ts: number }>>({})
 
 
   const insets = useSafeAreaInsets()
@@ -59,9 +62,11 @@ export default function WalletScreen() {
           ...r,
           shares,
           value: l?.sell_px ? shares * l.sell_px : null,
+          buyValue: l?.buy_px ? shares * l.buy_px : null,
           exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
         }
       }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0)))
+      getPricesAgo(rows.map((r) => r.symbol), 24).then(setAgo).catch(() => {})
     } catch (e) {
       setError((e as Error).message)
     }
@@ -84,12 +89,29 @@ export default function WalletScreen() {
       </View>
 
       {total !== null ? (
-        <View style={s.heroCard}>
+        <View style={[s.heroCard, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          <View style={{ flex: 1, gap: 4 }}>
           <Text style={s.kicker}>TOTAL VALUE</Text>
           <Text style={[s.hero, num]}>
             ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
+          {(() => {
+            const matched = items!.filter((i) => i.buyValue !== null && ago[i.symbol])
+            if (!matched.length) return null
+            const nowVal = matched.reduce((n, i) => n + (i.buyValue as number), 0)
+            const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
+            const d = nowVal - thenVal
+            const pct = thenVal > 0 ? (d / thenVal) * 100 : 0
+            return (
+              <Text style={[s.change, num, { color: d >= 0 ? T.accent : T.down }]}>
+                {d >= 0 ? '+' : '-'}${Math.abs(d).toFixed(2)} ({d >= 0 ? '+' : ''}{pct.toFixed(2)}%)
+                <Text style={s.changeLabel}>  24h</Text>
+              </Text>
+            )
+          })()}
           <Text style={s.tiny}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
+          </View>
+          <PortfolioSpark tickers={items!.map((i) => i.ticker)} />
         </View>
       ) : (
         <View style={s.heroCard}>
@@ -215,6 +237,8 @@ const s = StyleSheet.create({
   hero: { color: T.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2, marginTop: 4 },
   metric: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, marginTop: 3 },
   tiny: { color: T.faint, fontSize: 13, lineHeight: 18 },
+  change: { fontSize: 16, fontWeight: '700' },
+  changeLabel: { color: T.dim, fontSize: 14, fontWeight: '400' },
 
   sectionLabel: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginTop: 12, marginBottom: 1 },
 
