@@ -8,7 +8,8 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { getBestQuote, submitSwap } from '@/lib/swap2'
 import { getBalances, getHoldings, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const NETWORK_FEE_USD = 0.01
@@ -18,7 +19,7 @@ export default function SellScreen() {
   const router = useRouter()
   const { symbol } = useLocalSearchParams<{ symbol?: string }>()
   const sym = symbol ?? ''
-  const { account, connect, signAndSendTransaction } = useMobileWallet() as any
+  const { account, connect, signAndSendTransaction, signTransaction } = useMobileWallet() as any
 
   const [token, setToken] = useState<TokenRow | null>(null)
   const [latest, setLatest] = useState<Latest | null>(null)
@@ -71,7 +72,7 @@ export default function SellScreen() {
     setBusy(true); setStatus(null); setQuote(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
-      const q = await getQuote(
+      const q = await getBestQuote(
         { key: token.symbol, mint: token.mint, decimals: token.decimals, symbol: token.symbol, feeAccount: usdc.feeAccount } as any,
         amount,
         usdc.mint,
@@ -79,11 +80,11 @@ export default function SellScreen() {
         'USDC',
         feeBps,
       )
-      if (!q) throw new Error('No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.')
+      if (!q) throw new Error('No route available for this amount right now.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [token, amount])
+  }, [token, amount, feeBps])
 
   const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (netUsd !== null && quote.outUi < netUsd * 0.9))
   const insets = useSafeAreaInsets()
@@ -93,13 +94,11 @@ export default function SellScreen() {
     try {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
-      const b64 = await buildSwapTx(quote, String(addr))
-      if (!b64) throw new Error('Could not build transaction')
-      const sig = await signAndSendTransaction(decodeTx(b64), BigInt(quote.contextSlot))
+      const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
       setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [quote, account, connect, signAndSendTransaction])
+  }, [quote, account, connect, signAndSendTransaction, signTransaction])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
@@ -182,11 +181,13 @@ export default function SellScreen() {
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
               <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text></View>
-              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.raw?.routePlan?.[0]?.swapInfo?.label ?? '-'}</Text></View>
+              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.routeLabel ?? '-'}</Text></View>
+              {quote.altOutUi !== undefined && (<View style={s.row}><Text style={s.label}>Other route ({quote.altLabel})</Text><Text style={[s.small, num]}>{quote.altOutUi.toFixed(2)} USDC</Text></View>)}
+              {quote.route === 'v2' && (<View style={s.row}><Text style={s.label}>StockPass fee</Text><Text style={s.small}>none on this route</Text></View>)}
               {netUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}</Text></View>)}
-              <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
+              {quote.impactKnown !== false && (<View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>)}
               <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
-              {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Our measurements use Jupiter Ultra quotes, which can route through market makers. This swap uses the standard Jupiter router.</Text>)}
+              {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Compare it with the other route above before signing.</Text>)}
             </View>
           )}
 

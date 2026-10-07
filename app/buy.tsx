@@ -8,7 +8,8 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
-import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { getBestQuote, submitSwap } from '@/lib/swap2'
 import { getBalances, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const DEFAULT_SIZE = 1000
@@ -20,7 +21,7 @@ type Option = { token: TokenRow; entry: number }
 export default function BuyScreen() {
   const router = useRouter()
   const { ticker, symbol } = useLocalSearchParams<{ ticker?: string; symbol?: string }>()
-  const { account, connect, signAndSendTransaction } = useMobileWallet() as any
+  const { account, connect, signAndSendTransaction, signTransaction } = useMobileWallet() as any
 
   const [options, setOptions] = useState<Option[] | null>(null)
   const [selected, setSelected] = useState<Option | null>(null)
@@ -76,8 +77,8 @@ export default function BuyScreen() {
     setBusy(true); setStatus(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
-      const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
-      if (!q) throw new Error('No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.')
+      const q = await getBestQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
+      if (!q) throw new Error('No route available for this amount right now.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
@@ -92,9 +93,7 @@ export default function BuyScreen() {
     try {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
-      const b64 = await buildSwapTx(quote, String(addr))
-      if (!b64) throw new Error('Could not build transaction')
-      const sig = await signAndSendTransaction(decodeTx(b64), BigInt(quote.contextSlot))
+      const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
       setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
       await savePurchase({
         ticker: tk,
@@ -102,7 +101,7 @@ export default function BuyScreen() {
         issuer: selected.token.issuer,
         sizeUsd: SIZE_USD,
         entryBps: selected.entry,
-        feeBps: PLATFORM_FEE_BPS,
+        feeBps: quote.route === 'v2' ? 0 : PLATFORM_FEE_BPS,
         altBps: alternative?.entry ?? null,
         savedBps: savingBps,
         signature: String(sig),
@@ -110,7 +109,7 @@ export default function BuyScreen() {
       })
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, tk, SIZE_USD])
+  }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, signTransaction, tk, SIZE_USD])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
@@ -236,9 +235,11 @@ export default function BuyScreen() {
           {quote && (
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
-              <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
+              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.routeLabel ?? '-'}</Text></View>
+              {quote.altOutUi !== undefined && (<View style={s.row}><Text style={s.label}>Other route ({quote.altLabel})</Text><Text style={[s.small, num]}>~{quote.altOutUi.toFixed(4)} {selected?.token.symbol}</Text></View>)}
+              {quote.impactKnown !== false && (<View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>)}
               <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
-              <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.small, num]}>{quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
+              <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.small, num]}>{quote.route === 'v2' ? `${quote.feeBps} bps (Jupiter, no StockPass fee)` : quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
             </View>
           )}
 

@@ -29,6 +29,15 @@ export type Quote = {
   outSymbol?: string;
   paySymbol: string;
   feeAccount?: string;
+  /** 'v1' = standard Jupiter router (StockPass fee applies); 'v2' = Swap V2 (market makers etc., no StockPass fee). */
+  route?: 'v1' | 'v2';
+  routeLabel?: string;
+  /** False when the route does not report a price impact (Swap V2). */
+  impactKnown?: boolean;
+  /** What the other route would have returned, when both were available. */
+  altOutUi?: number;
+  altLabel?: string;
+  payToken?: PayToken;
 };
 
 export async function getQuote(
@@ -70,6 +79,9 @@ export async function getQuote(
       outSymbol,
       paySymbol: pay.symbol,
       feeAccount: pay.feeAccount,
+      route: 'v1',
+      routeLabel: q.routePlan?.[0]?.swapInfo?.label ?? 'Jupiter',
+      impactKnown: true,
     };
   } catch {
     return null;
