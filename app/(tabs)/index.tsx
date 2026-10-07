@@ -20,7 +20,7 @@ function Spark({ values, color }: { values: number[]; color: string }) {
   if (values.length < 3) return <View style={{ width: 64, height: 24 }} />
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const span = Math.max(0.5, max - min)
+  const span = Math.max(10, max - min)
   const step = 64 / (values.length - 1)
   const d = values
     .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(22 - ((v - min) / span) * 18).toFixed(1)}`)
@@ -119,8 +119,8 @@ export default function MarketScreen() {
           results.forEach((pts) => {
             const bySymbol: Record<string, number[]> = {}
             ;(pts as SeriesPoint[]).forEach((p) => {
-              if (!p.quotable || p.entry_bps === null) return
-              ;(bySymbol[p.symbol] ??= []).push(p.entry_bps as number)
+              if (!p.quotable || p.entry_bps === null || p.entry_bps >= 200) return
+              ;(bySymbol[p.symbol] ??= []).push(Math.max(0, p.entry_bps as number))
             })
             Object.entries(bySymbol).forEach(([sym, vals]) => {
               if (vals.length >= 3) next[sym] = vals.slice(-14)
