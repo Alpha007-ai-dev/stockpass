@@ -15,6 +15,7 @@ import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
 import { getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
 import { InsightCard } from '@/components/insight-card'
+import { AlertsCard } from '@/components/alerts-card'
 
 type Item = HoldingRow & {
   shares: number
@@ -249,6 +250,7 @@ export default function HomeScreen() {
           </Pressable>
         </>
       )}
+      {!demo && <AlertsCard owner={account?.address ? String(account.address) : undefined} />}
       <DailyBrief latest={latest} history={allHist} />
 
       {error && <ErrorState message={error} onRetry={() => scan()} />}

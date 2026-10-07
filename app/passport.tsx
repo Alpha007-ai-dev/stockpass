@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { CostAlert } from '@/components/cost-alert'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
 import { TokenIcon } from '@/components/token-icon'
@@ -135,6 +136,8 @@ export default function PassportScreen() {
               <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}</Text>
             </View>
           </View>
+
+          <CostAlert symbol={sym} currentBps={ok ? Math.max(0, mine.entry_bps as number) : null} />
 
           {reference && mine.buy_px && (
             <View style={s.card}>
