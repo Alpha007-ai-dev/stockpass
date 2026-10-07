@@ -40,6 +40,7 @@ export default function HomeScreen() {
   const [prev, setPrev] = useState<Snapshot | null>(null)
   const [demo, setDemoState] = useState(false)
   const modeRef = useRef<boolean | null>(null)
+  const lastScan = useRef(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const insets = useSafeAreaInsets()
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const open = state === 'open'
 
   const scan = useCallback(async (useDemo?: boolean) => {
+    lastScan.current = Date.now()
     setBusy(true)
     setError(null)
     try {
@@ -145,7 +147,11 @@ export default function HomeScreen() {
   // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
   useFocusEffect(useCallback(() => {
     isDemo().then((d) => {
-      if (modeRef.current === null || d === modeRef.current) return
+      if (modeRef.current === null) return
+      if (d === modeRef.current) {
+        if (lastScan.current > 0 && Date.now() - lastScan.current > 60000 && (d || account?.address)) scan(d)
+        return
+      }
       modeRef.current = d
       setDemoState(d); setItems(null); setAgo({})
       getLastPortfolio().then(setPrev)
