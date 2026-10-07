@@ -77,7 +77,7 @@ export default function BuyScreen() {
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
       const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
-      if (!q) throw new Error('No route available')
+      if (!q) throw new Error('No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
