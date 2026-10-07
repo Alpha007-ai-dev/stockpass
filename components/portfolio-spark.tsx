@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { T } from '@/constants/theme'
@@ -15,7 +15,7 @@ export function PortfolioSpark({ tickers, width = 96, height = 44 }: {
     let cancelled = false
     ;(async () => {
       try {
-        const all = await Promise.all(tickers.slice(0, 4).map((t) => getSeries(t, 24).catch(() => [])))
+        const all = await Promise.all(tickers.slice(0, 4).map((t) => getSeries(t, 24).then((arr) => { const base = arr.find((q) => q.buy_px)?.buy_px; return base ? arr.map((q) => ({ ...q, buy_px: q.buy_px ? (q.buy_px / base) * 100 : q.buy_px })) : [] }).catch(() => [])))
         const buckets = new Map<number, { sum: number; n: number }>()
         all.flat().forEach((p) => {
           if (!p.buy_px) return
