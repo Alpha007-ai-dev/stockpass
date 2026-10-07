@@ -84,6 +84,7 @@ export default function BuyScreen() {
   }, [selected, SIZE_USD, feeBps])
 
 
+  const blocked = quote !== null && quote.priceImpactPct * 100 > 5
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote || !selected) return
@@ -201,8 +202,8 @@ export default function BuyScreen() {
             <View style={s.row}>
               <Text style={s.totalLabel}>Total cost</Text>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[s.totalValue, num]}>${totalUsd!.toFixed(2)}</Text>
-                <Text style={s.tiny}>{totalBps!.toFixed(1)} bps</Text>
+                <Text style={[s.totalValue, num, blocked && { color: T.down }]}>{blocked ? 'n/a' : '$' + totalUsd!.toFixed(2)}</Text>
+                <Text style={s.tiny}>{blocked ? 'route unusable right now' : totalBps!.toFixed(1) + ' bps'}</Text>
               </View>
             </View>
           </View>
@@ -219,7 +220,7 @@ export default function BuyScreen() {
                 </>
               ) : (
                 <>
-                  <Text style={s.kicker}>ALTERNATIVE ISSUER</Text>
+                  <Text style={s.kicker}>{blocked ? 'TRY THIS ISSUER INSTEAD' : 'ALTERNATIVE ISSUER'}</Text>
                   <View style={s.row}>
                     <Text style={s.label}>{alternative.token.symbol} · {alternative.token.issuer}</Text>
                     <Text style={[s.value, num]}>{alternative.entry} bps</Text>
@@ -241,8 +242,9 @@ export default function BuyScreen() {
             </View>
           )}
 
-          <Pressable style={[s.primary, SIZE_USD <= 0 && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? 'Review and sign' : 'Review Purchase'}</Text>}
+          {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>This route has a very high price impact, so signing is disabled. Try a smaller amount.</Text>}
+          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
           </Pressable>
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
