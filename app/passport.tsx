@@ -176,8 +176,8 @@ export default function PassportScreen() {
               {valid.map((h) => (
                 <View key={h.market_state} style={s.barRow}>
                   <Text style={s.barLabel}>{STATE_LABEL[h.market_state] ?? h.market_state}</Text>
-                  <View style={s.track}><View style={[s.fill, { width: `${Math.round((h.avg_entry / maxAvg) * 100)}%` }]} /></View>
-                  <Text style={[s.barValue, num]}>{h.avg_entry.toFixed(0)}</Text>
+                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(0, Math.round((h.avg_entry / maxAvg) * 100))}%` }]} /></View>
+                  <Text style={[s.barValue, num]}>{h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)}</Text>
                 </View>
               ))}
             </View>

@@ -242,11 +242,11 @@ export default function MarketScreen() {
               </View>
               {(() => {
                 const h = hist[token.symbol]
-                if (!h || h.samples < 3 || h.avg_entry === null) return null
+                if (!h || h.avg_entry === null || h.avg_entry >= 200 || h.samples * h.availability < 10) return null
                 return (
                   <View style={s.metric}>
                     <Text style={s.metricLabel}>usual</Text>
-                    <Text style={[s.metricValue, num, { color: T.dim }]}>{h.avg_entry.toFixed(0)} bps</Text>
+                    <Text style={[s.metricValue, num, { color: T.dim }]}>{h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)} bps</Text>
                   </View>
                 )
               })()}

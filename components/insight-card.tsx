@@ -30,7 +30,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
     return { text: 'Available now, but usually hard to trade.', tone: 'warn' }
   }
   const value = i.value
-  const usual = hist && hist.samples >= 3 && hist.avg_entry !== null && hist.avg_entry < 200 ? hist.avg_entry : null
+  const usual = hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < 200 ? hist.avg_entry : null
   if (value && usual !== null) {
     const delta = i.entryBps - usual
     if (Math.abs(delta) >= 3) {
