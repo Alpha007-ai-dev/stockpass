@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useFocusEffect } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
@@ -21,6 +22,7 @@ export default function DefiScreen() {
   const [rows, setRows] = useState<Row[] | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const modeRef = useRef<boolean | null>(null)
 
   const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
@@ -62,7 +64,17 @@ export default function DefiScreen() {
     setBusy(false)
   }, [account, connect])
 
-  useEffect(() => { isDemo().then((d) => { if (d) load() }) }, [load])
+  useEffect(() => { isDemo().then((d) => { modeRef.current = d; if (d) load() }) }, [load])
+
+  // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
+  useFocusEffect(useCallback(() => {
+    isDemo().then((d) => {
+      if (modeRef.current === null || d === modeRef.current) return
+      modeRef.current = d
+      setRows(null); setError(null)
+      if (d || account?.address) load()
+    })
+  }, [account, load]))
 
   const supported = rows?.filter((r) => r.markets.length > 0) ?? []
   const blocked = rows?.filter((r) => r.markets.length === 0) ?? []
