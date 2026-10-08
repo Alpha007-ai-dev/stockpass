@@ -94,6 +94,8 @@ export default function WalletScreen() {
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
   const issuers = new Set(items?.map((i) => i.issuer)).size
+  const unpriced = items?.filter((i) => i.value === null).length ?? 0
+  const agoOk = (sym: string) => !!ago[sym] && Date.now() / 1000 - ago[sym].ts <= 30 * 3600
   const hidden = items?.reduce((n, i) => n + (i.shares - i.walletAmount), 0) ?? 0
   const addr = account?.address ? String(account.address) : null
   const shortAddr = addr ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : null
@@ -113,7 +115,7 @@ export default function WalletScreen() {
             ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </Text>
           {(() => {
-            const matched = items!.filter((i) => i.buyValue !== null && ago[i.symbol])
+            const matched = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
             if (!matched.length) return null
             const nowVal = matched.reduce((n, i) => n + (i.buyValue as number), 0)
             const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
@@ -126,12 +128,12 @@ export default function WalletScreen() {
               </Text>
             )
           })()}
-          <Text style={s.tiny}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
+          <Text style={s.tiny}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
           </View>
           <PortfolioSpark
             tickers={items!.map((i) => i.ticker)}
             up={(() => {
-              const m = items!.filter((i) => i.buyValue !== null && ago[i.symbol])
+              const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined
               const now = m.reduce((n, i) => n + (i.buyValue as number), 0)
               const then = m.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)

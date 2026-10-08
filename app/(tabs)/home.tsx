@@ -141,9 +141,12 @@ export default function HomeScreen() {
   // the demo portfolio and a real wallet never shows a fabricated change.
   const change = total !== null && prev && prev.demo === demo && prev.total > 0 ? total - prev.total : null
   const issuers = new Set(items?.map((i) => i.issuer)).size
+  const unpriced = items?.filter((i) => i.value === null).length ?? 0
+  // A 24h comparison is only meaningful when the earlier price really is about a day old.
+  const agoOk = (sym: string) => !!ago[sym] && Date.now() / 1000 - ago[sym].ts <= 30 * 3600
 
   useEffect(() => {
-    if (total === null || total <= 0) return
+    if (total === null || total <= 0 || unpriced > 0) return
     if (prev && prev.demo === demo && Date.now() - prev.at < 60 * 60 * 1000) return
     savePortfolio(total, demo).then(() => getLastPortfolio().then(setPrev))
   }, [total, prev, demo])
@@ -256,7 +259,7 @@ export default function HomeScreen() {
               ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
             {(() => {
-              const matched = items!.filter((i) => i.buyValue !== null && ago[i.symbol])
+              const matched = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (matched.length) {
                 const nowVal = matched.reduce((n, i) => n + (i.buyValue as number), 0)
                 const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
@@ -279,7 +282,7 @@ export default function HomeScreen() {
               }
               return null
             })()}
-            <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
+            <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
             {exitCostBps !== null && (
               <Text style={s.heroExit}>
                 Exit cost now <Text style={[s.heroExitStrong, num]}>${exitCostUsd.toFixed(2)} · {exitCostBps} bps</Text>
@@ -290,9 +293,9 @@ export default function HomeScreen() {
           <PortfolioSpark
             tickers={items!.map((i) => i.ticker)}
             up={(() => {
-              const m = items!.filter((i) => i.value !== null && ago[i.symbol])
+              const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined
-              const now = m.reduce((n, i) => n + (i.value as number), 0)
+              const now = m.reduce((n, i) => n + (i.buyValue as number), 0)
               const then = m.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
               return now - then >= 0
             })()}
@@ -412,7 +415,7 @@ function DailyBrief({ latest, history }: { latest: Record<string, Latest>; histo
     b.n += h.samples
     b.q += q
     bySymbol.set(h.symbol, b)
-    if (q > 0 && h.avg_entry !== null) {
+    if (q > 0 && h.avg_entry !== null && h.avg_entry < 200) {
       const v = Math.max(0, h.avg_entry) * q
       if (h.market_state === 'open') { openQ += q; openSum += v } else { offQ += q; offSum += v }
     }

@@ -168,13 +168,13 @@ export default function PassportScreen() {
 
               {!reference.stale && ok && (
                 <View style={s.totalBox}>
-                  <Text style={s.kicker}>TOTAL COST VS. WALL STREET PRICE</Text>
+                  <Text style={s.kicker}>PRICE VS. WALL STREET, TRADING COST INCLUDED</Text>
                   <Text style={[s.total, num]}>
-                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) + (mine.entry_bps as number) >= 0 ? '+' : ''}
-                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) + (mine.entry_bps as number)} bps
+                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}
+                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps
                   </Text>
                   <Text style={s.tiny}>
-                    ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) + (mine.entry_bps as number)) / 10).toFixed(2)} on $1,000
+                    ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)) / 10).toFixed(2)} on $1,000. The price per share you pay already contains the trading cost.
                   </Text>
                 </View>
               )}

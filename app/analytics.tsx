@@ -99,7 +99,7 @@ export default function AnalyticsScreen() {
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? 0
   const priced = items?.filter((i) => i.exitBps !== null && i.value !== null) ?? []
   const exitValue = priced.reduce((n, i) => n + (i.value as number), 0)
-  const exitCost = priced.reduce((n, i) => n + ((i.value as number) * (i.exitBps as number)) / 10000, 0)
+  const exitCost = priced.reduce((n, i) => n + ((i.value as number) * Math.max(0, i.exitBps as number)) / 10000, 0)
   const avgExit = exitValue > 0 ? (exitCost / exitValue) * 10000 : null
   const entryPriced = items?.filter((i) => i.entryBps !== null && i.value !== null) ?? []
   const entryValue = entryPriced.reduce((n, i) => n + (i.value as number), 0)
@@ -251,8 +251,7 @@ export default function AnalyticsScreen() {
           {items.map((i) => {
             const cheaper = i.altEntryBps !== null && i.entryBps !== null && i.altEntryBps < i.entryBps
             const saving = cheaper ? (i.entryBps as number) - (i.altEntryBps as number) : 0
-            const switching = i.exitBps !== null && i.altEntryBps !== null ? i.exitBps + i.altEntryBps : null
-            const net = switching !== null ? saving - switching : null
+            const switching = i.exitBps !== null && i.altEntryBps !== null ? Math.max(0, i.exitBps) + Math.max(0, i.altEntryBps) : null
             return (
               <View key={i.symbol} style={s.card}>
                 <View style={s.rowHead}>
@@ -283,8 +282,8 @@ export default function AnalyticsScreen() {
                       </View>
                     </View>
                     <Text style={s.tiny}>
-                      {i.altSymbol} is {saving} bps cheaper to enter, but switching requires selling this position and
-                      entering the alternative. Net result {net! >= 0 ? '+' : ''}{net} bps.
+                      {i.altSymbol} is {saving} bps cheaper to enter, which only helps new money. Moving this position means
+                      selling it and buying {i.altSymbol}, which would cost about {switching} bps.
                     </Text>
                   </>
                 ) : (
