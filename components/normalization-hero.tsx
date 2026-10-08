@@ -91,7 +91,6 @@ export function NormalizationHero({
 
 const s = StyleSheet.create({
   card: { backgroundColor: 'transparent', paddingVertical: 20, gap: 10, overflow: 'hidden' },
-  glow: { position: 'absolute', right: -6, top: -4 },
   kicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   priceRow: { flexDirection: 'row', gap: 12 },
   priceBox: { flex: 1 },
