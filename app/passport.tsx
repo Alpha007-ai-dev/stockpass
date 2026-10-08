@@ -86,7 +86,6 @@ export default function PassportScreen() {
 
   const ok = mine ? isUsable(mine.entry_bps, mine.quotable) : false
   const samples = hist.reduce((n, h) => n + h.samples, 0)
-  const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
   const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < 200)
   const maxAvg = Math.max(1, ...valid.map((h) => h.avg_entry))
   const shares = balance !== null && mine ? balance * mine.multiplier : null

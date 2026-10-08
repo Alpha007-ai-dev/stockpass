@@ -8,9 +8,8 @@ import { bpsLabel, isUsable } from '@/lib/cost'
 import { getGroups, Group } from '@/lib/pairs'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
-import { getHoldings } from '@/lib/stats'
+import { getHoldings, getCollateral, getStats, Latest, Collateral } from '@/lib/stats'
 import { PLATFORM_FEE_BPS } from '@/lib/swap'
-import { compact, getCollateral, getStats, Latest, Collateral } from '@/lib/stats'
 
 const ISSUER_NOTE: Record<string, string> = {
   xStocks: 'Trades in on-chain pools. Dividends via multiplier.',

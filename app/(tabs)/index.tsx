@@ -9,7 +9,7 @@ import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
 import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
-import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
+import { getMarketState } from '@/lib/market-hours'
 import { getGroups, Group } from '@/lib/pairs'
 import { getSeries, getStats, History, Latest, SeriesPoint, TokenRow } from '@/lib/stats'
 import { EarningsIcon } from '@/components/event-icons'
@@ -46,7 +46,6 @@ export default function MarketScreen() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const state = getMarketState()
-  const market = MARKET_LABEL[state]
   const open = state === 'open'
 
   const insets = useSafeAreaInsets()
