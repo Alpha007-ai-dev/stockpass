@@ -14,7 +14,7 @@ import { getGroups } from '@/lib/pairs'
 import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
 import { getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
-import { InsightCard } from '@/components/insight-card'
+import { buildInsight, InsightCard } from '@/components/insight-card'
 import { AlertsCard } from '@/components/alerts-card'
 
 type Item = HoldingRow & {
@@ -177,6 +177,45 @@ export default function HomeScreen() {
   const entries = allLatest.filter((l) => isUsable(l.entry_bps, l.quotable)).map((l) => l.entry_bps as number).sort((a, b) => a - b)
   const tracked = new Set(allLatest.map((l) => l.ticker)).size
 
+  // 30-day share of measurements that were quotable, per token (needs a meaningful sample).
+  const availability: Record<string, number> = {}
+  const tally = new Map<string, { n: number; q: number }>()
+  allHist.forEach((h) => {
+    const b = tally.get(h.symbol) ?? { n: 0, q: 0 }
+    b.n += h.samples
+    b.q += h.samples * h.availability
+    tally.set(h.symbol, b)
+  })
+  tally.forEach((b, symbol) => { if (b.n >= 50) availability[symbol] = Math.round((b.q / b.n) * 100) })
+
+  // What it would cost to sell everything right now, from the latest exit quotes.
+  const exitRows = (items ?? []).filter((i) => i.value !== null && i.exitBps !== null && isFresh(latest[i.symbol]))
+  const exitValue = exitRows.reduce((n, i) => n + (i.value as number), 0)
+  const exitCostUsd = exitRows.reduce((n, i) => n + ((i.value as number) * Math.max(0, i.exitBps as number)) / 10000, 0)
+  const exitCostBps = exitValue > 0 ? Math.round((exitCostUsd / exitValue) * 10000) : null
+
+  // Median entry cost across fresh, quotable tokens now, against the median usual cost in the same market state.
+  const median = (xs: number[]) => {
+    if (!xs.length) return null
+    const a = [...xs].sort((x, y) => x - y)
+    const m = Math.floor(a.length / 2)
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2
+  }
+  const freshEntries = allLatest.filter((l) => isFresh(l) && isUsable(l.entry_bps, l.quotable))
+  const cheapest = freshEntries.length ? freshEntries.reduce((a, b) => (a.entry_bps <= b.entry_bps ? a : b)) : null
+  const medianNow = median(freshEntries.map((l) => Math.max(0, l.entry_bps)))
+  const medianUsual = median(
+    allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < 200).map((h) => Math.max(0, h.avg_entry))
+  )
+
+  // Holdings worth a look, most important first (unusual cost, rarely-tradable token, cheaper issuer).
+  const ranked = (items ?? [])
+    .filter((i) => i.entryBps !== null && isFresh(latest[i.symbol]))
+    .map((i) => ({ i, ins: buildInsight(i, hist[i.symbol], availability[i.symbol] ?? null) }))
+    .filter((x) => x.ins !== null)
+    .sort((a, b) => (a.ins as any).rank - (b.ins as any).rank)
+    .slice(0, 4)
+
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={() => scan()} tintColor={T.dim} />}>
@@ -228,6 +267,12 @@ export default function HomeScreen() {
               return null
             })()}
             <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}</Text>
+            {exitCostBps !== null && (
+              <Text style={s.heroExit}>
+                Exit cost now <Text style={[s.heroExitStrong, num]}>${exitCostUsd.toFixed(2)} · {exitCostBps} bps</Text>
+                {exitRows.length < items!.length ? <Text style={s.heroChangeLabel}>  ({exitRows.length} of {items!.length} assets)</Text> : null}
+              </Text>
+            )}
           </View>
           <PortfolioSpark
             tickers={items!.map((i) => i.ticker)}
@@ -263,50 +308,55 @@ export default function HomeScreen() {
         </>
       )}
       {!demo && <AlertsCard owner={account?.address ? String(account.address) : undefined} />}
-      <DailyBrief latest={latest} history={allHist} />
 
       {error && <ErrorState message={error} onRetry={() => scan()} />}
 
-      {items && items.length > 0 && (
-        <>
-          <Text style={s.sectionLabel}>THINGS WORTH KNOWING</Text>
+      <Text style={s.sectionLabel}>FOR YOU</Text>
+      <DailyBrief latest={latest} history={allHist} />
+      {ranked.map(({ i }) => (
+        <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} availability={availability[i.symbol] ?? null} />
+      ))}
 
-          {items.filter((i) => i.entryBps !== null && isFresh(latest[i.symbol])).slice(0, 4).map((i) => (
-            <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} />
-          ))}
-        </>
-      )}
-
-      <View style={s.pairRow}>
-        <View style={[s.card, s.halfCard]}>
-          <View style={s.live}>
-            <View style={[s.dot, { backgroundColor: open ? T.accent : T.warn }]} />
-            <Text style={[s.stateTitle, { color: open ? T.accent : T.warn }]}>{market.title}</Text>
-          </View>
-          <Text style={s.stateSub}>{open ? 'US equities trading' : 'US equities closed'}</Text>
+      <View style={s.card2}>
+        <View style={s.live}>
+          <View style={[s.dot, { backgroundColor: open ? T.accent : T.warn }]} />
+          <Text style={[s.stateTitle, { color: open ? T.accent : T.warn }]}>{market.title}</Text>
+          <Text style={s.stateSub}>  {open ? 'US equities trading' : 'US equities closed'}</Text>
         </View>
-
-        {last ? (
-          <Pressable style={[s.card, s.halfCard]} onPress={() => Linking.openURL(`https://solscan.io/tx/${last.signature}`)}>
-            <Text style={s.kicker}>LAST PURCHASE</Text>
-            <Text style={s.lastTitle}>{last.symbol} · {last.issuer}</Text>
-            <Text style={s.stateSub}>{new Date(last.at).toLocaleString()}</Text>
-            {last.savedBps !== null && last.savedBps > 0 && (
-              <Text style={s.saved}>Saved {last.savedBps} bps · ${((last.savedBps / 10000) * last.sizeUsd).toFixed(2)}</Text>
-            )}
-          </Pressable>
-        ) : (
-          <View style={[s.card, s.halfCard]}>
-            <Text style={s.kicker}>LAST PURCHASE</Text>
-            <Text style={s.stateSub}>No purchase yet</Text>
+        {cheapest && (
+          <View style={s.line}>
+            <Text style={s.lineLabel}>Cheapest entry now</Text>
+            <Text style={[s.lineValue, num]}>{cheapest.symbol} · {Math.max(0, cheapest.entry_bps)} bps</Text>
+          </View>
+        )}
+        {medianNow !== null && (
+          <View style={s.line}>
+            <Text style={s.lineLabel}>Median across tokens</Text>
+            <Text style={[s.lineValue, num]}>
+              {Math.round(medianNow)} bps{medianUsual !== null ? ` · usual ${Math.round(medianUsual)}` : ''}
+            </Text>
           </View>
         )}
       </View>
 
+      {last ? (
+        <Pressable style={s.card2} onPress={() => Linking.openURL(`https://solscan.io/tx/${last.signature}`)}>
+          <Text style={s.kicker}>LAST PURCHASE</Text>
+          <Text style={s.lastTitle}>{last.symbol} · {last.issuer} · ${last.sizeUsd.toFixed(2)}</Text>
+          <Text style={s.stateSub}>{new Date(last.at).toLocaleString()}</Text>
+          {last.savedBps !== null && last.savedBps > 0 && (
+            <Text style={s.saved}>Saved {last.savedBps} bps · ${((last.savedBps / 10000) * last.sizeUsd).toFixed(2)}</Text>
+          )}
+        </Pressable>
+      ) : null}
+
       {items && items.length > 0 && (
         <Pressable style={s.analyticsCard} onPress={() => router.push('/analytics')}>
           <Text style={s.analyticsIcon}>▥</Text>
-          <Text style={s.analyticsText}>Portfolio Analytics</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.analyticsText}>Portfolio Analytics</Text>
+            <Text style={s.stateSub}>Cost per asset, cheaper issuers, timing</Text>
+          </View>
           <Text style={s.chev}>›</Text>
         </Pressable>
       )}
@@ -392,6 +442,12 @@ const s = StyleSheet.create({
   heroChange: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   heroChangeLabel: { color: T.dim, fontSize: 14, fontWeight: '400' },
   heroMeta: { color: T.faint, fontSize: 13, marginTop: 8 },
+  heroExit: { color: T.dim, fontSize: 13, marginTop: 4 },
+  heroExitStrong: { color: T.text, fontWeight: '700' },
+  card2: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 6 },
+  line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  lineLabel: { color: T.dim, fontSize: 14 },
+  lineValue: { color: T.text, fontSize: 14, fontWeight: '700' },
 
   sectionLabel: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginTop: 12, marginBottom: 1 },
 
@@ -404,8 +460,6 @@ const s = StyleSheet.create({
   noQuote: { color: T.faint, fontSize: 12 },
   chev: { color: T.faint, fontSize: 18 },
 
-  pairRow: { flexDirection: 'row', gap: 11, marginTop: 8 },
-  halfCard: { flex: 1, flexDirection: 'column', alignItems: 'flex-start', gap: 4, paddingVertical: 14 },
   stateTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
   stateSub: { color: T.faint, fontSize: 13 },
   lastTitle: { color: T.text, fontSize: 14, fontWeight: '700', marginTop: 2 },
@@ -413,7 +467,7 @@ const s = StyleSheet.create({
 
   analyticsCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 18, marginTop: 4 },
   analyticsIcon: { color: T.accent, fontSize: 18 },
-  analyticsText: { color: T.text, fontSize: 16, fontWeight: '600', flex: 1 },
+  analyticsText: { color: T.text, fontSize: 16, fontWeight: '600' },
 
   warn: { color: T.warn, fontSize: 13 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 52, alignItems: 'center', justifyContent: 'center' },

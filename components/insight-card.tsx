@@ -22,12 +22,12 @@ function usd(n: number) {
   return `$${n.toFixed(2)}`
 }
 
-export function buildInsight(i: InsightItem, hist: History | undefined, availability?: number | null): { text: string; tone: 'accent' | 'warn' | 'muted' } | null {
+export function buildInsight(i: InsightItem, hist: History | undefined, availability?: number | null): { text: string; tone: 'accent' | 'warn' | 'muted'; rank: number } | null {
   if (i.entryBps === null || i.exitBps === null) {
-    return { text: 'No executable quote right now.', tone: 'warn' }
+    return { text: 'No executable quote right now.', tone: 'warn', rank: 5 }
   }
   if (availability !== null && availability !== undefined && availability < 50) {
-    return { text: 'Available now, but usually hard to trade.', tone: 'warn' }
+    return { text: `Available now, but quotable only ${Math.round(availability)}% of the time over 30 days.`, tone: 'warn', rank: 2 }
   }
   const value = i.value
   const usual = hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < 200 ? hist.avg_entry : null
@@ -36,8 +36,9 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
     if (Math.abs(delta) >= 3) {
       const d = Math.round(delta)
       return {
-        text: `Entry cost is ${d > 0 ? 'higher' : 'lower'} than usual by ${d} bps.`,
+        text: `Entry cost is ${d > 0 ? 'higher' : 'lower'} than usual by ${Math.abs(d)} bps.`,
         tone: d > 0 ? 'warn' : 'accent',
+        rank: 1,
       }
     }
   }
@@ -47,6 +48,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
       return {
         text: `${i.altSymbol} is cheaper to enter, worth ${usd(savingUsd)} on this position.`,
         tone: 'warn',
+        rank: 3,
       }
     }
   }
