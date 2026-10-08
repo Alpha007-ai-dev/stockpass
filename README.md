@@ -135,7 +135,7 @@ Tap **Explore with a demo portfolio** on Home. This loads four real tokens with 
 
 StockPass takes **5 bps** on swaps it routes through the standard Jupiter router, charged on the USDC side. Wallets holding at least 100 SKR pay **2 bps**. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
 
-We started at 10 bps and lowered it: in our measurements 10 bps frequently consumed the entire advantage the app had found, which made the core feature pointless.
+The fee is deliberately low. The real differences between issuers are often only a few bps (see the normalized price difference above), so a higher fee would erase the advantage the app is trying to find.
 
 ---
 
