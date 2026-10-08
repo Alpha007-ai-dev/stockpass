@@ -11,12 +11,14 @@ function tokenLabel(row: Latest, fallback: string) {
 }
 
 export function NormalizationHero({
-  symbol, mine, peer, reference,
+  symbol, mine, peer, reference, total = 2, ticker,
 }: {
   symbol: string
   mine: Latest
   peer: Latest
   reference: any | null
+  total?: number
+  ticker?: string
 }) {
   const rawMine = (mine.buy_px ?? 0) * mine.multiplier
   const rawPeer = (peer.buy_px ?? 0) * peer.multiplier
@@ -46,7 +48,8 @@ export function NormalizationHero({
         <Path d="M0,110 C55,106 105,84 150,64 C176,52 196,44 210,40" stroke={T.accent} strokeWidth={1.5} strokeOpacity={0.18} fill="none" />
       </Svg>
 
-      <Text style={s.kicker}>SAME STOCK, TWO TOKENS</Text>
+      <Text style={s.kicker}>{total > 2 ? `SAME STOCK, ${total} TOKENS` : 'SAME STOCK, TWO TOKENS'}</Text>
+      {total > 2 && <Text style={s.tiny}>Compared with the cheapest of the other {total - 1}.</Text>}
 
       <View style={s.priceRow}>
         <View style={s.priceBox}>
@@ -82,6 +85,12 @@ export function NormalizationHero({
           <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
           <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn't necessarily mean a cheaper stock.</Text>
         </View>
+      )}
+
+      {total > 2 && ticker && (
+        <Pressable onPress={() => router.push(`/compare?ticker=${ticker}`)}>
+          <Text style={s.cheaper}>Compare all {total} issuers ›</Text>
+        </Pressable>
       )}
 
       {closed && (

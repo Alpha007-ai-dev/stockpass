@@ -36,6 +36,7 @@ export default function PassportScreen() {
   const [tab, setTab] = useState<Tab>('overview')
   const [mine, setMine] = useState<Latest | null>(null)
   const [peer, setPeer] = useState<Latest | null>(null)
+  const [tokenCount, setTokenCount] = useState(2)
   const [hist, setHist] = useState<History[]>([])
   const [reference, setReference] = useState<any | null>(null)
   const [token, setToken] = useState<TokenRow | null>(null)
@@ -55,7 +56,12 @@ export default function PassportScreen() {
     getStats()
       .then((s) => {
         setMine(s.latest.find((r) => r.symbol === sym) ?? null)
-        setPeer(s.latest.find((r) => r.ticker === ticker && r.symbol !== sym && r.buy_px) ?? null)
+        // With three issuers, compare against the cheapest alternative, not whichever row comes first.
+        const others = s.latest.filter((r) => r.ticker === ticker && r.symbol !== sym && r.buy_px)
+        const pool = others.filter((r) => isUsable(r.entry_bps, r.quotable))
+        const choices = pool.length ? pool : others
+        setPeer(choices.length ? choices.reduce((x, y) => ((x.buy_px as number) <= (y.buy_px as number) ? x : y)) : null)
+        setTokenCount(others.length + 1)
         setHist(s.history.filter((r) => r.symbol === sym))
         setReference((s as any).reference?.find((r: any) => r.ticker === ticker) ?? null)
       })
@@ -129,7 +135,7 @@ export default function PassportScreen() {
           <AnomalyCard symbol={sym} />
 
           {peer && mine.buy_px && peer.buy_px && (
-            <NormalizationHero symbol={sym} mine={mine} peer={peer} reference={reference} />
+            <NormalizationHero symbol={sym} mine={mine} peer={peer} reference={reference} total={tokenCount} ticker={ticker} />
           )}
 
           <View style={s.pairRow}>
