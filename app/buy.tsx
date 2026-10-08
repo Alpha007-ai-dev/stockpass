@@ -89,6 +89,14 @@ export default function BuyScreen() {
   }, [selected, SIZE_USD, feeBps])
 
 
+  // The demo cannot sign, so the Review button is disabled and the quote would never load. Fetch it
+  // automatically (a read-only preview, nothing is signed) so the receive amount and route are visible.
+  useEffect(() => {
+    if (!demo || !selected || SIZE_USD <= 0 || quote) return
+    const t = setTimeout(() => { prepare() }, 600)
+    return () => clearTimeout(t)
+  }, [demo, selected, SIZE_USD, quote, prepare])
+
   const blocked = quote !== null && quote.priceImpactPct * 100 > 5
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
