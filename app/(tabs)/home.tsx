@@ -351,7 +351,7 @@ export default function HomeScreen() {
       ))}
       <DailyBrief latest={latest} history={allHist} />
       {ranked.map(({ i }) => (
-        <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} availability={availability[i.symbol] ?? null} />
+        <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} availability={availability[i.symbol] ?? null} states={allHist.filter((h) => h.symbol === i.symbol)} state={state} />
       ))}
 
       <View style={s.card2}>
