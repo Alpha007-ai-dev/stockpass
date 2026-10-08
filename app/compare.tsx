@@ -155,6 +155,8 @@ export default function CompareScreen() {
         )
       })}
 
+      <Text style={s.faint}>Entry cost is half the round-trip spread, measured on each token's own price. Two tokens can show the same price per share and a different cost.</Text>
+
       <View style={s.banner}>
         {best && spread !== null && spread > 0 ? (
           <>

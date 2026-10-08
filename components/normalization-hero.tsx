@@ -36,7 +36,7 @@ export function NormalizationHero({
 
   return (
     <View style={s.card}>
-      <Svg width={210} height={110} style={s.glow} pointerEvents="none">
+      <Svg width={210} height={56} viewBox="0 0 210 110" preserveAspectRatio="none" style={s.glow} pointerEvents="none">
         <Defs>
           <LinearGradient id="gw" x1="0" y1="1" x2="1" y2="0">
             <Stop offset="0" stopColor={T.accent} stopOpacity="0.30" />
@@ -93,6 +93,8 @@ export function NormalizationHero({
         </Pressable>
       )}
 
+      <Text style={s.tiny}>The difference is what you pay per share. The cost below is half the round-trip spread, measured on each token's own price.</Text>
+
       {closed && (
         <Text style={s.tiny}>Wall Street is closed, so these are the latest prices we measured on Solana.</Text>
       )}
@@ -102,7 +104,7 @@ export function NormalizationHero({
 
 const s = StyleSheet.create({
   card: { backgroundColor: 'transparent', paddingVertical: 20, gap: 10, overflow: 'hidden' },
-  glow: { position: 'absolute', right: -6, top: -8 },
+  glow: { position: 'absolute', right: -6, top: -4 },
   kicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   priceRow: { flexDirection: 'row', gap: 12 },
   priceBox: { flex: 1 },
