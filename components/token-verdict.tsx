@@ -11,8 +11,7 @@ const STATE_LABEL: Record<string, string> = {
 export function buildVerdict(
   mine: Latest,
   hist: History[],
-  availability: number | null,
-  peer: Latest | null
+  availability: number | null
 ): { text: string; tone: 'accent' | 'warn' | 'muted' } {
   if (!isUsable(mine.entry_bps, mine.quotable)) return { text: 'No executable quote right now.', tone: 'warn' }
   if (availability !== null && availability < 50) {
@@ -30,18 +29,14 @@ export function buildVerdict(
       }
     }
   }
-  if (peer && peer.buy_px && isUsable(peer.entry_bps, peer.quotable) && Date.now() / 1000 - peer.ts <= 5400) {
-    const d = Math.round(entry - Math.max(0, peer.entry_bps))
-    if (d >= 3) return { text: `${peer.symbol} costs ${d} bps less to buy right now.`, tone: 'warn' }
-  }
   return {
     text: usual !== null ? `In line with its usual cost (${Math.round(usual)} bps).` : `Costs ${entry < 0.5 ? '~0' : Math.round(entry)} bps to buy right now.`,
     tone: 'muted',
   }
 }
 
-export function TokenVerdict(props: { mine: Latest; hist: History[]; availability: number | null; peer: Latest | null }) {
-  const v = buildVerdict(props.mine, props.hist, props.availability, props.peer)
+export function TokenVerdict(props: { mine: Latest; hist: History[]; availability: number | null }) {
+  const v = buildVerdict(props.mine, props.hist, props.availability)
   const color = v.tone === 'accent' ? T.accent : v.tone === 'warn' ? T.warn : T.dim
   return (
     <View style={s.card}>

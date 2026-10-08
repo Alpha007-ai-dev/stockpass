@@ -124,7 +124,7 @@ export default function PassportScreen() {
 
       {tab === 'overview' && mine && (
         <>
-          <TokenVerdict mine={mine} hist={hist} availability={samples >= 50 && avail !== null ? Math.round(avail * 100) : null} peer={peer} />
+          <TokenVerdict mine={mine} hist={hist} availability={samples >= 50 && avail !== null ? Math.round(avail * 100) : null} />
           <MultiplierNotice symbol={sym} />
           <AnomalyCard symbol={sym} />
 
