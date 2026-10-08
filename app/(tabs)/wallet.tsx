@@ -143,7 +143,7 @@ export default function WalletScreen() {
         <View style={s.heroCard}>
           <Text style={s.kicker}>YOUR HOLDINGS</Text>
           <Text style={s.tiny}>
-            Wallets show raw token counts. StockPass applies each issuer's multiplier to show what you really own.
+            Wallets show raw token counts. StockPass applies each issuer&apos;s multiplier to show what you really own.
           </Text>
           <Pressable style={s.primary} onPress={scan} disabled={busy}>
             {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
@@ -196,7 +196,7 @@ export default function WalletScreen() {
             <View style={s.noteCard}>
               <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet does not show</Text>
               <Text style={s.tiny}>
-                Wallets display raw token counts. Reinvested dividends live in each issuer's multiplier.
+                Wallets display raw token counts. Reinvested dividends live in each issuer&apos;s multiplier.
               </Text>
             </View>
           )}

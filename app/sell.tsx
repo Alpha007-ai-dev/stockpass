@@ -83,7 +83,7 @@ export default function SellScreen() {
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [token, amount])
+  }, [token, amount, feeBps])
 
   const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (netUsd !== null && quote.outUi < netUsd * 0.9))
   const insets = useSafeAreaInsets()

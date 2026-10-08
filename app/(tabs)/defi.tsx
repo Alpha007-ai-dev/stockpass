@@ -249,7 +249,7 @@ export default function DefiScreen() {
             </Text>
             <Text style={s.tiny}>
               StockPass shows this information only. It does not deposit or borrow on your behalf, and the data comes
-              from Kamino's public API, which can change at any time.
+              from Kamino&apos;s public API, which can change at any time.
             </Text>
           </View>
         </>

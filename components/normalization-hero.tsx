@@ -80,7 +80,7 @@ export function NormalizationHero({
       {shrinks && (
         <View style={s.why}>
           <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
-          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn't necessarily mean a cheaper stock.</Text>
+          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily mean a cheaper stock.</Text>
         </View>
       )}
 

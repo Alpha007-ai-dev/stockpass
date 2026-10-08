@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg'
-import { issuerColor, num, T } from '@/constants/theme'
+import { issuerColor, T } from '@/constants/theme'
 import { getSeries, SeriesPoint } from '@/lib/stats'
 
 const W = 320
