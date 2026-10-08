@@ -16,10 +16,14 @@ export function CostTimeline({ ticker }: { ticker: string }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    getSeries(ticker, hours).then(setPoints).catch((e) => setError((e as Error).message))
+    getSeries(ticker, hours)
+      .then(setPoints)
+      .catch((e) => setError((e as Error).message))
   }, [ticker, hours])
 
-  const valid = points.filter((p) => p.quotable && p.entry_bps !== null && p.entry_bps < 200).map((p) => ({ ...p, entry_bps: Math.max(0, p.entry_bps as number) }))
+  const valid = points
+    .filter((p) => p.quotable && p.entry_bps !== null && p.entry_bps < 200)
+    .map((p) => ({ ...p, entry_bps: Math.max(0, p.entry_bps as number) }))
 
   if (valid.length < 2) {
     return (
@@ -39,9 +43,15 @@ export function CostTimeline({ ticker }: { ticker: string }) {
   const issuers = [...new Set(valid.map((p) => p.issuer))]
   const series = issuers.map((issuer) => {
     const pts = valid.filter((p) => p.issuer === issuer)
-    const d = pts.length > 1
-      ? pts.map((p, i) => `${i === 0 || p.ts - pts[i - 1].ts > GAP_S ? 'M' : 'L'}${px(p.ts).toFixed(1)},${py(p.entry_bps as number).toFixed(1)}`).join(' ')
-      : ''
+    const d =
+      pts.length > 1
+        ? pts
+            .map(
+              (p, i) =>
+                `${i === 0 || p.ts - pts[i - 1].ts > GAP_S ? 'M' : 'L'}${px(p.ts).toFixed(1)},${py(p.entry_bps as number).toFixed(1)}`,
+            )
+            .join(' ')
+        : ''
     const avg = pts.length ? Math.round(pts.reduce((n, p) => n + (p.entry_bps as number), 0) / pts.length) : null
     return { issuer, pts, d, avg, color: issuerColor(issuer) }
   })
@@ -51,11 +61,19 @@ export function CostTimeline({ ticker }: { ticker: string }) {
   points.forEach((p) => {
     const isClosed = p.market_state !== 'open'
     if (isClosed && start === null) start = p.ts
-    if (!isClosed && start !== null) { closed.push({ from: start, to: p.ts }); start = null }
+    if (!isClosed && start !== null) {
+      closed.push({ from: start, to: p.ts })
+      start = null
+    }
   })
   if (start !== null) closed.push({ from: start, to: t1 })
 
-  const fmt = (ts: number) => { const d = new Date(ts * 1000); return hours === 24 ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : `${d.getMonth() + 1}/${d.getDate()}` }
+  const fmt = (ts: number) => {
+    const d = new Date(ts * 1000)
+    return hours === 24
+      ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      : `${d.getMonth() + 1}/${d.getDate()}`
+  }
   const updatedMin = Math.round((Date.now() / 1000 - t1) / 60)
 
   return (
@@ -72,21 +90,52 @@ export function CostTimeline({ ticker }: { ticker: string }) {
       </View>
 
       <Svg width={W} height={H}>
-        {closed.filter((c) => c.to > t0).map((c, i) => (
-          <Rect key={i} x={Math.max(PAD_L, px(c.from))} y={8} width={Math.max(1, px(c.to) - Math.max(PAD_L, px(c.from)))} height={H - PAD_B - 8} fill={T.surfaceAlt} />
+        {closed
+          .filter((c) => c.to > t0)
+          .map((c, i) => (
+            <Rect
+              key={i}
+              x={Math.max(PAD_L, px(c.from))}
+              y={8}
+              width={Math.max(1, px(c.to) - Math.max(PAD_L, px(c.from)))}
+              height={H - PAD_B - 8}
+              fill={T.surfaceAlt}
+            />
+          ))}
+        {[0, maxY / 2, maxY].map((v, i) => (
+          <SvgText key={`l${i}`} x={PAD_L - 6} y={py(v) + 3} fontSize={9} fill={T.faint} textAnchor="end">
+            {Math.round(v)}
+          </SvgText>
         ))}
-        {[0, maxY / 2, maxY].map((v, i) => (<SvgText key={`l${i}`} x={PAD_L - 6} y={py(v) + 3} fontSize={9} fill={T.faint} textAnchor="end">{Math.round(v)}</SvgText>))}
-        <SvgText x={PAD_L} y={H - 6} fontSize={9} fill={T.faint}>{fmt(t0)}</SvgText>
-        <SvgText x={W - 8} y={H - 6} fontSize={9} fill={T.faint} textAnchor="end">{fmt(t1)}</SvgText>
+        <SvgText x={PAD_L} y={H - 6} fontSize={9} fill={T.faint}>
+          {fmt(t0)}
+        </SvgText>
+        <SvgText x={W - 8} y={H - 6} fontSize={9} fill={T.faint} textAnchor="end">
+          {fmt(t1)}
+        </SvgText>
         {[0, maxY / 2, maxY].map((v, i) => (
           <Line key={i} x1={PAD_L} y1={py(v)} x2={W - 8} y2={py(v)} stroke={T.border} strokeWidth={1} />
         ))}
         {series.map((se) => (
-          <Path key={se.issuer} d={se.d} stroke={se.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          <Path
+            key={se.issuer}
+            d={se.d}
+            stroke={se.color}
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
         ))}
         {series.map((se) =>
           se.pts.map((p, i) => (
-            <Circle key={`${se.issuer}-${p.ts}`} cx={px(p.ts)} cy={py(p.entry_bps as number)} r={i === se.pts.length - 1 ? 4.5 : 2} fill={se.color} />
+            <Circle
+              key={`${se.issuer}-${p.ts}`}
+              cx={px(p.ts)}
+              cy={py(p.entry_bps as number)}
+              r={i === se.pts.length - 1 ? 4.5 : 2}
+              fill={se.color}
+            />
           )),
         )}
       </Svg>
@@ -95,12 +144,17 @@ export function CostTimeline({ ticker }: { ticker: string }) {
         {series.map((se) => (
           <View key={se.issuer} style={s.legendItem}>
             <View style={[s.dot, { backgroundColor: se.color }]} />
-            <Text style={s.legendText}>{se.issuer}{se.avg !== null ? ` ${se.avg === 0 ? '~0' : se.avg} bps` : ''}</Text>
+            <Text style={s.legendText}>
+              {se.issuer}
+              {se.avg !== null ? ` ${se.avg === 0 ? '~0' : se.avg} bps` : ''}
+            </Text>
           </View>
         ))}
       </View>
 
-      <Text style={s.faint}>{valid.length} measurements · updated {updatedMin} min ago · shaded = market closed</Text>
+      <Text style={s.faint}>
+        {valid.length} measurements · updated {updatedMin} min ago · shaded = market closed
+      </Text>
     </View>
   )
 }
@@ -120,5 +174,3 @@ const s = StyleSheet.create({
   legendText: { color: T.dim, fontSize: 12 },
   faint: { color: T.faint, fontSize: 12 },
 })
-
-

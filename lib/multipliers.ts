@@ -19,7 +19,12 @@ export async function getMintInfo(): Promise<Record<string, MintInfo>> {
   const res = await fetch(RPC, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getMultipleAccounts', params: [mints, { encoding: 'jsonParsed' }] }),
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'getMultipleAccounts',
+      params: [mints, { encoding: 'jsonParsed' }],
+    }),
   })
   const json = await res.json()
   if (json.error) throw new Error(json.error.message ?? 'RPC error')

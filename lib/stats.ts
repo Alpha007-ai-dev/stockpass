@@ -99,7 +99,6 @@ export async function getHoldings(owner: string): Promise<HoldingRow[]> {
   return Array.isArray(json) ? (json as HoldingRow[]) : ((json?.holdings ?? []) as HoldingRow[])
 }
 
-
 export type SeriesPoint = {
   ts: number
   symbol: string
@@ -137,21 +136,13 @@ export async function getCollateral(): Promise<Collateral[]> {
   return collCache
 }
 
-
-
-
-
-
-
-
-
 export async function getBalances(owner: string): Promise<{ usdc: number; skr: number }> {
   try {
     const res = await fetch(
-`
+      `
 ${BASE}/holdings?owner=${owner}
-`
-)
+`,
+    )
     if (!res.ok) return { usdc: 0, skr: 0 }
     const json: any = await res.json()
     return { usdc: Number(json?.usdc ?? 0), skr: Number(json?.skr ?? 0) }
@@ -220,10 +211,7 @@ export async function getReliability(symbol: string): Promise<TokenReliability |
   const json: any = await res.json()
   return { open: json?.open ?? null, overall: json?.overall ?? null }
 }
-export async function getPricesAgo(
-  symbols: string[],
-  hours = 24
-): Promise<Record<string, { px: number; ts: number }>> {
+export async function getPricesAgo(symbols: string[], hours = 24): Promise<Record<string, { px: number; ts: number }>> {
   if (!symbols.length) return {}
   const res = await fetch(`${BASE}/prices?symbols=${symbols.join(',')}&hours=${hours}`)
   if (!res.ok) return {}

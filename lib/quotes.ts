@@ -5,10 +5,10 @@ const ULTRA_ORDER = 'https://lite-api.jup.ag/ultra/v1/order'
 const CALL_DELAY_MS = 700
 
 export type Quote = {
-  buy: number      // price per share when buying
-  sell: number     // price per share when selling
+  buy: number // price per share when buying
+  sell: number // price per share when selling
   entryBps: number // cost of getting in
-  exitBps: number  // cost of getting out
+  exitBps: number // cost of getting out
   supply: number
   next: number | null
   nextAt: number | null

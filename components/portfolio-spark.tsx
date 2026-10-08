@@ -4,7 +4,12 @@ import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { T } from '@/constants/theme'
 import { getSeries } from '@/lib/stats'
 
-export function PortfolioSpark({ tickers, up: upProp, width = 96, height = 44 }: {
+export function PortfolioSpark({
+  tickers,
+  up: upProp,
+  width = 96,
+  height = 44,
+}: {
   tickers: string[]
   up?: boolean
   width?: number
@@ -17,7 +22,16 @@ export function PortfolioSpark({ tickers, up: upProp, width = 96, height = 44 }:
     let cancelled = false
     ;(async () => {
       try {
-        const all = await Promise.all((key ? key.split(',') : []).slice(0, 4).map((t) => getSeries(t, 24).then((arr) => { const base = arr.find((q) => q.buy_px)?.buy_px; return base ? arr.map((q) => ({ ...q, buy_px: q.buy_px ? (q.buy_px / base) * 100 : q.buy_px })) : [] }).catch(() => [])))
+        const all = await Promise.all(
+          (key ? key.split(',') : []).slice(0, 4).map((t) =>
+            getSeries(t, 24)
+              .then((arr) => {
+                const base = arr.find((q) => q.buy_px)?.buy_px
+                return base ? arr.map((q) => ({ ...q, buy_px: q.buy_px ? (q.buy_px / base) * 100 : q.buy_px })) : []
+              })
+              .catch(() => []),
+          ),
+        )
         const buckets = new Map<number, { sum: number; n: number }>()
         all.flat().forEach((p) => {
           if (!p.buy_px) return
@@ -33,7 +47,9 @@ export function PortfolioSpark({ tickers, up: upProp, width = 96, height = 44 }:
         if (!cancelled) setPoints([])
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [key])
 
   if (!points || points.length < 3) return <View style={{ width, height }} />
@@ -61,4 +77,3 @@ export function PortfolioSpark({ tickers, up: upProp, width = 96, height = 44 }:
     </Svg>
   )
 }
-

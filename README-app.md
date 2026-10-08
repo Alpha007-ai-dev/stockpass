@@ -24,16 +24,16 @@ A tokenized stock looks simple. It is not.
 
 ## What the app does
 
-| Screen | Question it answers |
-|---|---|
-| **Home** | What should I know right now about what I own? |
-| **Markets** | What can I buy, and what does entry cost? |
-| **DeFi** | What can I do with what I own? |
-| **Wallet** | What exactly do I own? |
-| **Passport** | What exactly is this token? |
-| **Compare** | Which issuer is currently cheaper? |
-| **Buy / Sell** | What will this transaction actually cost me? |
-| **Portfolio Analytics** | What does my ownership actually cost me? |
+| Screen                  | Question it answers                            |
+| ----------------------- | ---------------------------------------------- |
+| **Home**                | What should I know right now about what I own? |
+| **Markets**             | What can I buy, and what does entry cost?      |
+| **DeFi**                | What can I do with what I own?                 |
+| **Wallet**              | What exactly do I own?                         |
+| **Passport**            | What exactly is this token?                    |
+| **Compare**             | Which issuer is currently cheaper?             |
+| **Buy / Sell**          | What will this transaction actually cost me?   |
+| **Portfolio Analytics** | What does my ownership actually cost me?       |
 
 ### Signature features
 
@@ -51,11 +51,11 @@ All numbers below come from our own collector, not from documentation.
 
 ### Execution cost by issuer (round trip, $1,000 size)
 
-| | Weekday (market open) | Weekend |
-|---|---|---|
-| xStocks | 22–26 bps | 22–27 bps |
-| Ondo | 32–37 bps | 41–53 bps |
-| Backpack | 25 bps | 25–30 bps |
+|          | Weekday (market open) | Weekend   |
+| -------- | --------------------- | --------- |
+| xStocks  | 22–26 bps             | 22–27 bps |
+| Ondo     | 32–37 bps             | 41–53 bps |
+| Backpack | 25 bps                | 25–30 bps |
 
 Ondo's cost roughly doubles when US markets are closed. xStocks stays flat.
 
@@ -75,10 +75,10 @@ Many smaller tokens return no quote at all, especially on weekends. One token (T
 
 SPYx is accepted on two Kamino markets at the same time:
 
-| Market | Max LTV | Borrow APY |
-|---|---|---|
-| Kamino xStocks Market | 73% | 4.44% |
-| Kamino Sentora xStocks | 72% | 1.01% |
+| Market                 | Max LTV | Borrow APY |
+| ---------------------- | ------- | ---------- |
+| Kamino xStocks Market  | 73%     | 4.44%      |
+| Kamino Sentora xStocks | 72%     | 1.01%      |
 
 A **4.4× difference** in borrowing cost for the identical token. Ondo tokens are not accepted as collateral in either market.
 

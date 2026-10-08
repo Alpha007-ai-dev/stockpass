@@ -1,4 +1,4 @@
-﻿import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { Latest } from '@/lib/stats'
@@ -41,10 +41,14 @@ export function CostToGoOnChain({ mine, reference }: { mine: Latest; reference: 
         <>
           <View style={[s.row, s.totalRow]}>
             <Text style={s.totalLabel}>Total cost to go on-chain</Text>
-            <Text style={[s.total, num]}>{total >= 0 ? '+' : ''}{total} bps</Text>
+            <Text style={[s.total, num]}>
+              {total >= 0 ? '+' : ''}
+              {total} bps
+            </Text>
           </View>
           <Text style={s.foot}>
-            About ${((Math.abs(total) / 10000) * 1000).toFixed(2)} on a $1,000 position, versus buying the traditional share.
+            About ${((Math.abs(total) / 10000) * 1000).toFixed(2)} on a $1,000 position, versus buying the traditional
+            share.
           </Text>
         </>
       ) : (

@@ -38,7 +38,8 @@ export const STOCKS: Record<string, StockInfo> = {
     kind: 'Stock',
     exchange: 'NASDAQ',
     sector: 'Semiconductors',
-    summary: 'Designs processors and graphics chips for PCs, servers and data centres, competing with Intel and Nvidia.',
+    summary:
+      'Designs processors and graphics chips for PCs, servers and data centres, competing with Intel and Nvidia.',
   },
   AMZN: {
     name: 'Amazon.com Inc.',
@@ -192,7 +193,8 @@ export const STOCKS: Record<string, StockInfo> = {
     kind: 'Stock',
     exchange: 'NYSE',
     sector: 'Restaurants',
-    summary: 'Operates and franchises fast-food restaurants worldwide; most revenue comes from franchising and property.',
+    summary:
+      'Operates and franchises fast-food restaurants worldwide; most revenue comes from franchising and property.',
   },
   META: {
     name: 'Meta Platforms',
@@ -332,7 +334,8 @@ export const STOCKS: Record<string, StockInfo> = {
     kind: 'Pre-IPO',
     exchange: 'Private',
     sector: 'Aerospace',
-    summary: 'SpaceX is privately held and not listed on a public exchange. Exposure here is structured by the issuer, so read their terms carefully before treating it like a listed share.',
+    summary:
+      'SpaceX is privately held and not listed on a public exchange. Exposure here is structured by the issuer, so read their terms carefully before treating it like a listed share.',
   },
   SPY: {
     name: 'SPDR S&P 500 ETF Trust',
@@ -346,7 +349,8 @@ export const STOCKS: Record<string, StockInfo> = {
     kind: 'Preferred',
     exchange: 'NASDAQ',
     sector: 'Bitcoin Treasury',
-    summary: 'A preferred share class issued by Strategy. Preferred shares rank ahead of common stock and behave differently; check the issuer\u2019s terms.',
+    summary:
+      'A preferred share class issued by Strategy. Preferred shares rank ahead of common stock and behave differently; check the issuer\u2019s terms.',
   },
   TSLA: {
     name: 'Tesla Inc.',

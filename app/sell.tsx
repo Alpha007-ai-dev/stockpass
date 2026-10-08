@@ -8,7 +8,16 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import {
+  buildSwapTx,
+  decodeTx,
+  feeBpsFor,
+  getQuote,
+  PAY_TOKENS,
+  PLATFORM_FEE_BPS,
+  Quote,
+  SKR_THRESHOLD,
+} from '@/lib/swap'
 import { getBalances, getHoldings, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const NETWORK_FEE_USD = 0.01
@@ -49,7 +58,9 @@ export default function SellScreen() {
         if (!addr) return
         const rows = await getHoldings(String(addr))
         setBalance(rows.find((r) => r.symbol === sym)?.walletAmount ?? null)
-        getBalances(String(addr)).then((b) => setSkr(b.skr)).catch(() => {})
+        getBalances(String(addr))
+          .then((b) => setSkr(b.skr))
+          .catch(() => {})
       } catch {}
     })()
   }, [sym, account])
@@ -62,26 +73,37 @@ export default function SellScreen() {
   const feeBps = feeBpsFor(skr)
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
-  const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
-    ? grossUsd - feeUsd
-    : null
+  const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null ? grossUsd - feeUsd : null
 
   const prepare = useCallback(async () => {
     if (!token || amount === null || amount <= 0) return
-    setBusy(true); setStatus(null); setQuote(null)
+    setBusy(true)
+    setStatus(null)
+    setQuote(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
       const q = await getQuote(
-        { key: token.symbol, mint: token.mint, decimals: token.decimals, symbol: token.symbol, feeAccount: usdc.feeAccount } as any,
+        {
+          key: token.symbol,
+          mint: token.mint,
+          decimals: token.decimals,
+          symbol: token.symbol,
+          feeAccount: usdc.feeAccount,
+        } as any,
         amount,
         usdc.mint,
         usdc.decimals,
         'USDC',
         feeBps,
       )
-      if (!q) throw new Error('No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.')
+      if (!q)
+        throw new Error(
+          'No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.',
+        )
       setQuote(q)
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
     setBusy(false)
   }, [token, amount, feeBps])
 
@@ -89,7 +111,8 @@ export default function SellScreen() {
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote) return
-    setBusy(true); setStatus(null)
+    setBusy(true)
+    setStatus(null)
     try {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
@@ -97,7 +120,9 @@ export default function SellScreen() {
       if (!b64) throw new Error('Could not build transaction')
       const sig = await signAndSendTransaction(decodeTx(b64), BigInt(quote.contextSlot))
       setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
     setBusy(false)
   }, [quote, account, connect, signAndSendTransaction])
 
@@ -113,7 +138,8 @@ export default function SellScreen() {
           <Text style={s.title}>Sell {sym}</Text>
           {token && (
             <Text style={[s.subtitle, { color: issuerColor(token.issuer) }]} numberOfLines={1}>
-              {token.issuer}{token.name ? ` · ${token.name}` : ''}
+              {token.issuer}
+              {token.name ? ` · ${token.name}` : ''}
             </Text>
           )}
         </View>
@@ -135,12 +161,21 @@ export default function SellScreen() {
 
             <View style={s.pctRow}>
               {PCTS.map((p) => (
-                <Pressable key={p} onPress={() => { setPct(p); setQuote(null) }} style={[s.pct, pct === p && s.pctOn]}>
+                <Pressable
+                  key={p}
+                  onPress={() => {
+                    setPct(p)
+                    setQuote(null)
+                  }}
+                  style={[s.pct, pct === p && s.pctOn]}
+                >
                   <Text style={[s.pctText, pct === p && s.pctTextOn]}>{p === 100 ? 'Max' : `${p}%`}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={s.tiny}>Balance {balance.toFixed(4)} {sym}</Text>
+            <Text style={s.tiny}>
+              Balance {balance.toFixed(4)} {sym}
+            </Text>
           </View>
 
           {grossUsd !== null && (
@@ -151,7 +186,9 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>${grossUsd.toFixed(2)}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
+                <Text style={s.label}>
+                  Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)
+                </Text>
                 <Text style={[s.value, num]}>{exitCostUsd !== null ? `~$${exitCostUsd.toFixed(2)}` : '—'}</Text>
               </View>
               <View style={s.row}>
@@ -160,7 +197,9 @@ export default function SellScreen() {
               </View>
               {skrDiscount ? (
                 <View style={s.skrRow}>
-                  <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
+                  <Text style={s.skrText}>
+                    SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}
+                  </Text>
                   <Text style={s.skrText}>✓</Text>
                 </View>
               ) : (
@@ -169,7 +208,10 @@ export default function SellScreen() {
               <View style={s.divider} />
               <View style={s.row}>
                 <Text style={s.totalLabel}>Est. receive</Text>
-                <Text style={[s.totalValue, num]}>{netUsd!.toFixed(2)}<Text style={s.tiny}> USDC</Text></Text>
+                <Text style={[s.totalValue, num]}>
+                  {netUsd!.toFixed(2)}
+                  <Text style={s.tiny}> USDC</Text>
+                </Text>
               </View>
               <View style={s.row}>
                 <Text style={s.tiny}>Network fee, paid in SOL (est.)</Text>
@@ -181,20 +223,59 @@ export default function SellScreen() {
           {quote && (
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
-              <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text></View>
-              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.raw?.routePlan?.[0]?.swapInfo?.label ?? '-'}</Text></View>
-              {netUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}</Text></View>)}
-              <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
-              <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
-              {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Our measurements use Jupiter Ultra quotes, which can route through market makers. This swap uses the standard Jupiter router.</Text>)}
+              <View style={s.row}>
+                <Text style={s.label}>You receive</Text>
+                <Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Route</Text>
+                <Text style={s.small}>{quote.raw?.routePlan?.[0]?.swapInfo?.label ?? '-'}</Text>
+              </View>
+              {netUsd !== null && (
+                <View style={s.row}>
+                  <Text style={s.label}>vs. estimate</Text>
+                  <Text style={[s.small, num]}>
+                    {quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              <View style={s.row}>
+                <Text style={s.label}>Price impact</Text>
+                <Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Slippage limit</Text>
+                <Text style={[s.small, num]}>{quote.slippageBps} bps</Text>
+              </View>
+              {netUsd !== null && quote.outUi < netUsd * 0.99 && (
+                <Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>
+                  The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we
+                  measured. Our measurements use Jupiter Ultra quotes, which can route through market makers. This swap
+                  uses the standard Jupiter router.
+                </Text>
+              )}
             </View>
           )}
 
-          <Pressable style={[s.primary, blocked && { opacity: 0.35 }]} onPress={quote ? sign : prepare} disabled={busy || !ok || blocked}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}</Text>}
+          <Pressable
+            style={[s.primary, blocked && { opacity: 0.35 }]}
+            onPress={quote ? sign : prepare}
+            disabled={busy || !ok || blocked}
+          >
+            {busy ? (
+              <ActivityIndicator color={T.bg} />
+            ) : (
+              <Text style={s.primaryText}>
+                {quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}
+              </Text>
+            )}
           </Pressable>
           {!ok && <Text style={s.tiny}>No executable quote right now, so this position cannot be priced.</Text>}
-          {blocked && <Text style={[s.tiny, { color: T.down }]}>This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.</Text>}
+          {blocked && (
+            <Text style={[s.tiny, { color: T.down }]}>
+              This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.
+            </Text>
+          )}
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
       )}
@@ -222,7 +303,15 @@ const s = StyleSheet.create({
   pctText: { color: T.dim, fontSize: 14, fontWeight: '600' },
   pctTextOn: { color: T.bg, fontWeight: '700' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
-  skrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1A2410', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
+  skrRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1A2410',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
   skrText: { color: T.accent, fontSize: 13, fontWeight: '600' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   label: { color: T.dim, fontSize: 15 },
@@ -231,8 +320,13 @@ const s = StyleSheet.create({
   totalLabel: { color: T.text, fontSize: 16, fontWeight: '700' },
   totalValue: { color: T.accent, fontSize: 20, fontWeight: '800', letterSpacing: -0.6 },
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  primary: {
+    backgroundColor: T.accent,
+    borderRadius: 14,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-

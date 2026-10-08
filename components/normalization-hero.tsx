@@ -11,7 +11,10 @@ function tokenLabel(row: Latest, fallback: string) {
 }
 
 export function NormalizationHero({
-  symbol, mine, peer, reference,
+  symbol,
+  mine,
+  peer,
+  reference,
 }: {
   symbol: string
   mine: Latest
@@ -42,8 +45,20 @@ export function NormalizationHero({
           </LinearGradient>
         </Defs>
         <Path d="M0,110 C60,104 110,72 150,46 C176,30 196,20 210,14 L210,110 Z" fill="url(#gw)" />
-        <Path d="M0,110 C60,104 110,72 150,46 C176,30 196,20 210,14" stroke={T.accent} strokeWidth={2} strokeOpacity={0.45} fill="none" />
-        <Path d="M0,110 C55,106 105,84 150,64 C176,52 196,44 210,40" stroke={T.accent} strokeWidth={1.5} strokeOpacity={0.18} fill="none" />
+        <Path
+          d="M0,110 C60,104 110,72 150,46 C176,30 196,20 210,14"
+          stroke={T.accent}
+          strokeWidth={2}
+          strokeOpacity={0.45}
+          fill="none"
+        />
+        <Path
+          d="M0,110 C55,106 105,84 150,64 C176,52 196,44 210,40"
+          stroke={T.accent}
+          strokeWidth={1.5}
+          strokeOpacity={0.18}
+          fill="none"
+        />
       </Svg>
 
       <Text style={s.kicker}>SAME STOCK, TWO TOKENS</Text>
@@ -65,22 +80,32 @@ export function NormalizationHero({
         {shrinks && <Text style={s.gapLabel}>PRICE DIFFERENCE AS LISTED</Text>}
         {shrinks && <Text style={s.arrow}>&#8595;</Text>}
         <Text style={[s.gapGood, num]}>{normGap} bps</Text>
-        <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>{shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} ({(normGap / 100).toFixed(2)}%)</Text>
+        <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>
+          {shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} (
+          {(normGap / 100).toFixed(2)}%)
+        </Text>
       </View>
 
       {peerCheaper && (
         <Pressable onPress={() => router.push(`/passport?symbol=${peer.symbol}`)}>
-          <Text style={s.cheaper}>{tokenLabel(peer, 'Other')} is {normGap} bps cheaper to buy right now, entry costs included. View it ›</Text>
+          <Text style={s.cheaper}>
+            {tokenLabel(peer, 'Other')} is {normGap} bps cheaper to buy right now, entry costs included. View it ›
+          </Text>
         </Pressable>
       )}
       {mineCheaper && (
-        <Text style={s.cheaper}>{symbol} is {normGap} bps cheaper to buy right now, entry costs included.</Text>
+        <Text style={s.cheaper}>
+          {symbol} is {normGap} bps cheaper to buy right now, entry costs included.
+        </Text>
       )}
 
       {shrinks && (
         <View style={s.why}>
           <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
-          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily mean a cheaper stock.</Text>
+          <Text style={s.whyBody}>
+            These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily
+            mean a cheaper stock.
+          </Text>
         </View>
       )}
 

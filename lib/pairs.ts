@@ -31,4 +31,3 @@ export async function getPairs(): Promise<Pair[]> {
     on: g.tokens.find((t) => t.issuer === 'Ondo'),
   }))
 }
-

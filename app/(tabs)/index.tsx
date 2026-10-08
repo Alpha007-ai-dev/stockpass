@@ -27,7 +27,15 @@ function Spark({ values, color }: { values: number[]; color: string }) {
     .join(' ')
   return (
     <Svg width={64} height={24}>
-      <Path d={d} stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.85} />
+      <Path
+        d={d}
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        opacity={0.85}
+      />
     </Svg>
   )
 }
@@ -47,7 +55,7 @@ export default function MarketScreen() {
   const [error, setError] = useState<string | null>(null)
   const state = getMarketState()
   const open = state === 'open'
-
+
   const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setLoading(true)
@@ -55,10 +63,16 @@ export default function MarketScreen() {
     try {
       const [stats, allGroups] = await Promise.all([getStats(), getGroups()])
       const l: Record<string, Latest> = {}
-      stats.latest.forEach((r) => { l[r.symbol] = r })
+      stats.latest.forEach((r) => {
+        l[r.symbol] = r
+      })
       setLatest(l)
       const h: Record<string, History> = {}
-      stats.history.filter((r) => r.market_state === state).forEach((r) => { h[r.symbol] = r })
+      stats.history
+        .filter((r) => r.market_state === state)
+        .forEach((r) => {
+          h[r.symbol] = r
+        })
       setHist(h)
       setGroups(allGroups)
     } catch (e) {
@@ -67,7 +81,9 @@ export default function MarketScreen() {
     setLoading(false)
   }, [state])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   useEffect(() => {
     fetch('https://stockpass-collector.stockpass-dev.workers.dev/underlying')
@@ -109,9 +125,7 @@ export default function MarketScreen() {
       for (let i = 0; i < tickers.length; i += 8) {
         if (cancelled) return
         const batch = tickers.slice(i, i + 8)
-        const results = await Promise.all(
-          batch.map((tk) => getSeries(tk, 48).catch(() => [] as SeriesPoint[])),
-        )
+        const results = await Promise.all(batch.map((tk) => getSeries(tk, 48).catch(() => [] as SeriesPoint[])))
         if (cancelled) return
         setSparks((prev) => {
           const next = { ...prev }
@@ -131,7 +145,9 @@ export default function MarketScreen() {
       }
     })()
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [rows.length, filter])
 
   const statusFor = (l: Latest | undefined) => {
@@ -141,7 +157,12 @@ export default function MarketScreen() {
     return { label: 'LIVE', color: T.accent, dot: true }
   }
 
-  const filters: [string, string][] = [['all', 'All'], ['xStocks', 'xStocks'], ['Ondo', 'Ondo'], ['Backpack', 'Backpack']]
+  const filters: [string, string][] = [
+    ['all', 'All'],
+    ['xStocks', 'xStocks'],
+    ['Ondo', 'Ondo'],
+    ['Backpack', 'Backpack'],
+  ]
 
   return (
     <FlatList
@@ -166,7 +187,9 @@ export default function MarketScreen() {
           <View style={s.toggle}>
             {(['list', 'map', 'issuers'] as const).map((v) => (
               <Pressable key={v} onPress={() => setView(v)} style={[s.toggleBtn, view === v && s.toggleOn]}>
-                <Text style={[s.toggleText, view === v && s.toggleTextOn]}>{v === 'list' ? 'Assets' : v === 'map' ? 'Cost map' : 'Issuers'}</Text>
+                <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
+                  {v === 'list' ? 'Assets' : v === 'map' ? 'Cost map' : 'Issuers'}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -212,7 +235,10 @@ export default function MarketScreen() {
               </View>
               <View style={{ alignItems: 'flex-end', gap: 3 }}>
                 <Text style={[s.price, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
-                <Text style={[s.status, { color: st.color }]}>{st.dot ? '● ' : '○ '}{st.label}</Text>
+                <Text style={[s.status, { color: st.color }]}>
+                  {st.dot ? '● ' : '○ '}
+                  {st.label}
+                </Text>
               </View>
             </View>
 
@@ -225,7 +251,8 @@ export default function MarketScreen() {
                 <View style={s.eventBadge}>
                   <EarningsIcon size={15} color="#A78BFA" />
                   <Text style={s.eventText}>
-                    Earnings {new Date(ev.date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                    Earnings{' '}
+                    {new Date(ev.date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                     {days <= 7 ? ` · in ${days}d` : ''}
                   </Text>
                 </View>
@@ -236,7 +263,13 @@ export default function MarketScreen() {
               <View style={s.metric}>
                 <Text style={s.metricLabel}>entry/exit</Text>
                 <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>
-                  {!ok ? '—' : l!.entry_bps < 0 ? '~0 bps' : l!.entry_bps === l!.exit_bps ? `${l!.entry_bps} bps` : `${l!.entry_bps} / ${l!.exit_bps} bps`}
+                  {!ok
+                    ? '—'
+                    : l!.entry_bps < 0
+                      ? '~0 bps'
+                      : l!.entry_bps === l!.exit_bps
+                        ? `${l!.entry_bps} bps`
+                        : `${l!.entry_bps} / ${l!.exit_bps} bps`}
                 </Text>
               </View>
               {(() => {
@@ -245,7 +278,9 @@ export default function MarketScreen() {
                 return (
                   <View style={s.metric}>
                     <Text style={s.metricLabel}>usual</Text>
-                    <Text style={[s.metricValue, num, { color: T.dim }]}>{h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)} bps</Text>
+                    <Text style={[s.metricValue, num, { color: T.dim }]}>
+                      {h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)} bps
+                    </Text>
                   </View>
                 )
               })()}
@@ -277,26 +312,59 @@ const s = StyleSheet.create({
   dot: { width: 7, height: 7, borderRadius: 4 },
   liveText: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
 
-  toggle: { flexDirection: 'row', backgroundColor: T.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.border },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: T.surface,
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: T.border,
+  },
   toggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
   toggleOn: { backgroundColor: T.accent },
   toggleText: { color: T.dim, fontSize: 14, fontWeight: '600' },
   toggleTextOn: { color: T.bg, fontWeight: '700' },
 
-  search: { backgroundColor: T.surface, borderRadius: 14, borderWidth: 1, borderColor: T.border, color: T.text, paddingHorizontal: 14, height: 46, fontSize: 15 },
+  search: {
+    backgroundColor: T.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.border,
+    color: T.text,
+    paddingHorizontal: 14,
+    height: 46,
+    fontSize: 15,
+  },
   filters: { flexDirection: 'row', gap: 8 },
   chip: { borderRadius: 13, borderWidth: 1, borderColor: T.border, paddingHorizontal: 13, paddingVertical: 8 },
   chipOn: { backgroundColor: T.accent, borderColor: T.accent },
   chipText: { color: T.dim, fontSize: 13, fontWeight: '600' },
   chipTextOn: { color: T.bg, fontWeight: '700' },
 
-  card: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 12, marginBottom: 11 },
+  card: {
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
+    marginBottom: 11,
+  },
   cardTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
   symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
   issuer: { fontSize: 13, fontWeight: '600', marginTop: 1 },
   price: { color: T.text, fontSize: 17, fontWeight: '700' },
   status: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
-  eventBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', backgroundColor: '#1E1A2E', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
+  eventBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    alignSelf: 'flex-start',
+    backgroundColor: '#1E1A2E',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   eventText: { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
   cardBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 22 },
   metric: { gap: 1 },
@@ -307,13 +375,3 @@ const s = StyleSheet.create({
 
   warn: { color: T.warn, fontSize: 13 },
 })
-
-
-
-
-
-
-
-
-
-

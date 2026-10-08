@@ -11,7 +11,6 @@ export function isUsable(entryBps: number | null | undefined, quotable: number |
   return !!quotable && entryBps !== null && entryBps !== undefined && entryBps < NO_MARKET_BPS
 }
 
-
 export function bpsLabel(bps: number | null | undefined, quotable?: number | boolean): string {
   if (quotable !== undefined && !quotable) return '—'
   if (bps === null || bps === undefined) return '—'

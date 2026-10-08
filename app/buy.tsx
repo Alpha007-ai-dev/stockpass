@@ -8,7 +8,16 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
-import { buildSwapTx, decodeTx, feeBpsFor, getQuote, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import {
+  buildSwapTx,
+  decodeTx,
+  feeBpsFor,
+  getQuote,
+  PAY_TOKENS,
+  PLATFORM_FEE_BPS,
+  Quote,
+  SKR_THRESHOLD,
+} from '@/lib/swap'
 import { getBalances, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const DEFAULT_SIZE = 1000
@@ -37,7 +46,9 @@ export default function BuyScreen() {
     Promise.all([getStats(), getGroups()])
       .then(([s, groups]) => {
         const map: Record<string, Latest> = {}
-        s.latest.forEach((r) => { map[r.symbol] = r })
+        s.latest.forEach((r) => {
+          map[r.symbol] = r
+        })
         const g = groups.find((x) => x.ticker === tk)
         const opts = (g?.tokens ?? [])
           .map((token) => ({ token, l: map[token.symbol] }))
@@ -54,7 +65,10 @@ export default function BuyScreen() {
     const addr = account?.address
     if (addr) {
       getBalances(String(addr))
-        .then((b) => { setUsdc(b.usdc); setSkr(b.skr) })
+        .then((b) => {
+          setUsdc(b.usdc)
+          setSkr(b.skr)
+        })
         .catch(() => {})
     }
   }, [account])
@@ -70,25 +84,37 @@ export default function BuyScreen() {
   // The StockPass fee applies to either issuer, so it cancels out of the comparison.
   const savingBps = selected && alternative ? alternative.entry - selected.entry : null
 
-
   const prepare = useCallback(async () => {
     if (!selected) return
-    setBusy(true); setStatus(null)
+    setBusy(true)
+    setStatus(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
-      const q = await getQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
-      if (!q) throw new Error('No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.')
+      const q = await getQuote(
+        usdc,
+        SIZE_USD,
+        selected.token.mint,
+        selected.token.decimals,
+        selected.token.symbol,
+        feeBps,
+      )
+      if (!q)
+        throw new Error(
+          'No route in the standard Jupiter router. This token is priced through Jupiter Ultra market makers, which this app version cannot execute yet.',
+        )
       setQuote(q)
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
     setBusy(false)
   }, [selected, SIZE_USD, feeBps])
-
 
   const blocked = quote !== null && quote.priceImpactPct * 100 > 5
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote || !selected) return
-    setBusy(true); setStatus(null)
+    setBusy(true)
+    setStatus(null)
     try {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
@@ -108,7 +134,9 @@ export default function BuyScreen() {
         signature: String(sig),
         at: Date.now(),
       })
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
     setBusy(false)
   }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, tk, SIZE_USD])
 
@@ -119,12 +147,21 @@ export default function BuyScreen() {
       </Pressable>
 
       <View style={s.header}>
-        {selected && <TokenIcon icon={selected.token.icon} symbol={selected.token.symbol} label={tk} issuer={selected.token.issuer} size={44} />}
+        {selected && (
+          <TokenIcon
+            icon={selected.token.icon}
+            symbol={selected.token.symbol}
+            label={tk}
+            issuer={selected.token.issuer}
+            size={44}
+          />
+        )}
         <View style={{ flex: 1 }}>
           <Text style={s.title}>Buy {selected?.token.symbol ?? tk}</Text>
           {selected && (
             <Text style={[s.subtitle, { color: issuerColor(selected.token.issuer) }]} numberOfLines={1}>
-              {selected.token.issuer}{selected.token.name ? ` · ${selected.token.name}` : ''}
+              {selected.token.issuer}
+              {selected.token.name ? ` · ${selected.token.name}` : ''}
             </Text>
           )}
         </View>
@@ -141,7 +178,10 @@ export default function BuyScreen() {
               <Text style={s.dollar}>$</Text>
               <TextInput
                 value={sizeText}
-                onChangeText={(t) => { setSizeText(t); setQuote(null) }}
+                onChangeText={(t) => {
+                  setSizeText(t)
+                  setQuote(null)
+                }}
                 keyboardType="decimal-pad"
                 placeholder="0"
                 placeholderTextColor={T.faint}
@@ -151,12 +191,25 @@ export default function BuyScreen() {
             </View>
             <View style={s.quickRow}>
               {[100, 500, 1000].map((v) => (
-                <Pressable key={v} onPress={() => { setSizeText(String(v)); setQuote(null) }} style={s.quick}>
+                <Pressable
+                  key={v}
+                  onPress={() => {
+                    setSizeText(String(v))
+                    setQuote(null)
+                  }}
+                  style={s.quick}
+                >
                   <Text style={s.quickText}>${v}</Text>
                 </Pressable>
               ))}
               {usdc !== null && usdc > 0 && (
-                <Pressable onPress={() => { setSizeText(usdc.toFixed(2)); setQuote(null) }} style={s.quick}>
+                <Pressable
+                  onPress={() => {
+                    setSizeText(usdc.toFixed(2))
+                    setQuote(null)
+                  }}
+                  style={s.quick}
+                >
                   <Text style={s.quickText}>Max</Text>
                 </Pressable>
               )}
@@ -173,7 +226,9 @@ export default function BuyScreen() {
             <Text style={[s.hero, num]}>
               {quote ? `~${quote.outUi.toFixed(4)}` : '—'} <Text style={s.heroUnit}>{selected.token.symbol}</Text>
             </Text>
-            <Text style={s.tiny}>{quote ? `Est. price $${(SIZE_USD / quote.outUi).toFixed(2)}` : 'Review the route to get a quote'}</Text>
+            <Text style={s.tiny}>
+              {quote ? `Est. price $${(SIZE_USD / quote.outUi).toFixed(2)}` : 'Review the route to get a quote'}
+            </Text>
           </View>
 
           <View style={s.card}>
@@ -192,7 +247,9 @@ export default function BuyScreen() {
             </View>
             {skrDiscount ? (
               <View style={s.skrRow}>
-                <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
+                <Text style={s.skrText}>
+                  SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}
+                </Text>
                 <Text style={s.skrCheck}>✓</Text>
               </View>
             ) : (
@@ -202,7 +259,9 @@ export default function BuyScreen() {
             <View style={s.row}>
               <Text style={s.totalLabel}>Total cost</Text>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[s.totalValue, num, blocked && { color: T.down }]}>{blocked ? 'n/a' : '$' + totalUsd!.toFixed(2)}</Text>
+                <Text style={[s.totalValue, num, blocked && { color: T.down }]}>
+                  {blocked ? 'n/a' : '$' + totalUsd!.toFixed(2)}
+                </Text>
                 <Text style={s.tiny}>{blocked ? 'route unusable right now' : totalBps!.toFixed(1) + ' bps'}</Text>
               </View>
             </View>
@@ -215,18 +274,22 @@ export default function BuyScreen() {
                   <Text style={s.kickerAccent}>YOU SAVE</Text>
                   <Text style={[s.savingValue, num]}>{savingBps} bps</Text>
                   <Text style={s.savingSub}>
-                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} vs {alternative.token.issuer} ({alternative.entry} bps)
+                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} vs {alternative.token.issuer} ({alternative.entry}{' '}
+                    bps)
                   </Text>
                 </>
               ) : (
                 <>
                   <Text style={s.kicker}>{blocked ? 'TRY THIS ISSUER INSTEAD' : 'ALTERNATIVE ISSUER'}</Text>
                   <View style={s.row}>
-                    <Text style={s.label}>{alternative.token.symbol} · {alternative.token.issuer}</Text>
+                    <Text style={s.label}>
+                      {alternative.token.symbol} · {alternative.token.issuer}
+                    </Text>
                     <Text style={[s.value, num]}>{alternative.entry} bps</Text>
                   </View>
                   <Text style={s.tiny}>
-                    Only {Math.abs(savingBps)} bps apart after the StockPass fee. Choose on issuer, availability or utility.
+                    Only {Math.abs(savingBps)} bps apart after the StockPass fee. Choose on issuer, availability or
+                    utility.
                   </Text>
                 </>
               )}
@@ -236,15 +299,40 @@ export default function BuyScreen() {
           {quote && (
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
-              <View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>
-              <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
-              <View style={s.row}><Text style={s.label}>Fee charged</Text><Text style={[s.small, num]}>{quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}</Text></View>
+              <View style={s.row}>
+                <Text style={s.label}>Price impact</Text>
+                <Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Slippage limit</Text>
+                <Text style={[s.small, num]}>{quote.slippageBps} bps</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Fee charged</Text>
+                <Text style={[s.small, num]}>
+                  {quote.feeUi > 0 ? `${quote.feeUi.toFixed(4)} ${quote.feeSymbol}` : `${quote.feeBps} bps`}
+                </Text>
+              </View>
             </View>
           )}
 
-          {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>This route has a very high price impact, so signing is disabled. Try a smaller amount.</Text>}
-          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
+          {blocked && (
+            <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>
+              This route has a very high price impact, so signing is disabled. Try a smaller amount.
+            </Text>
+          )}
+          <Pressable
+            style={[s.primary, (SIZE_USD <= 0 || blocked) && { opacity: 0.4 }]}
+            onPress={quote ? sign : prepare}
+            disabled={busy || SIZE_USD <= 0 || blocked}
+          >
+            {busy ? (
+              <ActivityIndicator color={T.bg} />
+            ) : (
+              <Text style={s.primaryText}>
+                {quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}
+              </Text>
+            )}
           </Pressable>
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
@@ -271,7 +359,15 @@ const s = StyleSheet.create({
   hero: { color: T.text, fontSize: 32, fontWeight: '800', letterSpacing: -1 },
   heroUnit: { color: T.dim, fontSize: 18, fontWeight: '600' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
-  skrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1A2410', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
+  skrRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1A2410',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
   skrText: { color: T.accent, fontSize: 13, fontWeight: '600' },
   skrCheck: { color: T.accent, fontSize: 14, fontWeight: '700' },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
@@ -289,13 +385,26 @@ const s = StyleSheet.create({
   totalLabel: { color: T.text, fontSize: 16, fontWeight: '700' },
   totalValue: { color: T.accent, fontSize: 26, fontWeight: '800', letterSpacing: -0.6 },
 
-  savingCard: { backgroundColor: '#16210C', borderWidth: 1.5, borderColor: T.accent, borderRadius: 16, padding: 16, gap: 3, alignItems: 'center' },
+  savingCard: {
+    backgroundColor: '#16210C',
+    borderWidth: 1.5,
+    borderColor: T.accent,
+    borderRadius: 16,
+    padding: 16,
+    gap: 3,
+    alignItems: 'center',
+  },
   savingValue: { color: T.accent, fontSize: 34, fontWeight: '800', letterSpacing: -1 },
   savingSub: { color: T.text, fontSize: 14 },
 
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  primary: {
+    backgroundColor: T.accent,
+    borderRadius: 14,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-

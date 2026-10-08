@@ -9,7 +9,16 @@ import { ErrorState } from '@/components/error-state'
 import { bpsLabel, bpsValue, isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { getHoldings, getIssuerReliability, getSeries, getStats, HoldingRow, IssuerReliability, Latest, WeakToken } from '@/lib/stats'
+import {
+  getHoldings,
+  getIssuerReliability,
+  getSeries,
+  getStats,
+  HoldingRow,
+  IssuerReliability,
+  Latest,
+  WeakToken,
+} from '@/lib/stats'
 
 type Item = HoldingRow & {
   shares: number
@@ -33,7 +42,7 @@ export default function AnalyticsScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [rel, setRel] = useState<{ issuers: IssuerReliability[]; weakest: WeakToken[]; meta: any } | null>(null)
-
+
   const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setBusy(true)
@@ -55,37 +64,45 @@ export default function AnalyticsScreen() {
         rows = await getHoldings(String(addr))
       }
 
-      const base: Item[] = rows.map((r) => {
-        const l = latest.get(r.symbol)
-        const peers = (groups.find((g) => g.ticker === r.ticker)?.tokens ?? [])
-          .filter((p) => p.symbol !== r.symbol)
-          .map((p) => ({ token: p, l: latest.get(p.symbol) }))
-          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
-        const cheapest = peers.length
-          ? peers.reduce((a, b) => ((a.l!.entry_bps as number) <= (b.l!.entry_bps as number) ? a : b))
-          : null
-        const shares = r.walletAmount * (l?.multiplier ?? 1)
-        return {
-          ...r,
-          shares,
-          value: l?.sell_px ? shares * l.sell_px : null,
-          entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
-          exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
-          entryDelta: null,
-          altSymbol: cheapest ? cheapest.token.symbol : null,
-          altIssuer: cheapest ? cheapest.token.issuer : null,
-          altEntryBps: cheapest ? (cheapest.l!.entry_bps as number) : null,
-        }
-      }).sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+      const base: Item[] = rows
+        .map((r) => {
+          const l = latest.get(r.symbol)
+          const peers = (groups.find((g) => g.ticker === r.ticker)?.tokens ?? [])
+            .filter((p) => p.symbol !== r.symbol)
+            .map((p) => ({ token: p, l: latest.get(p.symbol) }))
+            .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
+          const cheapest = peers.length
+            ? peers.reduce((a, b) => ((a.l!.entry_bps as number) <= (b.l!.entry_bps as number) ? a : b))
+            : null
+          const shares = r.walletAmount * (l?.multiplier ?? 1)
+          return {
+            ...r,
+            shares,
+            value: l?.sell_px ? shares * l.sell_px : null,
+            entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
+            exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
+            entryDelta: null,
+            altSymbol: cheapest ? cheapest.token.symbol : null,
+            altIssuer: cheapest ? cheapest.token.issuer : null,
+            altEntryBps: cheapest ? (cheapest.l!.entry_bps as number) : null,
+          }
+        })
+        .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
       setItems(base)
 
-      const withDelta = await Promise.all(base.map(async (i) => {
-        try {
-          const pts = (await getSeries(i.ticker, 24)).filter((p) => p.symbol === i.symbol && p.quotable && p.entry_bps !== null)
-          if (pts.length < 2 || i.entryBps === null) return i
-          return { ...i, entryDelta: i.entryBps - (pts[0].entry_bps as number) }
-        } catch { return i }
-      }))
+      const withDelta = await Promise.all(
+        base.map(async (i) => {
+          try {
+            const pts = (await getSeries(i.ticker, 24)).filter(
+              (p) => p.symbol === i.symbol && p.quotable && p.entry_bps !== null,
+            )
+            if (pts.length < 2 || i.entryBps === null) return i
+            return { ...i, entryDelta: i.entryBps - (pts[0].entry_bps as number) }
+          } catch {
+            return i
+          }
+        }),
+      )
       setItems(withDelta)
     } catch (e) {
       setError((e as Error).message)
@@ -93,8 +110,14 @@ export default function AnalyticsScreen() {
     setBusy(false)
   }, [account, connect])
 
-  useEffect(() => { load() }, [load])
-  useEffect(() => { getIssuerReliability().then(setRel).catch(() => {}) }, [])
+  useEffect(() => {
+    load()
+  }, [load])
+  useEffect(() => {
+    getIssuerReliability()
+      .then(setRel)
+      .catch(() => {})
+  }, [])
 
   const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? 0
   const priced = items?.filter((i) => i.exitBps !== null && i.value !== null) ?? []
@@ -103,31 +126,44 @@ export default function AnalyticsScreen() {
   const avgExit = exitValue > 0 ? (exitCost / exitValue) * 10000 : null
   const entryPriced = items?.filter((i) => i.entryBps !== null && i.value !== null) ?? []
   const entryValue = entryPriced.reduce((n, i) => n + (i.value as number), 0)
-  const avgEntry = entryValue > 0
-    ? entryPriced.reduce((n, i) => n + (i.value as number) * (i.entryBps as number), 0) / entryValue
-    : null
+  const avgEntry =
+    entryValue > 0
+      ? entryPriced.reduce((n, i) => n + (i.value as number) * (i.entryBps as number), 0) / entryValue
+      : null
 
   const byIssuer: Record<string, number> = {}
-  items?.forEach((i) => { byIssuer[i.issuer] = (byIssuer[i.issuer] ?? 0) + (i.value ?? 0) })
+  items?.forEach((i) => {
+    byIssuer[i.issuer] = (byIssuer[i.issuer] ?? 0) + (i.value ?? 0)
+  })
 
-  const insights = (items ?? []).filter((i) => i.entryBps === null || (i.entryDelta !== null && Math.abs(i.entryDelta) >= 2))
+  const insights = (items ?? []).filter(
+    (i) => i.entryBps === null || (i.entryDelta !== null && Math.abs(i.entryDelta) >= 2),
+  )
 
   const tabs: [Tab, string][] = [
-    ['overview', 'Overview'], ['costs', 'Costs'], ['exposure', 'Exposure'],
+    ['overview', 'Overview'],
+    ['costs', 'Costs'],
+    ['exposure', 'Exposure'],
     ['opportunities', 'Opportunities'],
   ]
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
-      refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}>
-
+    <ScrollView
+      style={s.screen}
+      contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
+      refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}
+    >
       <Pressable onPress={() => (router.canGoBack() ? router.back() : router.replace('/wallet'))} style={s.back}>
         <Text style={s.backText}>‹ Wallet</Text>
       </Pressable>
 
       <Text style={s.title}>Portfolio Analytics</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 6, paddingVertical: 2 }}
+      >
         {tabs.map(([key, label]) => (
           <Pressable key={key} onPress={() => setTab(key)} style={[s.tab, tab === key && s.tabOn]}>
             <Text style={[s.tabText, tab === key && s.tabTextOn]}>{label}</Text>
@@ -142,8 +178,12 @@ export default function AnalyticsScreen() {
         <>
           <View style={s.heroCard}>
             <Text style={s.kicker}>TOTAL VALUE</Text>
-            <Text style={[s.hero, num]}>${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-            <Text style={s.tiny}>{items.length} assets · {Object.keys(byIssuer).length} issuers</Text>
+            <Text style={[s.hero, num]}>
+              ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
+            <Text style={s.tiny}>
+              {items.length} assets · {Object.keys(byIssuer).length} issuers
+            </Text>
           </View>
 
           <View style={s.pairRow}>
@@ -164,7 +204,8 @@ export default function AnalyticsScreen() {
             <Text style={[s.hero, num, { fontSize: 30 }]}>${exitCost.toFixed(2)}</Text>
             <Text style={s.tiny}>
               What it would cost to sell every position back to USDC at current quotes.
-              {'\n'}{priced.length} of {items.length} holdings executable right now. Estimate, not a commitment.
+              {'\n'}
+              {priced.length} of {items.length} holdings executable right now. Estimate, not a commitment.
             </Text>
           </View>
         </>
@@ -194,7 +235,9 @@ export default function AnalyticsScreen() {
                 <View style={[s.metricCell, { flex: 1, alignItems: 'flex-end' }]}>
                   <Text style={s.tinyLabel}>cost to exit</Text>
                   <Text style={[s.metricSmall, num]}>
-                    {i.value !== null && i.exitBps !== null ? `$${((i.value * bpsValue(i.exitBps)) / 10000).toFixed(2)}` : '—'}
+                    {i.value !== null && i.exitBps !== null
+                      ? `$${((i.value * bpsValue(i.exitBps)) / 10000).toFixed(2)}`
+                      : '—'}
                   </Text>
                 </View>
               </View>
@@ -213,18 +256,22 @@ export default function AnalyticsScreen() {
         <>
           <View style={s.card}>
             <Text style={s.kicker}>BY ISSUER</Text>
-            {Object.entries(byIssuer).sort((a, b) => b[1] - a[1]).map(([issuer, v]) => {
-              const pct = total > 0 ? (v / total) * 100 : 0
-              return (
-                <View key={issuer} style={{ gap: 6, marginTop: 8 }}>
-                  <View style={s.row}>
-                    <Text style={s.allocLabel}>{issuer}</Text>
-                    <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
+            {Object.entries(byIssuer)
+              .sort((a, b) => b[1] - a[1])
+              .map(([issuer, v]) => {
+                const pct = total > 0 ? (v / total) * 100 : 0
+                return (
+                  <View key={issuer} style={{ gap: 6, marginTop: 8 }}>
+                    <View style={s.row}>
+                      <Text style={s.allocLabel}>{issuer}</Text>
+                      <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
+                    </View>
+                    <View style={s.track}>
+                      <View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(issuer) }]} />
+                    </View>
                   </View>
-                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(issuer) }]} /></View>
-                </View>
-              )
-            })}
+                )
+              })}
           </View>
 
           <View style={s.card}>
@@ -237,14 +284,15 @@ export default function AnalyticsScreen() {
                     <Text style={s.allocLabel}>{i.symbol}</Text>
                     <Text style={[s.allocPct, num]}>{pct.toFixed(1)}%</Text>
                   </View>
-                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} /></View>
+                  <View style={s.track}>
+                    <View style={[s.fill, { width: `${Math.max(2, pct)}%`, backgroundColor: issuerColor(i.issuer) }]} />
+                  </View>
                 </View>
               )
             })}
           </View>
         </>
       )}
-
 
       {items && tab === 'opportunities' && (
         <>
@@ -284,7 +332,8 @@ export default function AnalyticsScreen() {
                     </View>
                     <Text style={s.tiny}>
                       {i.altSymbol} is {saving} bps cheaper to enter, but switching requires selling this position and
-                      entering the alternative. Net result {net! >= 0 ? '+' : ''}{net} bps.
+                      entering the alternative. Net result {net! >= 0 ? '+' : ''}
+                      {net} bps.
                     </Text>
                   </>
                 ) : (
@@ -300,7 +349,6 @@ export default function AnalyticsScreen() {
           <Text style={s.tiny}>Cheapest to buy is not the same as cheapest for you.</Text>
         </>
       )}
-
     </ScrollView>
   )
 }
@@ -317,7 +365,14 @@ const s = StyleSheet.create({
   tabText: { color: T.dim, fontSize: 13, fontWeight: '600' },
   tabTextOn: { color: T.bg, fontWeight: '700' },
 
-  heroCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 18, gap: 4 },
+  heroCard: {
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 18,
+    gap: 4,
+  },
   card: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16, gap: 8 },
   pairRow: { flexDirection: 'row', gap: 11 },
   kicker: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
