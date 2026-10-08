@@ -7,6 +7,30 @@ const PROXY = 'https://stockpass-collector.stockpass-dev.workers.dev/logo?symbol
 
 const svgCache = new Map<string, string>()
 
+/** react-native-svg ignores CSS classes (.st0{fill:#fff}); copy each class rule onto the elements as plain attributes. */
+function inlineClasses(xml: string): string {
+  const rules = new Map<string, [string, string][]>()
+  for (const block of xml.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    for (const r of block[1].matchAll(/\.([\w-]+)\s*\{([^}]*)\}/g)) {
+      const decls: [string, string][] = []
+      for (const d of r[2].split(';')) {
+        const i = d.indexOf(':')
+        if (i > 0) decls.push([d.slice(0, i).trim(), d.slice(i + 1).trim()])
+      }
+      rules.set(r[1], [...(rules.get(r[1]) ?? []), ...decls])
+    }
+  }
+  if (rules.size === 0) return xml
+  return xml.replace(/<(?!\/)([a-zA-Z][\w:-]*)([^>]*?)\sclass\s*=\s*["']([^"']*)["']([^>]*)>/g, (all, tag, a, cls, b) => {
+    const have = `${a} ${b}`
+    const picked = String(cls).split(/\s+/).flatMap((c) => rules.get(c) ?? [])
+      .filter(([k]) => /^[a-z-]+$/.test(k) && !new RegExp(`\\s${k}\\s*=`).test(have) && !/^enable-background$/.test(k))
+      .reduce((m, [k, v]) => m.set(k, v), new Map<string, string>())
+    const add = [...picked].map(([k, v]) => ` ${k}="${v.replace(/"/g, '')}"`).join('')
+    return `<${tag}${a}${add}${b}>`
+  })
+}
+
 /** Backpack logos come as SVG files of varying size; make sure they scale to the box instead of being cropped. */
 function fitSvg(xml: string): string {
   const m = xml.match(/<svg\b[^>]*>/i)
@@ -45,7 +69,7 @@ function useSvg(uri: string | null | undefined) {
       .then((r) => (r.ok ? r.text() : Promise.reject(new Error(String(r.status)))))
       .then((txt) => {
         if (!/<svg/i.test(txt)) throw new Error('not svg')
-        const fixed = fitSvg(txt)
+        const fixed = fitSvg(inlineClasses(txt))
         svgCache.set(uri, fixed)
         if (live) setXml(fixed)
       })
