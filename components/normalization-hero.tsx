@@ -1,6 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { Latest } from '@/lib/stats'
@@ -36,18 +35,6 @@ export function NormalizationHero({
 
   return (
     <View style={s.card}>
-      <Svg width={210} height={56} viewBox="0 0 210 110" preserveAspectRatio="none" style={s.glow} pointerEvents="none">
-        <Defs>
-          <LinearGradient id="gw" x1="0" y1="1" x2="1" y2="0">
-            <Stop offset="0" stopColor={T.accent} stopOpacity="0.30" />
-            <Stop offset="1" stopColor={T.accent} stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
-        <Path d="M0,110 C60,104 110,72 150,46 C176,30 196,20 210,14 L210,110 Z" fill="url(#gw)" />
-        <Path d="M0,110 C60,104 110,72 150,46 C176,30 196,20 210,14" stroke={T.accent} strokeWidth={2} strokeOpacity={0.45} fill="none" />
-        <Path d="M0,110 C55,106 105,84 150,64 C176,52 196,44 210,40" stroke={T.accent} strokeWidth={1.5} strokeOpacity={0.18} fill="none" />
-      </Svg>
-
       <Text style={s.kicker}>{total > 2 ? `SAME STOCK, ${total} TOKENS` : 'SAME STOCK, TWO TOKENS'}</Text>
       {total > 2 && <Text style={s.tiny}>Compared with the cheapest of the other {total - 1}.</Text>}
 
