@@ -170,11 +170,11 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 - **Plain-language notes on unusual costs.** The Worker already finds measurements outside a token's normal range; the written explanation needs a Claude API key and only ever describes the evidence, never a cause.
 
 **Later**
-- **Beyond stocks.** The measurement (what it costs to get in and out, by market state) applies to any tokenized real-world asset: treasuries, gold, funds. Same collector, new tickers.
+- **Real-world assets (RWA) beyond stocks.** Tokenized stocks are the first market, not the last. The same measurement (what it costs to get in and out, by market state) applies to any tokenized real-world asset: treasuries, gold, funds. Same collector, new tickers, same cost-first view in the app.
 - **More issuers and routes** as they appear on Solana, measured the same way so they stay comparable.
 - **An open measurement API**, so other apps can show the cost before the trade.
 
-**Why this direction:** tokenizing an asset is no longer the hard part. Knowing what it costs to hold and exit is, and the longer the collector runs the more history only we have.
+**Why RWA:** tokenizing an asset is no longer the hard part. Knowing what it costs to hold and exit is, and the longer the collector runs the more history only we have.
 
 ---
 
