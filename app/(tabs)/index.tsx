@@ -212,7 +212,7 @@ export default function MarketScreen() {
                 <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                <Text style={[s.price, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}</Text>
+                <Text style={[s.price, num]}>{l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}{l?.buy_px ? <Text style={s.perShare}> /share</Text> : null}</Text>
                 <Text style={[s.status, { color: st.color }]}>{st.dot ? '● ' : '○ '}{st.label}</Text>
               </View>
             </View>
@@ -296,6 +296,7 @@ const s = StyleSheet.create({
   symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
   issuer: { fontSize: 13, fontWeight: '600', marginTop: 1 },
   price: { color: T.text, fontSize: 17, fontWeight: '700' },
+  perShare: { color: T.faint, fontSize: 11, fontWeight: '400' },
   status: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
   eventBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, alignSelf: 'flex-start', backgroundColor: '#1E1A2E', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   eventText: { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
