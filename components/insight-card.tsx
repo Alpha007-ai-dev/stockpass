@@ -42,16 +42,6 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
       }
     }
   }
-  if (i.altEntryBps !== null && i.altEntryBps < i.entryBps && value) {
-    const savingUsd = (value * (i.entryBps - i.altEntryBps)) / 10000
-    if (savingUsd >= 0.5) {
-      return {
-        text: `${i.altSymbol} is cheaper to enter, worth ${usd(savingUsd)} on this position.`,
-        tone: 'warn',
-        rank: 3,
-      }
-    }
-  }
   return null
 }
 
