@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
@@ -34,6 +34,7 @@ export default function BuyScreen() {
   const [demo, setDemo] = useState(false)
   useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
   const [status, setStatus] = useState<string | null>(null)
+  const [done, setDone] = useState<{ symbol: string; sizeUsd: number; entryBps: number; altBps: number | null; savedBps: number | null; signature: string } | null>(null)
 
   const tk = ticker ?? (symbol ? symbol.replace(/(x|on|bp)$/, '') : 'SPY')
 
@@ -109,6 +110,14 @@ export default function BuyScreen() {
         savedBps: savingBps,
         signature: String(sig),
         at: Date.now(),
+      })
+      setDone({
+        symbol: selected.token.symbol,
+        sizeUsd: SIZE_USD,
+        entryBps: selected.entry,
+        altBps: alternative?.entry ?? null,
+        savedBps: savingBps,
+        signature: String(sig),
       })
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
@@ -254,6 +263,24 @@ export default function BuyScreen() {
         </>
       )}
 
+      {done && (
+        <View style={s.card}>
+          <Text style={s.kicker}>TRADE SENT</Text>
+          <Text style={[s.tiny, { color: T.text, fontSize: 15 }]}>
+            {done.symbol} · ${done.sizeUsd.toFixed(2)}
+          </Text>
+          <Text style={s.tiny}>
+            Cost at signing: {Math.max(0, done.entryBps)} bps (about ${((Math.max(0, done.entryBps) / 10000) * done.sizeUsd).toFixed(2)}).
+            {done.savedBps !== null && done.savedBps > 0 && done.altBps !== null
+              ? ` The other issuer quoted ${Math.max(0, done.altBps)} bps, so this choice saved about ${done.savedBps} bps ($${((done.savedBps / 10000) * done.sizeUsd).toFixed(2)}).`
+              : ''}
+          </Text>
+          <Text style={s.tiny}>Based on the reviewed quote, not the final fill.</Text>
+          <Pressable onPress={() => Linking.openURL(`https://solscan.io/tx/${done.signature}`)}>
+            <Text style={[s.tiny, { color: T.accent }]}>View on Solscan ›</Text>
+          </Pressable>
+        </View>
+      )}
       {status && <Text style={s.tiny}>{status}</Text>}
     </ScrollView>
   )

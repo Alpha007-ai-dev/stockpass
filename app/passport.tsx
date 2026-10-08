@@ -6,6 +6,7 @@ import { AnomalyCard } from '@/components/anomaly-card'
 import { CostAlert } from '@/components/cost-alert'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
+import { TokenVerdict } from '@/components/token-verdict'
 import { TokenIcon } from '@/components/token-icon'
 import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
@@ -121,6 +122,7 @@ export default function PassportScreen() {
 
       {tab === 'overview' && mine && (
         <>
+          <TokenVerdict mine={mine} hist={hist} availability={samples >= 50 && avail !== null ? Math.round(avail * 100) : null} peer={peer} />
           <AnomalyCard symbol={sym} />
 
           {peer && mine.buy_px && peer.buy_px && (
@@ -186,6 +188,18 @@ export default function PassportScreen() {
                   <Text style={[s.barValue, num]}>{h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)}</Text>
                 </View>
               ))}
+              {(() => {
+                const solid = valid.filter((h) => h.samples * h.availability >= 10)
+                if (solid.length < 2) return null
+                const lo = solid.reduce((a, b) => (a.avg_entry <= b.avg_entry ? a : b))
+                const hi = solid.reduce((a, b) => (a.avg_entry >= b.avg_entry ? a : b))
+                if (hi.avg_entry - lo.avg_entry < 3) return null
+                return (
+                  <Text style={s.tiny}>
+                    Cheapest on average during {(STATE_LABEL[lo.market_state] ?? lo.market_state).toLowerCase()} ({Math.round(Math.max(0, lo.avg_entry))} bps), most expensive during {(STATE_LABEL[hi.market_state] ?? hi.market_state).toLowerCase()} ({Math.round(hi.avg_entry)} bps). Historical pattern, not a forecast.
+                  </Text>
+                )
+              })()}
             </View>
           )}
 
