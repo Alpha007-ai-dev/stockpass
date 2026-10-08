@@ -61,7 +61,9 @@ export default function SellScreen() {
   const amount = balance !== null ? (balance * pct) / 100 : null
   const shares = amount !== null && latest ? amount * latest.multiplier : null
   const grossUsd = shares !== null && latest?.sell_px ? shares * latest.sell_px : null
-  const exitCostUsd = grossUsd !== null && ok ? (grossUsd * Math.max(0, latest!.exit_bps as number)) / 10000 : null
+  // sell_px is already net of the exit cost, so measure the cost against the value before it.
+  const exitFrac = ok ? Math.min(0.99, Math.max(0, latest!.exit_bps as number) / 10000) : 0
+  const exitCostUsd = grossUsd !== null && ok ? (grossUsd / (1 - exitFrac)) * exitFrac : null
   const feeBps = feeBpsFor(skr)
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
@@ -88,7 +90,9 @@ export default function SellScreen() {
     setBusy(false)
   }, [token, amount, feeBps])
 
-  const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (netUsd !== null && quote.outUi < netUsd * 0.9))
+  // On the v2 route Jupiter takes its own fee instead of the StockPass fee, so compare the quote against that estimate.
+  const baselineUsd = quote?.route === 'v2' && grossUsd !== null ? grossUsd * (1 - quote.feeBps / 10000) : netUsd
+  const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (baselineUsd !== null && quote.outUi < baselineUsd * 0.9))
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote) return
@@ -186,7 +190,7 @@ export default function SellScreen() {
               <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.routeLabel ?? '-'}</Text></View>
               {quote.altOutUi !== undefined && (<View style={s.row}><Text style={s.label}>Other route ({quote.altLabel})</Text><Text style={[s.small, num]}>{quote.altOutUi.toFixed(2)} USDC</Text></View>)}
               {quote.route === 'v2' && (<View style={s.row}><Text style={s.label}>StockPass fee</Text><Text style={s.small}>none on this route</Text></View>)}
-              {netUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - netUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - netUsd).toFixed(2)}</Text></View>)}
+              {baselineUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - baselineUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - baselineUsd).toFixed(2)}</Text></View>)}
               {quote.impactKnown !== false && (<View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>)}
               <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
               {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Compare it with the other route above before signing.</Text>)}

@@ -17,7 +17,7 @@ const DEFAULT_SIZE = 1000
 const NETWORK_FEE_USD = 0.01
 const MIN_SAVING_BPS = 5
 
-type Option = { token: TokenRow; entry: number }
+type Option = { token: TokenRow; entry: number; px: number }
 
 export default function BuyScreen() {
   const router = useRouter()
@@ -46,9 +46,10 @@ export default function BuyScreen() {
         const g = groups.find((x) => x.ticker === tk)
         const opts = (g?.tokens ?? [])
           .map((token) => ({ token, l: map[token.symbol] }))
-          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
-          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number }))
-          .sort((a, b) => a.entry - b.entry)
+          .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable) && (o.l.buy_px ?? 0) > 0)
+          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number, px: o.l!.buy_px as number }))
+          // The cheapest issuer is the one with the lowest price per share (entry cost included); a tie goes to the lower entry cost.
+          .sort((a, b) => (a.px - b.px) || (a.entry - b.entry))
         setOptions(opts)
         setSelected(opts.find((o) => o.token.symbol === symbol) ?? opts[0] ?? null)
       })
@@ -69,11 +70,15 @@ export default function BuyScreen() {
   const issuerCostUsd = selected ? (Math.max(0, selected.entry) / 10000) * SIZE_USD : null
   const feeBps = feeBpsFor(skr)
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
-  const feeUsd = (feeBps / 10000) * SIZE_USD
+  // On the v2 route Jupiter takes its own fee and StockPass takes none; before a quote exists the v1 StockPass fee is shown.
+  const isV2 = quote?.route === 'v2'
+  const chargedBps = isV2 ? quote!.feeBps : feeBps
+  const feeUsd = (chargedBps / 10000) * SIZE_USD
   const totalUsd = issuerCostUsd !== null ? issuerCostUsd + feeUsd + NETWORK_FEE_USD : null
-  const totalBps = totalUsd !== null ? (totalUsd / SIZE_USD) * 10000 : null
-  // The StockPass fee applies to either issuer, so it cancels out of the comparison.
-  const savingBps = selected && alternative ? alternative.entry - selected.entry : null
+  const totalBps = totalUsd !== null && SIZE_USD > 0 ? (totalUsd / SIZE_USD) * 10000 : null
+  // Price per share already includes each issuer's entry cost, so the gap between the two prices is what choosing one over the other saves.
+  const savingBps = selected && alternative ? Math.round((alternative.px / selected.px - 1) * 10000) : null
+  const overBalance = !demo && usdc !== null && SIZE_USD > usdc
 
 
   const prepare = useCallback(async () => {
@@ -113,7 +118,7 @@ export default function BuyScreen() {
         issuer: selected.token.issuer,
         sizeUsd: SIZE_USD,
         entryBps: selected.entry,
-        feeBps: quote.route === 'v2' ? 0 : PLATFORM_FEE_BPS,
+        feeBps: quote.route === 'v2' ? 0 : feeBps,
         altBps: alternative?.entry ?? null,
         savedBps: savingBps,
         signature: String(sig),
@@ -175,7 +180,7 @@ export default function BuyScreen() {
                 </Pressable>
               ))}
               {usdc !== null && usdc > 0 && (
-                <Pressable onPress={() => { setSizeText(usdc.toFixed(2)); setQuote(null) }} style={s.quick}>
+                <Pressable onPress={() => { setSizeText((Math.floor(usdc * 100) / 100).toFixed(2)); setQuote(null) }} style={s.quick}>
                   <Text style={s.quickText}>Max</Text>
                 </Pressable>
               )}
@@ -206,10 +211,10 @@ export default function BuyScreen() {
               <Text style={[s.value, num]}>~${NETWORK_FEE_USD.toFixed(2)}</Text>
             </View>
             <View style={s.row}>
-              <Text style={s.label}>StockPass fee ({feeBps} bps)</Text>
+              <Text style={s.label}>{isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}</Text>
               <Text style={[s.value, num]}>${feeUsd.toFixed(2)}</Text>
             </View>
-            {skrDiscount ? (
+            {isV2 ? null : skrDiscount ? (
               <View style={s.skrRow}>
                 <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
                 <Text style={s.skrCheck}>✓</Text>
@@ -222,7 +227,7 @@ export default function BuyScreen() {
               <Text style={s.totalLabel}>Total cost</Text>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={[s.totalValue, num, blocked && { color: T.down }]}>{blocked ? 'n/a' : '$' + totalUsd!.toFixed(2)}</Text>
-                <Text style={s.tiny}>{blocked ? 'route unusable right now' : totalBps!.toFixed(1) + ' bps'}</Text>
+                <Text style={s.tiny}>{blocked ? 'route unusable right now' : totalBps !== null ? totalBps.toFixed(1) + ' bps' : ''}</Text>
               </View>
             </View>
           </View>
@@ -234,7 +239,7 @@ export default function BuyScreen() {
                   <Text style={s.kickerAccent}>YOU SAVE</Text>
                   <Text style={[s.savingValue, num]}>{savingBps} bps</Text>
                   <Text style={s.savingSub}>
-                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} vs {alternative.token.issuer} ({alternative.entry} bps)
+                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} vs {alternative.token.issuer}, by price per share
                   </Text>
                 </>
               ) : (
@@ -245,7 +250,9 @@ export default function BuyScreen() {
                     <Text style={[s.value, num]}>{alternative.entry} bps</Text>
                   </View>
                   <Text style={s.tiny}>
-                    Only {Math.abs(savingBps)} bps apart after the StockPass fee. Choose on issuer, availability or utility.
+                    {savingBps <= -MIN_SAVING_BPS
+                      ? `${alternative.token.symbol} costs ${Math.abs(savingBps)} bps less per share than your choice. Choose on issuer, availability or utility if that matters more.`
+                      : `Only ${Math.abs(savingBps)} bps apart per share. Choose on issuer, availability or utility.`}
                   </Text>
                 </>
               )}
@@ -264,9 +271,10 @@ export default function BuyScreen() {
           )}
 
           {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>This route has a very high price impact, so signing is disabled. Try a smaller amount.</Text>}
-          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked || demo) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked || demo}>
+          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked || demo || overBalance) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked || demo || overBalance}>
             {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: buying is disabled' : quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
           </Pressable>
+          {overBalance && <Text style={{ color: T.down, fontSize: 12 }}>This is more than the USDC in your wallet.</Text>}
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
       )}

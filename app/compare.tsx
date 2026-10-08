@@ -66,10 +66,14 @@ export default function CompareScreen() {
   const tokens = group?.tokens ?? []
   const rows = tokens.map((t) => ({ token: t, l: latest[t.symbol] as Latest | undefined }))
   const usable = rows.filter((r) => r.l && isUsable(r.l.entry_bps, r.l.quotable)) as { token: any; l: Latest }[]
-  const best = usable.length ? usable.reduce((a, b) => (a.l.entry_bps! <= b.l.entry_bps! ? a : b)) : null
+  // What the buyer actually pays is the per-share price (buy_px already includes the entry cost), so the cheapest option is the lowest price;
+  // a tie goes to the lower entry cost.
+  const priced = usable.filter((r) => (r.l.buy_px ?? 0) > 0)
+  const byPrice = (a: { l: Latest }, b: { l: Latest }) => (a.l.buy_px! - b.l.buy_px!) || (a.l.entry_bps! - b.l.entry_bps!)
+  const best = priced.length ? [...priced].sort(byPrice)[0] : null
   const chosen = (picked ? usable.find((r) => r.token.symbol === picked) : null) ?? best
-  const worst = usable.length > 1 ? usable.reduce((a, b) => (a.l.entry_bps! >= b.l.entry_bps! ? a : b)) : null
-  const spread = best && worst ? worst.l.entry_bps! - best.l.entry_bps! : null
+  const worst = priced.length > 1 ? [...priced].sort(byPrice)[priced.length - 1] : null
+  const spread = best && worst ? Math.round((worst.l.buy_px! / best.l.buy_px! - 1) * 10000) : null
   const maxBps = Math.max(1, ...usable.map((r) => r.l.entry_bps!))
   const multipliers = new Set(rows.filter((r) => r.l).map((r) => r.l!.multiplier.toFixed(4)))
 
@@ -160,8 +164,8 @@ export default function CompareScreen() {
       <View style={s.banner}>
         {best && spread !== null && spread > 0 ? (
           <>
-            <Text style={s.bannerStrong}>{best.token.issuer} is {spread} bps cheaper to enter than the most expensive option.</Text>
-            <Text style={s.faint}>${((spread / 10000) * 1000).toFixed(2)} on a $1,000 position, before our fee.</Text>
+            <Text style={s.bannerStrong}>{best.token.issuer} is {spread} bps cheaper to buy than the most expensive option.</Text>
+            <Text style={s.faint}>${((spread / 10000) * 1000).toFixed(2)} less for the same $1,000 of stock, before our fee. Based on the price per share, entry cost included.</Text>
           </>
         ) : best ? (
           <Text style={s.bannerStrong}>Only {best.token.issuer} has a usable quote right now.</Text>
@@ -178,7 +182,9 @@ export default function CompareScreen() {
         const ok = isUsable(l.exit_bps, l.quotable)
         const shares = held.amount * l.multiplier
         const value = l.sell_px ? shares * l.sell_px : null
-        const costUsd = ok && value ? (value * (l.exit_bps as number)) / 10000 : null
+        // sell_px is already net of the exit cost, so the cost is measured against the value before it.
+        const e = ok ? (l.exit_bps as number) / 10000 : 0
+        const costUsd = ok && value ? (value / (1 - e)) * e : null
         return (
           <View style={s.switchCard}>
             <Text style={s.switchKicker}>YOU HOLD {held.symbol}</Text>
