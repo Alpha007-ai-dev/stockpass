@@ -7,6 +7,8 @@ import { CostAlert } from '@/components/cost-alert'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
 import { TokenVerdict } from '@/components/token-verdict'
+import { SizeCurve } from '@/components/size-curve'
+import { MultiplierNotice } from '@/components/multiplier-notice'
 import { TokenIcon } from '@/components/token-icon'
 import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
@@ -123,6 +125,7 @@ export default function PassportScreen() {
       {tab === 'overview' && mine && (
         <>
           <TokenVerdict mine={mine} hist={hist} availability={samples >= 50 && avail !== null ? Math.round(avail * 100) : null} peer={peer} />
+          <MultiplierNotice symbol={sym} />
           <AnomalyCard symbol={sym} />
 
           {peer && mine.buy_px && peer.buy_px && (
@@ -177,6 +180,7 @@ export default function PassportScreen() {
       {tab === 'costs' && (
         <>
           <CostTimeline ticker={ticker} />
+          <SizeCurve symbol={sym} state={mine?.market_state ?? 'open'} />
 
           {valid.length > 0 && (
             <View style={s.card}>

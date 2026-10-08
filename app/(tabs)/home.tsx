@@ -16,6 +16,7 @@ import { getLastPurchase, Purchase } from '@/lib/purchases'
 import { getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
 import { buildInsight, InsightCard } from '@/components/insight-card'
 import { AlertsCard } from '@/components/alerts-card'
+import { describeChange, getMultiplierChanges, MultiplierChange } from '@/lib/insights'
 
 type Item = HoldingRow & {
   shares: number
@@ -44,6 +45,7 @@ export default function HomeScreen() {
   const lastScan = useRef(0)
   const statsAt = useRef(Date.now())
   const [busy, setBusy] = useState(false)
+  const [mchanges, setMchanges] = useState<MultiplierChange[]>([])
   const [error, setError] = useState<string | null>(null)
   const insets = useSafeAreaInsets()
   const state = getMarketState()
@@ -123,6 +125,7 @@ export default function HomeScreen() {
   }, [account, connect])
 
   useEffect(() => {
+    getMultiplierChanges().then(setMchanges)
     getLastPortfolio().then(setPrev)
     getLastPurchase().then(setLast)
     isDemo().then((d) => { modeRef.current = d; setDemoState(d); if (d) scan(true) })
@@ -312,6 +315,12 @@ export default function HomeScreen() {
       {error && <ErrorState message={error} onRetry={() => scan()} />}
 
       <Text style={s.sectionLabel}>FOR YOU</Text>
+      {(items ?? []).flatMap((i) => mchanges.filter((c) => c.symbol === i.symbol)).map((c) => (
+        <Pressable key={`mc-${c.symbol}`} style={s.mcard} onPress={() => router.push(`/passport?symbol=${c.symbol}`)}>
+          <Text style={s.mkicker}>{c.symbol}</Text>
+          <Text style={s.mtext}>{describeChange(c)}</Text>
+        </Pressable>
+      ))}
       <DailyBrief latest={latest} history={allHist} />
       {ranked.map(({ i }) => (
         <InsightCard key={i.symbol} item={i} hist={hist[i.symbol]} availability={availability[i.symbol] ?? null} />
@@ -442,6 +451,9 @@ const s = StyleSheet.create({
   heroChange: { fontSize: 16, fontWeight: '700', marginTop: 2 },
   heroChangeLabel: { color: T.dim, fontSize: 14, fontWeight: '400' },
   heroMeta: { color: T.faint, fontSize: 13, marginTop: 8 },
+  mcard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.warn, borderRadius: 16, padding: 14, gap: 4 },
+  mkicker: { color: T.warn, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  mtext: { color: T.text, fontSize: 14, lineHeight: 20, fontWeight: '500' },
   heroExit: { color: T.dim, fontSize: 13, marginTop: 4 },
   heroExitStrong: { color: T.text, fontWeight: '700' },
   card2: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 6 },
