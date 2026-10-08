@@ -24,6 +24,13 @@ function fitSvg(xml: string): string {
   return xml.replace(m[0], tag)
 }
 
+/** True when the logo only uses black (or the default fill), which disappears on the dark icon circle. */
+function isDarkOnly(xml: string): boolean {
+  const fills = [...xml.matchAll(/fill\s*[=:]\s*["']?\s*([^"';\s>]+)/gi)].map((m) => m[1].toLowerCase())
+  const dark = new Set(['black', '#000', '#000000', '#000000ff', 'currentcolor', 'none', 'transparent'])
+  return fills.every((f) => dark.has(f))
+}
+
 function useSvg(uri: string | null | undefined) {
   const [xml, setXml] = useState<string | null>(uri ? svgCache.get(uri) ?? null : null)
   const [bad, setBad] = useState(false)
@@ -63,7 +70,7 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
   const color = issuerColor(issuer)
   const inner = size - 8
   return (
-    <View style={[s.wrap, { width: size, height: size, borderRadius: size / 2, borderColor: color }]}>
+    <View style={[s.wrap, { width: size, height: size, borderRadius: size / 2, borderColor: color }, isBp && svg.xml && isDarkOnly(svg.xml) && { backgroundColor: '#F2F2F2' }]}>
       {isBp && svg.xml && !svg.bad ? (
         <SvgXml xml={svg.xml} width={inner} height={inner} />
       ) : !isBp && src && !failed ? (
