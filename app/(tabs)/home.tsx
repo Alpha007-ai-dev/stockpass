@@ -206,6 +206,16 @@ export default function HomeScreen() {
   }
   const freshEntries = allLatest.filter((l) => isFresh(l) && isUsable(l.entry_bps, l.quotable))
   const cheapest = freshEntries.length ? freshEntries.reduce((a, b) => (a.entry_bps <= b.entry_bps ? a : b)) : null
+  // The stock where the issuers differ most right now, as a concrete example for a visitor without a wallet.
+  let example: { ticker: string; rows: Latest[]; gap: number } | null = null
+  const byTicker = new Map<string, Latest[]>()
+  freshEntries.forEach((l) => byTicker.set(l.ticker, [...(byTicker.get(l.ticker) ?? []), l]))
+  for (const [ticker, rows] of Array.from(byTicker.entries())) {
+    if (rows.length < 2) continue
+    const v = rows.map((r) => Math.max(0, r.entry_bps))
+    const gap = Math.max(...v) - Math.min(...v)
+    if (!example || gap > example.gap) example = { ticker, rows: [...rows].sort((a, b) => a.entry_bps - b.entry_bps), gap }
+  }
   const medianNow = median(freshEntries.map((l) => Math.max(0, l.entry_bps)))
   const medianUsual = median(
     allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < 200).map((h) => Math.max(0, h.avg_entry))
@@ -310,6 +320,24 @@ export default function HomeScreen() {
           </Pressable>
         </>
       )}
+      {total === null && example && example.gap >= 1 && (
+        <View style={s.card2}>
+          <Text style={s.kicker}>LIVE EXAMPLE</Text>
+          <Text style={s.lastTitle}>Buying {example.ticker} right now</Text>
+          {example.rows.map((r, idx) => (
+            <View key={r.symbol} style={s.line}>
+              <Text style={s.lineLabel}>{r.symbol} · {r.issuer}</Text>
+              <Text style={[s.lineValue, num, idx === 0 && { color: T.accent }]}>{Math.max(0, r.entry_bps)} bps</Text>
+            </View>
+          ))}
+          <Text style={s.stateSub}>Same stock, different issuer. On $100 the difference is ${(example.gap / 100).toFixed(2)}.</Text>
+        </View>
+      )}
+      {demo && (
+        <Pressable style={s.secondary} onPress={async () => { await exitDemo(); scan(false) }} disabled={busy}>
+          <Text style={s.secondaryText}>Connect real wallet</Text>
+        </Pressable>
+      )}
       {!demo && <AlertsCard owner={account?.address ? String(account.address) : undefined} />}
 
       {error && <ErrorState message={error} onRetry={() => scan()} />}
@@ -348,7 +376,7 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {last ? (
+      {last && !demo ? (
         <Pressable style={s.card2} onPress={() => Linking.openURL(`https://solscan.io/tx/${last.signature}`)}>
           <Text style={s.kicker}>LAST PURCHASE</Text>
           <Text style={s.lastTitle}>{last.symbol} · {last.issuer} · ${last.sizeUsd.toFixed(2)}</Text>
