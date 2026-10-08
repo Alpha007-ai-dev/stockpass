@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { AnomalyCard } from '@/components/anomaly-card'
 import { CostAlert } from '@/components/cost-alert'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
@@ -120,6 +121,8 @@ export default function PassportScreen() {
 
       {tab === 'overview' && mine && (
         <>
+          <AnomalyCard symbol={sym} />
+
           {peer && mine.buy_px && peer.buy_px && (
             <NormalizationHero symbol={sym} mine={mine} peer={peer} reference={reference} />
           )}
