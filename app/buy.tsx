@@ -6,6 +6,7 @@ import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
+import { isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
 import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
@@ -30,6 +31,8 @@ export default function BuyScreen() {
   const [usdc, setUsdc] = useState<number | null>(null)
   const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [demo, setDemo] = useState(false)
+  useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
   const [status, setStatus] = useState<string | null>(null)
 
   const tk = ticker ?? (symbol ? symbol.replace(/(x|on|bp)$/, '') : 'SPY')
@@ -244,8 +247,8 @@ export default function BuyScreen() {
           )}
 
           {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>This route has a very high price impact, so signing is disabled. Try a smaller amount.</Text>}
-          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
+          <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked || demo) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked || demo}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: buying is disabled' : quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
           </Pressable>
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>

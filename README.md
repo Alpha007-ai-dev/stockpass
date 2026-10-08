@@ -92,13 +92,14 @@ Solana Mobile (Seeker)
    React Native / Expo SDK 55
    Expo Router · Solana Kit · Mobile Wallet Adapter
         │
-        ├── Jupiter Ultra API ──── executable buy/sell quotes
+        ├── Jupiter Ultra API ──── measured buy/sell quotes (collector)
+        ├── Jupiter Swap v1 + v2 ─ execution; the app picks the better net route
         ├── Solana RPC ─────────── Token-2022 multiplier, supply, holdings
         ├── Kamino public API ──── collateral terms
         └── StockPass Collector ── historical measurements
                 │
         Cloudflare Worker + D1
-        every 5 minutes, rotating across 110+ tokens
+        every 5 minutes, rotating across 120+ tokens
 ```
 
 The collector is a separate repo: [stockpass-collector](https://github.com/Alpha007-ai-dev/stockpass-collector)
@@ -109,7 +110,7 @@ The collector is a separate repo: [stockpass-collector](https://github.com/Alpha
 - **Ondo Global Markets** — 55 stocks
 - **Backpack Securities** — 11 stocks
 
-The app is issuer-agnostic: adding a fourth issuer requires no UI changes.
+Issuers are discovered by the collector, not hard-coded there. In the app an issuer's colour and label live in a few constants, so adding a fourth issuer means adding those entries.
 
 ---
 
@@ -126,13 +127,13 @@ The app talks to a deployed collector. No API keys are needed on the client — 
 
 ### Demo mode
 
-Tap **Explore with a demo portfolio** on Home. This loads four real tokens with real live prices and multipliers, using sample quantities. It is clearly labelled as a demo, and buying is disabled in this mode.
+Tap **Explore with a demo portfolio** on Home. This loads four real tokens with real live prices and multipliers, using sample quantities. It is clearly labelled as a demo, and buying and selling are disabled in this mode.
 
 ---
 
 ## Fee
 
-StockPass takes **5 bps** on swaps it routes, charged on the USDC side. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
+StockPass takes **5 bps** on swaps it routes through the standard Jupiter router, charged on the USDC side. Wallets holding at least 100 SKR pay **2 bps**. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
 
 We started at 10 bps and lowered it: in our measurements 10 bps frequently consumed the entire advantage the app had found, which made the core feature pointless.
 
@@ -152,8 +153,9 @@ We started at 10 bps and lowered it: in our measurements 10 bps frequently consu
 
 - Measurements are taken at a fixed $1,000 size. Larger or smaller trades may differ, though our earlier tests across $100 / $1,000 / $10,000 showed minimal variation.
 - The traditional reference feed uses a free IEX-based tier, which does not cover the full US market. Stale or wide quotes are flagged and excluded rather than shown as a premium.
-- US market holidays are not handled yet in the market-state logic.
-- Each token is measured roughly every 45 minutes, so the app shows recent, not real-time, historical context. Live quotes at the moment of trading come directly from Jupiter.
+- Market holidays and early closes follow the NYSE calendar through hard-coded rules, checked against nyse.com for 2026 and 2027. Pre-market and after-hours are not modelled on holidays: the whole day counts as closed.
+- Each token is measured roughly every 50 minutes, so the app shows recent, not real-time, historical context. Live quotes at the moment of trading come directly from Jupiter.
+- **Two routes.** The collector measures costs through Jupiter Ultra; the app executes through the standard Jupiter router and, where it returns more, Jupiter Swap v2 (market makers). On the Swap v2 route there is no StockPass fee, only Jupiter's own. Swap v2 does not report a price impact. On Sell, the app blocks any route that returns far less than the measured price; on Buy, a high price impact on the standard route blocks signing. If no route can fill an amount, the app says so instead of showing a number.
 
 ---
 

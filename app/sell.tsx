@@ -28,6 +28,8 @@ export default function SellScreen() {
   const [quote, setQuote] = useState<Quote | null>(null)
   const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [demo, setDemo] = useState(false)
+  useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
   const [status, setStatus] = useState<string | null>(null)
 
   useEffect(() => {
@@ -191,8 +193,8 @@ export default function SellScreen() {
             </View>
           )}
 
-          <Pressable style={[s.primary, blocked && { opacity: 0.35 }]} onPress={quote ? sign : prepare} disabled={busy || !ok || blocked}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}</Text>}
+          <Pressable style={[s.primary, (blocked || demo) && { opacity: 0.35 }]} onPress={quote ? sign : prepare} disabled={busy || !ok || blocked || demo}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: selling is disabled' : quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}</Text>}
           </Pressable>
           {!ok && <Text style={s.tiny}>No executable quote right now, so this position cannot be priced.</Text>}
           {blocked && <Text style={[s.tiny, { color: T.down }]}>This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.</Text>}

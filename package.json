@@ -1,7 +1,7 @@
 {
-  "name": "kit-expo-minimal",
-  "displayName": "Minimal Mobile Kit Expo example",
-  "description": "A minimal template for building a Solana mobile app with Expo, React Native, and Solana Kit.",
+  "name": "stockpass",
+  "displayName": "StockPass",
+  "description": "What you really pay to own a stock on-chain: a Solana Mobile app that measures the cost of tokenized equities.",
   "usecase": "Mobile",
   "keywords": [
     "expo",
