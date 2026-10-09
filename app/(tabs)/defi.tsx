@@ -1,3 +1,4 @@
+import { useScrollReset } from '@/lib/use-scroll-reset'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -23,6 +24,7 @@ export default function DefiScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const modeRef = useRef<boolean | null>(null)
+  const scrollRef = useScrollReset()
 
   const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
@@ -83,7 +85,7 @@ export default function DefiScreen() {
   const collateralValue = supported.reduce((n, r) => n + (r.value ?? 0), 0)
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
+    <ScrollView ref={scrollRef as any} style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}>
 
       <View style={s.header}>

@@ -1,3 +1,4 @@
+import { useScrollReset } from '@/lib/use-scroll-reset'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -26,6 +27,7 @@ export default function WalletScreen() {
   const [usdc, setUsdc] = useState<number | null>(null)
   const [demo, setDemoState] = useState(false)
   const modeRef = useRef<boolean | null>(null)
+  const scrollRef = useScrollReset()
   const lastScan = useRef(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -101,7 +103,7 @@ export default function WalletScreen() {
   const shortAddr = addr ? `${addr.slice(0, 4)}…${addr.slice(-4)}` : null
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
+    <ScrollView ref={scrollRef as any} style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
       <View style={s.header}>
         <Text style={s.title}>Wallet</Text>
         {demo && <Text style={s.demoTag}>DEMO</Text>}
