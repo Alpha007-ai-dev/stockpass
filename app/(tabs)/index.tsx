@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useRouter } from 'expo-router'
+import { useFocusEffect, useRouter } from 'expo-router'
 import Svg, { Path } from 'react-native-svg'
 import { CostMap, MapFilter } from '@/components/cost-map'
 import { ReliabilityMap } from '@/components/reliability-map'
@@ -144,8 +144,13 @@ export default function MarketScreen() {
 
   const filters: [string, string][] = [['all', 'All'], ['xStocks', 'xStocks'], ['Ondo', 'Ondo'], ['Backpack', 'Backpack']]
 
+  // Tabs stay mounted, so the list would otherwise keep its scroll position when you come back from another tab.
+  const listRef = useRef<FlatList<any>>(null)
+  useFocusEffect(useCallback(() => () => { listRef.current?.scrollToOffset({ offset: 0, animated: false }) }, []))
+
   return (
     <FlatList
+      ref={listRef}
       style={s.screen}
       contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
       data={view === 'list' ? rows : []}
