@@ -339,6 +339,7 @@ export default function HomeScreen() {
           <Pressable style={s.secondary} onPress={startDemo} disabled={busy}>
             <Text style={s.secondaryText}>Explore with a demo portfolio</Text>
           </Pressable>
+          <Text style={s.privacyNote}>Connecting sends your wallet address to the StockPass server to read your holdings. Your keys stay in your wallet.</Text>
         </>
       )}
       {total === null && example && example.gap >= 1 && (
@@ -477,6 +478,7 @@ function DailyBrief({ latest, history }: { latest: Record<string, Latest>; histo
   )
 }
 const s = StyleSheet.create({
+  privacyNote: { color: T.faint, fontSize: 11, textAlign: 'center', marginTop: 4 },
   screen: { flex: 1, backgroundColor: T.bg },
   briefCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 8, marginBottom: 12 },
   briefKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },

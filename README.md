@@ -37,11 +37,11 @@ A tokenized stock looks simple. It is not.
 
 ### Signature features
 
-- **Price normalization** — raw token price → per-share price, with the multiplier read live from the chain. The 41 bps → 4 bps moment.
+- **Price normalization** — raw token price → per-share price, with the multiplier from the collector's latest on-chain measurement (up to about 50 minutes old). The 41 bps → 4 bps moment.
 - **Cost to go on-chain** — traditional reference price → market deviation → execution cost → total. Three separate metrics, never conflated.
 - **Switching cost** — a cheaper issuer is not automatically better for an existing holder. Exit + re-entry is priced explicitly.
 - **DeFi utility** — which of your holdings are accepted as collateral, at what LTV and borrow rate, and which are not accepted at all.
-- **Marketability** — LIVE / LIMITED / NO MARKET, derived from executable quote availability, not from a made-up health score.
+- **Marketability** — LIVE / LIMITED / NO MARKET, derived from executable quote availability and a fixed cost threshold (LIMITED above 30 bps entry cost), not from a made-up health score.
 
 ---
 
@@ -92,11 +92,9 @@ Solana Mobile (Seeker)
    React Native / Expo SDK 55
    Expo Router · Solana Kit · Mobile Wallet Adapter
         │
-        ├── Jupiter Ultra API ──── measured buy/sell quotes (collector)
-        ├── Jupiter Swap v1 + v2 ─ execution; the app picks the better net route
-        ├── Solana RPC ─────────── Token-2022 multiplier, supply, holdings
-        ├── Kamino public API ──── collateral terms
-        └── StockPass Collector ── historical measurements
+        ├── Jupiter Swap v1 ────── execution quotes and transactions, directly from Jupiter
+        ├── StockPass Collector ── measurements, holdings, collateral terms, alerts, Swap v2 relay
+        └── (the collector, not the app, talks to Solana RPC, Jupiter Ultra and Kamino)
                 │
         Cloudflare Worker + D1
         every 5 minutes, rotating across 120+ tokens
@@ -125,9 +123,22 @@ Requires a Solana Mobile device or an Android device with a Mobile Wallet Adapte
 
 The app talks to a deployed collector. No API keys are needed on the client — all keys live in the Worker.
 
+### What leaves your device
+
+- **Your wallet address** goes to the StockPass collector to read your tokenized-stock holdings and USDC/SKR balance (`/holdings`), to store cost alerts (address + watched tokens + threshold), and as the taker when a Swap v2 route is requested.
+- **Signed swap transactions** are sent through the collector for Swap v2 routes. Jupiter v1 routes go straight to Jupiter.
+- **The collector's host logs requests** (Cloudflare observability), so wallet addresses in query strings appear in those logs. We do not link them to anything else and do not sell or share them.
+- **Alerts are not authenticated.** Anyone who knows a wallet address could read, delete or fill that wallet's alerts. Nothing else is stored per wallet.
+- **On the device only:** your last purchase, the demo/real mode choice and portfolio snapshots (local storage).
+- **Private keys never leave your wallet app.** StockPass only asks it to sign.
+
+### Trust and risk
+
+Swap v2 transactions are built by the StockPass Worker and signed in your wallet; the app does not yet verify the transaction's programs client-side (listed under roadmap). Jupiter v1 transactions come directly from Jupiter. This is hackathon software: unaudited, not financial advice. Review every transaction in your wallet before approving.
+
 ### Demo mode
 
-Tap **Explore with a demo portfolio** on Home. This loads four real tokens with real live prices and multipliers, using sample quantities. It is clearly labelled as a demo, and buying and selling are disabled in this mode.
+Tap **Explore with a demo portfolio** on Home. This loads four real tokens with real live prices and multipliers, using sample quantities. It is clearly labelled as a demo, and buying and selling are disabled in this mode (the Buy/Sell buttons are inactive and the trade functions refuse to run).
 
 ---
 
@@ -144,7 +155,7 @@ The fee is deliberately low. The real differences between issuers are often only
 ## What we deliberately did not do
 
 - **No invented data.** Where a metric cannot be measured, the app shows `—` or "No executable quote" instead of a plausible-looking number.
-- **No purchase-relative P&L.** We have no purchase history, so we never claim one. Portfolio change is labelled "since last snapshot".
+- **No purchase-relative P&L.** We keep only your last purchase, on the device, and never compute a profit from it. Portfolio change is labelled "since last snapshot".
 - **No risk or health scores.** Every number shown is measured or derived from a measurement.
 - **No DeFi execution.** The DeFi tab is informational with outbound links. StockPass does not deposit or borrow on your behalf.
 - **Supply is not liquidity.** We show token supply as supply, and never imply it means tradability.
@@ -167,6 +178,7 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 
 **Near term**
 - **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
+- **Safer v2 route.** Check client-side that the fee payer is the user and allow-list the programs in a Worker-built transaction; sign alerts with a wallet message so only the owner can change them.
 - **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
 - **Real SKR utility.** Today holding 100 SKR lowers the StockPass sell fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
 - **A selectable trade size** instead of the fixed $1,000 measurement size.
