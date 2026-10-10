@@ -80,6 +80,12 @@ export default function WalletScreen() {
 
   useEffect(() => { isDemo().then((d) => { modeRef.current = d; setDemoState(d); if (d) scan() }) }, [scan])
 
+  // Connecting on any tab connects the whole app, so load the holdings as soon as the wallet is there.
+  useEffect(() => {
+    if (!account?.address) return
+    isDemo().then((d) => { if (!d) scan() })
+  }, [account?.address])
+
   // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
   useFocusEffect(useCallback(() => {
     isDemo().then((d) => {
@@ -149,15 +155,21 @@ export default function WalletScreen() {
           <Text style={s.tiny}>
             Wallets show raw token counts. StockPass applies each issuer's multiplier to show what you really own.
           </Text>
-          <Pressable style={s.primary} onPress={scan} disabled={busy}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
-          </Pressable>
+          {account?.address && !demo ? (
+            <View style={{ paddingVertical: 12 }}>
+              {busy ? <ActivityIndicator color={T.accent} /> : <Text style={s.tiny}>Pull down to load your holdings.</Text>}
+            </View>
+          ) : (
+            <Pressable style={s.primary} onPress={scan} disabled={busy}>
+              {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
+            </Pressable>
+          )}
         </View>
       )}
 
       {error && <ErrorState message={error} onRetry={scan} />}
 
-      {usdc !== null && usdc > 0 && (
+      {usdc !== null && !demo && (
         <View style={s.rowCard}>
           <View style={{ flex: 1 }}>
             <Text style={s.kicker}>USDC BALANCE</Text>
@@ -165,7 +177,7 @@ export default function WalletScreen() {
               ${usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </Text>
           </View>
-          <Text style={s.tiny}>available to buy</Text>
+          <Text style={s.tiny}>{usdc > 0 ? 'available to buy' : 'add USDC to buy'}</Text>
         </View>
       )}
 

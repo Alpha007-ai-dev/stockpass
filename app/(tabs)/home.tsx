@@ -14,7 +14,7 @@ import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
 import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
 import { getLastPurchase, Purchase } from '@/lib/purchases'
-import { getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
+import { getBalances, getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
 import { buildInsight, InsightCard } from '@/components/insight-card'
 import { AlertsCard } from '@/components/alerts-card'
 import { describeChange, getMultiplierChanges, MultiplierChange } from '@/lib/insights'
@@ -43,6 +43,7 @@ export default function HomeScreen() {
   const [prev, setPrev] = useState<Snapshot | null>(null)
   const [demo, setDemoState] = useState(false)
   const modeRef = useRef<boolean | null>(null)
+  const [usdc, setUsdc] = useState<number | null>(null)
   const scrollRef = useScrollReset()
   const lastScan = useRef(0)
   const statsAt = useRef(Date.now())
@@ -83,7 +84,9 @@ export default function HomeScreen() {
         const addr = account?.address ?? (await connect())?.address
         if (!addr) throw new Error('Wallet not connected')
         rows = await getHoldings(String(addr))
+        getBalances(String(addr)).then((b) => setUsdc(b.usdc)).catch(() => {})
       }
+      if (asDemo) setUsdc(null)
 
       const groupsForAlt = await getGroups()
       const base: Item[] = rows.map((r) => {
@@ -125,6 +128,12 @@ export default function HomeScreen() {
     }
     setBusy(false)
   }, [account, connect])
+
+  // Connecting on any tab connects the whole app, so load the portfolio as soon as the wallet is there.
+  useEffect(() => {
+    if (!account?.address) return
+    isDemo().then((d) => { if (!d) scan(false) })
+  }, [account?.address])
 
   useEffect(() => {
     getMultiplierChanges().then(setMchanges)
@@ -285,6 +294,12 @@ export default function HomeScreen() {
               return null
             })()}
             <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
+            {usdc !== null && !demo && (
+              <Text style={s.heroExit}>
+                USDC balance <Text style={[s.heroExitStrong, num]}>${usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                <Text style={s.heroChangeLabel}>  available to buy</Text>
+              </Text>
+            )}
             {exitCostBps !== null && (
               <Text style={s.heroExit}>
                 Exit cost now <Text style={[s.heroExitStrong, num]}>${exitCostUsd.toFixed(2)} · {exitCostBps} bps</Text>

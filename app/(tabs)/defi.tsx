@@ -68,6 +68,12 @@ export default function DefiScreen() {
 
   useEffect(() => { isDemo().then((d) => { modeRef.current = d; if (d) load() }) }, [load])
 
+  // Connecting on any tab connects the whole app, so load the holdings as soon as the wallet is there.
+  useEffect(() => {
+    if (!account?.address) return
+    isDemo().then((d) => { if (!d) load() })
+  }, [account?.address])
+
   // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
   useFocusEffect(useCallback(() => {
     isDemo().then((d) => {
@@ -102,9 +108,15 @@ export default function DefiScreen() {
               your holdings can be used, at what loan-to-value, and at what borrowing rate.
             </Text>
           </View>
-          <Pressable style={s.primary} onPress={load} disabled={busy}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
-          </Pressable>
+          {account?.address ? (
+            <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+              {busy ? <ActivityIndicator color={T.accent} /> : <Text style={s.tiny}>Pull down to load your holdings.</Text>}
+            </View>
+          ) : (
+            <Pressable style={s.primary} onPress={load} disabled={busy}>
+              {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
+            </Pressable>
+          )}
         </>
       )}
 

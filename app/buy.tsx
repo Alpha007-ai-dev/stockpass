@@ -185,10 +185,13 @@ export default function BuyScreen() {
                 </Pressable>
               )}
             </View>
-            {usdc !== null && (
-              <Text style={s.tiny}>
-                Balance ${usdc.toFixed(2)} USDC{SIZE_USD > usdc ? ' · not enough for this size' : ''}
-              </Text>
+            {usdc !== null && !demo && (
+              <View style={s.row}>
+                <Text style={s.label}>Your USDC balance</Text>
+                <Text style={[s.value, num, SIZE_USD > usdc && { color: T.down }]}>
+                  ${usdc.toFixed(2)}{SIZE_USD > usdc ? ' · not enough' : ''}
+                </Text>
+              </View>
             )}
 
             <View style={s.divider} />
