@@ -9,7 +9,7 @@ import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
-import { isUsable } from '@/lib/cost'
+import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
@@ -233,7 +233,7 @@ export default function HomeScreen() {
   }
   const medianNow = median(freshEntries.map((l) => Math.max(0, l.entry_bps)))
   const medianUsual = median(
-    allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < 200).map((h) => Math.max(0, h.avg_entry))
+    allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS).map((h) => Math.max(0, h.avg_entry))
   )
 
   // Holdings worth a look, most important first (unusual cost, rarely-tradable token, cheaper issuer).
@@ -434,7 +434,7 @@ function DailyBrief({ latest, history }: { latest: Record<string, Latest>; histo
     b.n += h.samples
     b.q += q
     bySymbol.set(h.symbol, b)
-    if (q > 0 && h.avg_entry !== null && h.avg_entry < 200) {
+    if (q > 0 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS) {
       const v = Math.max(0, h.avg_entry) * q
       if (h.market_state === 'open') { openQ += q; openSum += v } else { offQ += q; offSum += v }
     }

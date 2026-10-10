@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
-import { bpsLabel } from '@/lib/cost'
+import { bpsLabel, NO_MARKET_BPS } from '@/lib/cost'
 import { History } from '@/lib/stats'
 
 export type InsightItem = {
@@ -30,7 +30,7 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
     return { text: `Available now, but quotable only ${Math.round(availability)}% of the time over 30 days.`, tone: 'warn', rank: 2 }
   }
   const value = i.value
-  const usual = hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < 200 ? hist.avg_entry : null
+  const usual = hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < NO_MARKET_BPS ? hist.avg_entry : null
   if (value && usual !== null) {
     const delta = i.exitBps - usual
     if (Math.abs(delta) >= 3) {
@@ -51,7 +51,7 @@ const STATE_WORD: Record<string, string> = {
 
 /** When this token has historically been cheapest to sell (the exit cost mirrors the measured entry cost). */
 export function exitTip(states: History[] | undefined, currentState: string | undefined): string | null {
-  const solid = (states ?? []).filter((h) => h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < 200)
+  const solid = (states ?? []).filter((h) => h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
   if (solid.length < 2) return null
   const lo = solid.reduce((a, b) => (a.avg_entry <= b.avg_entry ? a : b))
   const now = solid.find((h) => h.market_state === currentState)

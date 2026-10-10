@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -18,7 +18,7 @@ const DEFAULT_SIZE = 1000
 const NETWORK_FEE_USD = 0.01
 const MIN_SAVING_BPS = 5
 
-type Option = { token: TokenRow; entry: number; px: number }
+type Option = { token: TokenRow; entry: number; px: number; mult: number }
 
 export default function BuyScreen() {
   const router = useRouter()
@@ -47,7 +47,7 @@ export default function BuyScreen() {
         const opts = (g?.tokens ?? [])
           .map((token) => ({ token, l: map[token.symbol] }))
           .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable) && (o.l.buy_px ?? 0) > 0)
-          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number, px: o.l!.buy_px as number }))
+          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number, px: o.l!.buy_px as number, mult: o.l!.multiplier || 1 }))
           // The cheapest issuer is the one with the lowest price per share (entry cost included); a tie goes to the lower entry cost.
           .sort((a, b) => (a.px - b.px) || (a.entry - b.entry))
         setOptions(opts)
@@ -81,8 +81,10 @@ export default function BuyScreen() {
   const overBalance = !demo && usdc !== null && SIZE_USD > usdc
 
 
+  const inflight = useRef(false)
   const prepare = useCallback(async () => {
-    if (!selected) return
+    if (!selected || inflight.current) return
+    inflight.current = true
     setBusy(true); setStatus(null)
     try {
       const usdc = { ...PAY_TOKENS.find((t) => t.key === 'usdc')!, feeAccount: '' }
@@ -90,6 +92,7 @@ export default function BuyScreen() {
       if (!q) throw new Error('No route available for this amount right now.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
+    inflight.current = false
     setBusy(false)
   }, [selected, SIZE_USD, feeBps])
 
@@ -102,30 +105,40 @@ export default function BuyScreen() {
     return () => clearTimeout(t)
   }, [demo, selected, SIZE_USD, quote, prepare])
 
-  const blocked = quote !== null && quote.priceImpactPct * 100 > 5
+  // Swap v2 reports no price impact, so every quote is also checked against the measured price per share:
+  // receiving more than 10% fewer tokens than that price implies means the route is not usable.
+  const expectedOut = selected && selected.px > 0 && SIZE_USD > 0 ? SIZE_USD / (selected.px * selected.mult) : 0
+  const shortfall = quote && expectedOut > 0 ? 1 - quote.outUi / expectedOut : 0
+  const farOffPrice = shortfall > 0.1
+  const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || farOffPrice)
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
-    if (!quote || !selected) return
+    if (!quote || !selected || inflight.current) return
+    inflight.current = true
     setBusy(true); setStatus(null)
     try {
+      // Demo mode never signs, whatever the button state says.
+      if (await isDemo()) throw new Error('Demo mode cannot trade. Connect a real wallet.')
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
       const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
-      setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
-      await savePurchase({
-        ticker: tk,
-        symbol: selected.token.symbol,
-        issuer: selected.token.issuer,
-        sizeUsd: SIZE_USD,
-        entryBps: selected.entry,
-        feeBps: quote.route === 'v2' ? 0 : feeBps,
-        altBps: alternative?.entry ?? null,
-        savedBps: savingBps,
-        signature: String(sig),
-        at: Date.now(),
-      })
+      // The trade is sent: show the result first, so a bookkeeping error can never leave the sign button active for a second buy.
       markTrade()
       setStatus(null)
+      try {
+        await savePurchase({
+          ticker: tk,
+          symbol: selected.token.symbol,
+          issuer: selected.token.issuer,
+          sizeUsd: SIZE_USD,
+          entryBps: selected.entry,
+          feeBps: quote.route === 'v2' ? 0 : feeBps,
+          altBps: alternative?.entry ?? null,
+          savedBps: savingBps,
+          signature: String(sig),
+          at: Date.now(),
+        })
+      } catch {}
       setDone({
         symbol: selected.token.symbol,
         sizeUsd: SIZE_USD,
@@ -136,6 +149,7 @@ export default function BuyScreen() {
         signature: String(sig),
       })
     } catch (e) { setStatus((e as Error).message) }
+    inflight.current = false
     setBusy(false)
   }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, signTransaction, tk, SIZE_USD])
 
@@ -203,7 +217,7 @@ export default function BuyScreen() {
             <Text style={[s.hero, num]}>
               {quote ? `~${quote.outUi.toFixed(4)}` : '—'} <Text style={s.heroUnit}>{selected.token.symbol}</Text>
             </Text>
-            <Text style={s.tiny}>{quote ? `Est. price $${(SIZE_USD / quote.outUi).toFixed(2)}` : 'Review the route to get a quote'}</Text>
+            <Text style={s.tiny}>{quote ? `Est. price $${(SIZE_USD / quote.outUi).toFixed(2)} per token` : 'Review the route to get a quote'}</Text>
           </View>
 
           <View style={s.card}>
@@ -276,7 +290,7 @@ export default function BuyScreen() {
             </View>
           )}
 
-          {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>This route has a very high price impact, so signing is disabled. Try a smaller amount.</Text>}
+          {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>{farOffPrice ? 'This route would give you far fewer tokens than the measured price implies, so signing is disabled. Try again in a moment.' : 'This route has a very high price impact, so signing is disabled. Try a smaller amount.'}</Text>}
           <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked || demo || overBalance) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked || demo || overBalance}>
             {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: buying is disabled' : quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
           </Pressable>

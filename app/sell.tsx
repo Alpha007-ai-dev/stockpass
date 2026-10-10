@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -7,6 +7,7 @@ import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { isUsable } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
+import { fmtUsd } from '@/lib/format'
 import { getGroups } from '@/lib/pairs'
 import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
 import { getBestQuote, submitSwap } from '@/lib/swap2'
@@ -25,6 +26,9 @@ export default function SellScreen() {
   const [token, setToken] = useState<TokenRow | null>(null)
   const [latest, setLatest] = useState<Latest | null>(null)
   const [balance, setBalance] = useState<number | null>(null)
+  // Why there is no balance: still loading, no wallet connected, the request failed, or the wallet really holds none.
+  const [balState, setBalState] = useState<'loading' | 'ready' | 'none' | 'noWallet' | 'error'>('loading')
+  const [balTry, setBalTry] = useState(0)
   const [pct, setPct] = useState(100)
   const [quote, setQuote] = useState<Quote | null>(null)
   const [skr, setSkr] = useState<number | null>(null)
@@ -47,17 +51,20 @@ export default function SellScreen() {
     ;(async () => {
       try {
         if (await isDemo()) {
-          setBalance(DEMO_HOLDINGS.find((d) => d.symbol === sym)?.walletAmount ?? null)
+          const d = DEMO_HOLDINGS.find((x) => x.symbol === sym)?.walletAmount ?? null
+          setBalance(d); setBalState(d !== null ? 'ready' : 'none')
           return
         }
         const addr = account?.address
-        if (!addr) return
+        if (!addr) { setBalance(null); setBalState('noWallet'); return }
+        setBalState('loading')
         const rows = await getHoldings(String(addr))
-        setBalance(rows.find((r) => r.symbol === sym)?.walletAmount ?? null)
+        const held = rows.find((r) => r.symbol === sym)?.walletAmount ?? null
+        setBalance(held); setBalState(held !== null ? 'ready' : 'none')
         getBalances(String(addr)).then((b) => setSkr(b.skr)).catch(() => {})
-      } catch {}
+      } catch { setBalState('error') }
     })()
-  }, [sym, account])
+  }, [sym, account, balTry])
 
   const ok = latest ? isUsable(latest.exit_bps, latest.quotable) : false
   const amount = balance !== null ? (balance * pct) / 100 : null
@@ -67,6 +74,9 @@ export default function SellScreen() {
   const exitFrac = ok ? Math.min(0.99, Math.max(0, latest!.exit_bps as number) / 10000) : 0
   const exitCostUsd = grossUsd !== null && ok ? (grossUsd / (1 - exitFrac)) * exitFrac : null
   const feeBps = feeBpsFor(skr)
+  // The SKR balance can arrive after a quote was fetched: a quote made with the old fee must not stay on screen.
+  useEffect(() => { setQuote(null) }, [feeBps])
+  const inflight = useRef(false)
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   // On the v2 route Jupiter takes its own fee and StockPass takes none.
   const isV2 = quote?.route === 'v2'
@@ -77,7 +87,8 @@ export default function SellScreen() {
     : null
 
   const prepare = useCallback(async () => {
-    if (!token || amount === null || amount <= 0) return
+    if (!token || amount === null || amount <= 0 || inflight.current) return
+    inflight.current = true
     setBusy(true); setStatus(null); setQuote(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
@@ -92,6 +103,7 @@ export default function SellScreen() {
       if (!q) throw new Error('No route available for this amount right now.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
+    inflight.current = false
     setBusy(false)
   }, [token, amount, feeBps])
 
@@ -100,9 +112,11 @@ export default function SellScreen() {
   const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (baselineUsd !== null && quote.outUi < baselineUsd * 0.9))
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
-    if (!quote) return
+    if (!quote || inflight.current) return
+    inflight.current = true
     setBusy(true); setStatus(null)
     try {
+      if (await isDemo()) throw new Error('Demo mode cannot trade. Connect a real wallet.')
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
       const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
@@ -110,6 +124,7 @@ export default function SellScreen() {
       setStatus(null)
       setDone({ symbol: sym, amount: amount ?? 0, receiveUsd: quote.outUi, signature: String(sig) })
     } catch (e) { setStatus((e as Error).message) }
+    inflight.current = false
     setBusy(false)
   }, [quote, account, connect, signAndSendTransaction, signTransaction, sym, amount])
 
@@ -131,7 +146,14 @@ export default function SellScreen() {
         </View>
       </View>
 
-      {balance === null && <Text style={s.tiny}>You do not hold {sym} in this wallet.</Text>}
+      {balance === null && balState === 'loading' && <ActivityIndicator color={T.accent} />}
+      {balance === null && balState === 'noWallet' && <Text style={s.tiny}>Connect your wallet to sell {sym}.</Text>}
+      {balance === null && balState === 'none' && <Text style={s.tiny}>You do not hold {sym} in this wallet.</Text>}
+      {balance === null && balState === 'error' && (
+        <Pressable onPress={() => setBalTry((n) => n + 1)}>
+          <Text style={[s.tiny, { color: T.down }]}>Could not read your balance. Tap to try again.</Text>
+        </Pressable>
+      )}
 
       {balance !== null && !done && (
         <>
@@ -164,11 +186,11 @@ export default function SellScreen() {
               </View>
               <View style={s.row}>
                 <Text style={s.label}>Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
-                <Text style={[s.value, num]}>{exitCostUsd !== null ? `~$${exitCostUsd.toFixed(2)}` : '—'}</Text>
+                <Text style={[s.value, num]}>{exitCostUsd !== null ? `~${fmtUsd(exitCostUsd)}` : '—'}</Text>
               </View>
               <View style={s.row}>
                 <Text style={s.label}>{isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}</Text>
-                <Text style={[s.value, num]}>-${feeUsd!.toFixed(2)}</Text>
+                <Text style={[s.value, num]}>{feeUsd! > 0 ? '-' : ''}{fmtUsd(feeUsd!)}</Text>
               </View>
               {isV2 ? null : skrDiscount ? (
                 <View style={s.skrRow}>

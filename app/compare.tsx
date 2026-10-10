@@ -165,7 +165,7 @@ export default function CompareScreen() {
         {best && spread !== null && spread > 0 ? (
           <>
             <Text style={s.bannerStrong}>{best.token.issuer} is {spread} bps cheaper to buy than the most expensive option.</Text>
-            <Text style={s.faint}>${((spread / 10000) * 1000).toFixed(2)} less for the same $1,000 of stock, before our fee. Based on the price per share, entry cost included.</Text>
+            <Text style={s.faint}>${((spread / 10000) * 1000).toFixed(2)} less for the same $1,000 of stock. Based on the price per share, entry cost included.</Text>
           </>
         ) : best ? (
           <Text style={s.bannerStrong}>Only {best.token.issuer} has a usable quote right now.</Text>

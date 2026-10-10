@@ -14,7 +14,7 @@ import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
 import { EarningsIcon } from '@/components/event-icons'
 import { issuerColor, num, T } from '@/constants/theme'
-import { bpsLabel, isUsable } from '@/lib/cost'
+import { bpsLabel, isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { compact, getCollateral, getHoldings, getStats, getReliability, getUnderlying, History, Latest, TokenReliability, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
@@ -101,7 +101,7 @@ export default function PassportScreen() {
   const devBps = reference && tokenMid ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
-  const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < 200)
+  const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
   const maxAvg = Math.max(1, ...valid.map((h) => h.avg_entry))
   const shares = balance !== null && mine ? balance * mine.multiplier : null
 

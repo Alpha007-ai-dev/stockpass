@@ -1,3 +1,4 @@
+import { fetchT } from './http';
 import { getTransactionDecoder } from '@solana/transactions';
 import { getBase64Encoder } from '@solana/codecs-strings';
 
@@ -60,7 +61,7 @@ export async function getQuote(
       '&amount=' + amount +
       '&slippageBps=50' +
       (useFee ? '&platformFeeBps=' + Math.max(0, Math.floor(feeBps ?? PLATFORM_FEE_BPS)) : '');
-    const r = await fetch(url);
+    const r = await fetchT(url);
     const q = await r.json();
     if (!q || q.error || !q.outAmount) return null;
 
@@ -98,16 +99,15 @@ export async function buildSwapTx(quote: Quote, userPublicKey: string): Promise<
     };
     if (quote.feeAccount) body.feeAccount = quote.feeAccount;
 
-    const r = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
+    const r = await fetchT('https://lite-api.jup.ag/swap/v1/swap', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
     const j = await r.json();
-    if (!j?.swapTransaction) { console.log('JUP SWAP ERROR', JSON.stringify(j)); return null; }
+    if (!j?.swapTransaction) return null;
     return j.swapTransaction as string;
-  } catch (e) {
-    console.log('JUP SWAP EXCEPTION', String(e));
+  } catch {
     return null;
   }
 }

@@ -1,4 +1,11 @@
+import { fetchT } from './http'
+
 const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev'
+
+// A Cloudflare error page is HTML: say the server is unavailable instead of a JSON parse error.
+async function readJson(res: Response): Promise<any> {
+  try { return await res.json() } catch { throw new Error(res.ok ? 'Server returned unreadable data' : 'Server unavailable, try again shortly') }
+}
 
 export type Latest = {
   symbol: string
@@ -93,8 +100,8 @@ export type HoldingRow = {
 }
 
 export async function getHoldings(owner: string): Promise<HoldingRow[]> {
-  const res = await fetch(`${BASE}/holdings?owner=${owner}`)
-  const json: any = await res.json()
+  const res = await fetchT(`${BASE}/holdings?owner=${owner}`)
+  const json: any = await readJson(res)
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`)
   return Array.isArray(json) ? (json as HoldingRow[]) : ((json?.holdings ?? []) as HoldingRow[])
 }
@@ -149,8 +156,8 @@ export async function getCollateral(): Promise<Collateral[]> {
 
 
 export async function getBalances(owner: string): Promise<{ usdc: number; skr: number }> {
-  const res = await fetch(`${BASE}/holdings?owner=${owner}`)
-  const json: any = await res.json()
+  const res = await fetchT(`${BASE}/holdings?owner=${owner}`)
+  const json: any = await readJson(res)
   if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`)
   if (!json || Array.isArray(json) || typeof json.usdc !== 'number') throw new Error('Balance data unavailable')
   return { usdc: json.usdc, skr: Number(json.skr ?? 0) }

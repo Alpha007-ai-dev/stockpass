@@ -119,7 +119,7 @@ export default function MarketScreen() {
           results.forEach((pts) => {
             const bySymbol: Record<string, number[]> = {}
             ;(pts as SeriesPoint[]).forEach((p) => {
-              if (!p.quotable || p.entry_bps === null || p.entry_bps >= 200) return
+              if (!p.quotable || p.entry_bps === null || p.entry_bps >= NO_MARKET_BPS) return
               ;(bySymbol[p.symbol] ??= []).push(Math.max(0, p.entry_bps as number))
             })
             Object.entries(bySymbol).forEach(([sym, vals]) => {
@@ -247,7 +247,7 @@ export default function MarketScreen() {
               </View>
               {(() => {
                 const h = hist[token.symbol]
-                if (!h || h.avg_entry === null || h.avg_entry >= 200 || h.samples * h.availability < 10) return null
+                if (!h || h.avg_entry === null || h.avg_entry >= NO_MARKET_BPS || h.samples * h.availability < 10) return null
                 return (
                   <View style={s.metric}>
                     <Text style={s.metricLabel}>usual</Text>
