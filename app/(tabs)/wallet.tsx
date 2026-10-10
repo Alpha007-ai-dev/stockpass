@@ -132,11 +132,11 @@ export default function WalletScreen() {
             return (
               <Text style={[s.change, num, { color: d >= 0 ? T.accent : T.down }]}>
                 {d >= 0 ? '+' : '-'}${Math.abs(d).toFixed(2)} ({d >= 0 ? '+' : ''}{pct.toFixed(2)}%)
-                <Text style={s.changeLabel}>  24h</Text>
+                <Text style={s.changeLabel}>  24h price change</Text>
               </Text>
             )
           })()}
-          <Text style={s.tiny}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
+          <Text style={s.tiny}>{items!.length} asset{items!.length === 1 ? '' : 's'} · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
           </View>
           <PortfolioSpark
             tickers={items!.map((i) => i.ticker)}

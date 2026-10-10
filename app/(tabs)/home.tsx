@@ -279,7 +279,7 @@ export default function HomeScreen() {
                 return (
                   <Text style={[s.heroChange, num, { color: d >= 0 ? T.accent : T.down }]}>
                     {d >= 0 ? '+' : '-'}${Math.abs(d).toFixed(2)} ({d >= 0 ? '+' : ''}{pct.toFixed(2)}%)
-                    <Text style={s.heroChangeLabel}>  24h</Text>
+                    <Text style={s.heroChangeLabel}>  24h price change</Text>
                   </Text>
                 )
               }
@@ -293,7 +293,7 @@ export default function HomeScreen() {
               }
               return null
             })()}
-            <Text style={s.heroMeta}>{items!.length} assets · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
+            <Text style={s.heroMeta}>{items!.length} asset{items!.length === 1 ? '' : 's'} · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
             {usdc !== null && !demo && (
               <Text style={s.heroExit}>
                 USDC balance <Text style={[s.heroExitStrong, num]}>${usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>

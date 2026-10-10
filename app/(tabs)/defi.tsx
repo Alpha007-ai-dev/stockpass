@@ -55,7 +55,7 @@ export default function DefiScreen() {
         const accepted = peers.find((p) => p.symbol !== token.symbol && collateral.some((c) => c.symbol === p.symbol))
         return {
           token,
-          value: l?.buy_px ? shares * l.buy_px : null,
+          value: l?.sell_px ? shares * l.sell_px : null,
           markets,
           peerAccepted: accepted ? accepted.symbol : null,
         }

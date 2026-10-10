@@ -89,13 +89,15 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
   const [failed, setFailed] = useState(false)
   const isBp = issuer === 'Backpack' && !!symbol
   const src = isBp ? PROXY + symbol : icon
-  const svg = useSvg(isBp ? src : null)
+  // Issuer icons that the Image component cannot decode (typically SVG) are fetched through our proxy and drawn as SVG instead.
+  const svgUri = isBp ? src : failed && symbol ? PROXY + symbol : null
+  const svg = useSvg(svgUri)
   useEffect(() => { setFailed(false) }, [src])
   const color = issuerColor(issuer)
   const inner = size - 8
   return (
-    <View style={[s.wrap, { width: size, height: size, borderRadius: size / 2, borderColor: color }, isBp && svg.xml && isDarkOnly(svg.xml) && { backgroundColor: '#F2F2F2' }]}>
-      {isBp && svg.xml && !svg.bad ? (
+    <View style={[s.wrap, { width: size, height: size, borderRadius: size / 2, borderColor: color }, svg.xml && isDarkOnly(svg.xml) && { backgroundColor: '#F2F2F2' }]}>
+      {svg.xml && !svg.bad ? (
         <SvgXml xml={svg.xml} width={inner} height={inner} />
       ) : !isBp && src && !failed ? (
         <Image source={{ uri: src }} onError={() => setFailed(true)} style={{ width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }} />
