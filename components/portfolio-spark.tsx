@@ -55,9 +55,9 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
 
   const min = Math.min(...points)
   const max = Math.max(...points)
-  // Never zoom in closer than 0.2%: a tiny move must look tiny.
+  // Never zoom in closer than 1%: executable prices wobble by a few tenths of a percent, and that must look like wobble.
   const mid = (min + max) / 2
-  const span = Math.max(0.002, max - min)
+  const span = Math.max(0.01, max - min)
   const step = width / (points.length - 1)
   const coords = points.map((v, i) => [i * step, height - 4 - ((v - (mid - span / 2)) / span) * (height - 10)])
   const d = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
