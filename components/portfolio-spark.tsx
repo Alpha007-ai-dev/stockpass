@@ -5,7 +5,12 @@ import { T } from '@/constants/theme'
 import { NO_MARKET_BPS } from '@/lib/cost'
 import { getSeries, type SeriesPoint } from '@/lib/stats'
 
-export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
+export function PortfolioSpark({
+  items,
+  up: upProp,
+  width = 96,
+  height = 44,
+}: {
   /** The held tokens: ticker + symbol to look up, value in USD as the weight. */
   items: { ticker: string; symbol: string; value: number }[]
   up?: boolean
@@ -24,7 +29,14 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
           held.map(async (i) => {
             // One failing ticker must not blank the whole chart.
             const rows = (await getSeries(i.ticker, 24).catch((): SeriesPoint[] => []))
-              .filter((p) => p.symbol === i.symbol && p.buy_px && p.quotable && p.entry_bps !== null && p.entry_bps < NO_MARKET_BPS)
+              .filter(
+                (p) =>
+                  p.symbol === i.symbol &&
+                  p.buy_px &&
+                  p.quotable &&
+                  p.entry_bps !== null &&
+                  p.entry_bps < NO_MARKET_BPS,
+              )
               // Mid price: the buy price minus the entry cost, so a changing cost does not look like a price move.
               .map((p) => ({ ts: p.ts, px: (p.buy_px as number) / (1 + Math.max(0, p.entry_bps as number) / 10000) }))
               .sort((x, y) => x.ts - y.ts)
@@ -41,7 +53,10 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
           for (const x of usable) {
             const base = x.rows[0].px
             let last = x.rows[0].px
-            for (const r of x.rows) { if (r.ts <= end) last = r.px; else break }
+            for (const r of x.rows) {
+              if (r.ts <= end) last = r.px
+              else break
+            }
             sum += x.weight * (last / base)
             wsum += x.weight
           }
@@ -52,7 +67,9 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
         if (!cancelled) setPoints([])
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [key])
 
   if (!points || points.length < 3) return <View style={{ width, height }} />

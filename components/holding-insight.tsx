@@ -27,9 +27,11 @@ export function HoldingInsight({ holding, latest }: Props) {
   if (series && series.length > 1) {
     const first = series[0]
     const last = series[series.length - 1]
-    if (first.buy_px && last.buy_px) priceChange = ((last.buy_px / first.buy_px) - 1) * 100
-    if (first.entry_bps !== null && last.entry_bps !== null) entryChange = (last.entry_bps as number) - (first.entry_bps as number)
-    if (first.exit_bps !== null && last.exit_bps !== null) exitChange = (last.exit_bps as number) - (first.exit_bps as number)
+    if (first.buy_px && last.buy_px) priceChange = (last.buy_px / first.buy_px - 1) * 100
+    if (first.entry_bps !== null && last.entry_bps !== null)
+      entryChange = (last.entry_bps as number) - (first.entry_bps as number)
+    if (first.exit_bps !== null && last.exit_bps !== null)
+      exitChange = (last.exit_bps as number) - (first.exit_bps as number)
   }
 
   const note = (() => {
@@ -48,7 +50,13 @@ export function HoldingInsight({ holding, latest }: Props) {
   return (
     <Pressable style={s.wrap} onPress={() => router.push(`/passport?symbol=${holding.symbol}`)}>
       <View style={s.head}>
-        <TokenIcon icon={holding.icon} symbol={holding.symbol} label={holding.ticker} issuer={holding.issuer} size={36} />
+        <TokenIcon
+          icon={holding.icon}
+          symbol={holding.symbol}
+          label={holding.ticker}
+          issuer={holding.issuer}
+          size={36}
+        />
 
         <View style={{ flex: 1 }}>
           <Text style={s.symbol}>{holding.symbol}</Text>
@@ -56,7 +64,8 @@ export function HoldingInsight({ holding, latest }: Props) {
         </View>
         {priceChange !== null && (
           <Text style={[s.change, num, { color: priceChange >= 0 ? T.accent : T.down }]}>
-            {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+            {priceChange >= 0 ? '+' : ''}
+            {priceChange.toFixed(2)}%
           </Text>
         )}
       </View>
@@ -92,10 +101,3 @@ const s = StyleSheet.create({
   note: { color: T.dim, fontSize: 14, lineHeight: 19 },
   faint: { color: T.faint, fontSize: 13 },
 })
-
-
-
-
-
-
-

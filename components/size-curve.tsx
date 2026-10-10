@@ -26,7 +26,9 @@ export function SizeCurve({ symbol, state }: { symbol: string; state: string }) 
       {pts.map((p) => (
         <View key={p.size_usd} style={s.row}>
           <Text style={s.label}>{usd(p.size_usd)}</Text>
-          <View style={s.track}><View style={[s.fill, { width: `${Math.max(2, Math.round((p.entry_bps / max) * 100))}%` }]} /></View>
+          <View style={s.track}>
+            <View style={[s.fill, { width: `${Math.max(2, Math.round((p.entry_bps / max) * 100))}%` }]} />
+          </View>
           <Text style={[s.value, num]}>{p.entry_bps < 0.5 ? '~0' : p.entry_bps.toFixed(1)}</Text>
         </View>
       ))}

@@ -52,7 +52,9 @@ export default function CompareScreen() {
     Promise.all([getStats(), getGroups()])
       .then(([s, groups]) => {
         const map: Record<string, Latest> = {}
-        s.latest.forEach((r) => { map[r.symbol] = r })
+        s.latest.forEach((r) => {
+          map[r.symbol] = r
+        })
         setLatest(map)
         setGroup(groups.find((g) => g.ticker === tk) ?? null)
       })
@@ -60,7 +62,9 @@ export default function CompareScreen() {
   }, [tk])
 
   useEffect(() => {
-    getCollateral().then(setCollateral).catch(() => {})
+    getCollateral()
+      .then(setCollateral)
+      .catch(() => {})
   }, [])
 
   const tokens = group?.tokens ?? []
@@ -69,7 +73,7 @@ export default function CompareScreen() {
   // What the buyer actually pays is the per-share price (buy_px already includes the entry cost), so the cheapest option is the lowest price;
   // a tie goes to the lower entry cost.
   const priced = usable.filter((r) => (r.l.buy_px ?? 0) > 0)
-  const byPrice = (a: { l: Latest }, b: { l: Latest }) => (a.l.buy_px! - b.l.buy_px!) || (a.l.entry_bps! - b.l.entry_bps!)
+  const byPrice = (a: { l: Latest }, b: { l: Latest }) => a.l.buy_px! - b.l.buy_px! || a.l.entry_bps! - b.l.entry_bps!
   const best = priced.length ? [...priced].sort(byPrice)[0] : null
   const chosen = (picked ? usable.find((r) => r.token.symbol === picked) : null) ?? best
   const worst = priced.length > 1 ? [...priced].sort(byPrice)[priced.length - 1] : null
@@ -85,7 +89,9 @@ export default function CompareScreen() {
 
       <Text style={s.h1}>Compare</Text>
       <Text style={s.h2}>Same underlying.{'\n'}Different representation.</Text>
-      <Text style={s.faint}>{tk} · {rows.length} issuer{rows.length === 1 ? '' : 's'} on Solana</Text>
+      <Text style={s.faint}>
+        {tk} · {rows.length} issuer{rows.length === 1 ? '' : 's'} on Solana
+      </Text>
 
       {rows.length > 1 && rows.length <= 3 && (
         <View style={s.race}>
@@ -95,11 +101,15 @@ export default function CompareScreen() {
             const isSelected = chosen?.token.symbol === token.symbol
             const h = ok ? Math.max(12, Math.round(((l!.entry_bps as number) / maxBps) * 100)) : 0
             return (
-              <Pressable key={token.symbol} onPress={() => { if (ok) setPicked(token.symbol) }} style={[s.raceCol, isSelected && s.raceBest]}>
+              <Pressable
+                key={token.symbol}
+                onPress={() => {
+                  if (ok) setPicked(token.symbol)
+                }}
+                style={[s.raceCol, isSelected && s.raceBest]}
+              >
                 <Text style={[s.raceIssuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
-                <Text style={[s.raceCost, num, isBest && { color: T.accent }]}>
-                  {ok ? `${l!.entry_bps}` : '—'}
-                </Text>
+                <Text style={[s.raceCost, num, isBest && { color: T.accent }]}>{ok ? `${l!.entry_bps}` : '—'}</Text>
                 <Text style={s.faint}>{ok ? 'bps' : 'NO QUOTE'}</Text>
                 <View style={s.barWrap}>
                   <View style={[s.bar, { width: `${h}%`, backgroundColor: issuerColor(token.issuer) }]} />
@@ -119,14 +129,25 @@ export default function CompareScreen() {
         const markets = collateral ? collateral.filter((c) => c.symbol === token.symbol).length : 0
         const width = ok && l ? Math.max(6, Math.round((l.entry_bps! / maxBps) * 100)) : 0
         return (
-          <Pressable key={token.symbol} style={[s.card, isSelected && s.cardBest]}
-            onPress={() => { if (ok) setPicked(token.symbol) }}>
+          <Pressable
+            key={token.symbol}
+            style={[s.card, isSelected && s.cardBest]}
+            onPress={() => {
+              if (ok) setPicked(token.symbol)
+            }}
+          >
             <View style={s.cardHead}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <TokenIcon icon={token.icon} symbol={token.symbol} label={token.ticker} issuer={token.issuer} size={36} />
+                <TokenIcon
+                  icon={token.icon}
+                  symbol={token.symbol}
+                  label={token.ticker}
+                  issuer={token.issuer}
+                  size={36}
+                />
                 <View>
-                <Text style={s.symbol}>{token.symbol}</Text>
-                <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
+                  <Text style={s.symbol}>{token.symbol}</Text>
+                  <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
                 </View>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
@@ -137,7 +158,9 @@ export default function CompareScreen() {
               </View>
             </View>
 
-            <View style={s.track}><View style={[s.fill, { width: `${width}%`, backgroundColor: issuerColor(token.issuer) }]} /></View>
+            <View style={s.track}>
+              <View style={[s.fill, { width: `${width}%`, backgroundColor: issuerColor(token.issuer) }]} />
+            </View>
 
             <View style={s.metaRow}>
               <Text style={s.faint}>{l?.buy_px ? `$${l.buy_px.toFixed(2)} per share` : 'no price yet'}</Text>
@@ -159,13 +182,21 @@ export default function CompareScreen() {
         )
       })}
 
-      <Text style={s.faint}>Entry cost is half the round-trip spread, measured on each token&apos;s own price. Two tokens can show the same price per share and a different cost.</Text>
+      <Text style={s.faint}>
+        Entry cost is half the round-trip spread, measured on each token&apos;s own price. Two tokens can show the same
+        price per share and a different cost.
+      </Text>
 
       <View style={s.banner}>
         {best && spread !== null && spread > 0 ? (
           <>
-            <Text style={s.bannerStrong}>{best.token.issuer} is {spread} bps cheaper to buy than the most expensive option.</Text>
-            <Text style={s.faint}>${((spread / 10000) * 1000).toFixed(2)} less for the same $1,000 of stock. Based on the price per share, entry cost included.</Text>
+            <Text style={s.bannerStrong}>
+              {best.token.issuer} is {spread} bps cheaper to buy than the most expensive option.
+            </Text>
+            <Text style={s.faint}>
+              ${((spread / 10000) * 1000).toFixed(2)} less for the same $1,000 of stock. Based on the price per share,
+              entry cost included.
+            </Text>
           </>
         ) : best ? (
           <Text style={s.bannerStrong}>Only {best.token.issuer} has a usable quote right now.</Text>
@@ -189,18 +220,21 @@ export default function CompareScreen() {
           <View style={s.switchCard}>
             <Text style={s.switchKicker}>YOU HOLD {held.symbol}</Text>
             <Text style={s.body}>
-              {shares.toFixed(4)} {tk}{value ? ` · $${value.toFixed(2)}` : ""}
+              {shares.toFixed(4)} {tk}
+              {value ? ` · $${value.toFixed(2)}` : ''}
             </Text>
             <View style={s.switchDivider} />
             <View style={s.row}>
               <Text style={s.switchLabel}>Cost to exit to USDC</Text>
               <Text style={[s.switchValue, num]}>{ok ? bpsLabel(l.exit_bps) : 'no quote'}</Text>
             </View>
-            {ok && <Text style={s.body}>Plus the StockPass fee of {PLATFORM_FEE_BPS} bps when you sell through the app.</Text>}
-            {costUsd !== null && (
+            {ok && (
               <Text style={s.body}>
-                About ${costUsd.toFixed(2)} to sell this position back to USDC right now.
+                Plus the StockPass fee of {PLATFORM_FEE_BPS} bps when you sell through the app.
               </Text>
+            )}
+            {costUsd !== null && (
+              <Text style={s.body}>About ${costUsd.toFixed(2)} to sell this position back to USDC right now.</Text>
             )}
           </View>
         )
@@ -210,7 +244,8 @@ export default function CompareScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>Why the raw prices differ</Text>
           <Text style={s.body}>
-            These tokens use different multipliers, so one token is not one share everywhere. All prices above are per share.
+            These tokens use different multipliers, so one token is not one share everywhere. All prices above are per
+            share.
           </Text>
         </View>
       )}
@@ -221,7 +256,12 @@ export default function CompareScreen() {
         </Pressable>
       )}
 
-      <Text style={s.faint}>{error ?? (rows.find((r) => r.l) ? `Last measured ${new Date(rows.find((r) => r.l)!.l!.ts * 1000).toLocaleString()}` : 'Loading…')}</Text>
+      <Text style={s.faint}>
+        {error ??
+          (rows.find((r) => r.l)
+            ? `Last measured ${new Date(rows.find((r) => r.l)!.l!.ts * 1000).toLocaleString()}`
+            : 'Loading…')}
+      </Text>
     </ScrollView>
   )
 }
@@ -234,7 +274,16 @@ const s = StyleSheet.create({
   h1: { color: T.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
   h2: { color: T.text, fontSize: 22, fontWeight: '600', lineHeight: 28, letterSpacing: -0.4 },
   race: { flexDirection: 'row', gap: 8 },
-  raceCol: { flex: 1, backgroundColor: T.surface, borderRadius: 18, borderWidth: 1, borderColor: T.border, padding: 14, alignItems: 'center', gap: 3 },
+  raceCol: {
+    flex: 1,
+    backgroundColor: T.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: 14,
+    alignItems: 'center',
+    gap: 3,
+  },
   raceBest: { borderColor: T.accent, borderWidth: 1.5 },
   bestTag: { color: T.accent, fontSize: 9, fontWeight: '800', letterSpacing: 0.6 },
   raceIssuer: { fontSize: 13, fontWeight: '700' },
@@ -255,7 +304,14 @@ const s = StyleSheet.create({
   note: { color: T.faint, fontSize: 13, lineHeight: 19 },
   banner: { paddingVertical: 14, gap: 4, borderTopWidth: 1, borderBottomWidth: 1, borderColor: T.border },
   bannerStrong: { color: T.text, fontSize: 16, fontWeight: '600' },
-  switchCard: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.borderBright, padding: 16, gap: 9 },
+  switchCard: {
+    backgroundColor: T.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: T.borderBright,
+    padding: 16,
+    gap: 9,
+  },
   switchKicker: { color: T.warn, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   switchDivider: { height: 1, backgroundColor: T.border, marginVertical: 2 },
   switchLabel: { color: T.text, fontSize: 15, fontWeight: '700' },
@@ -271,25 +327,3 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 56, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

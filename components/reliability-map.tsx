@@ -20,7 +20,9 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
   const hasNow = latest && Object.keys(latest).length > 0
 
   useEffect(() => {
-    getTokenReliability().then(setTokens).catch(() => setTokens([]))
+    getTokenReliability()
+      .then(setTokens)
+      .catch(() => setTokens([]))
   }, [])
 
   if (!tokens) return <Text style={s.faint}>Loading…</Text>
@@ -54,14 +56,15 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
       )}
 
       {issuers.map((issuer) => {
-        const list = tokens
-          .filter((t) => t.issuer === issuer)
-          .sort((a, b) => b.availability - a.availability)
+        const list = tokens.filter((t) => t.issuer === issuer).sort((a, b) => b.availability - a.availability)
         const reliable = list.filter((t) => t.availability >= 80).length
         const totalN = list.reduce((n, t) => n + t.samples, 0)
         const quotedN = list.reduce((n, t) => n + t.quotable_count, 0)
         const avg = totalN > 0 ? (quotedN / totalN) * 100 : 0
-        const liveCount = list.filter((t) => { const l = latest?.[t.symbol]; return l !== undefined && !!l.quotable && Date.now() / 1000 - l.ts < 5400 }).length
+        const liveCount = list.filter((t) => {
+          const l = latest?.[t.symbol]
+          return l !== undefined && !!l.quotable && Date.now() / 1000 - l.ts < 5400
+        }).length
 
         return (
           <View key={issuer} style={{ gap: 9 }}>
@@ -71,23 +74,35 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
                 <Text style={s.issuer}>{issuer}</Text>
               </View>
               <Text style={[s.headStat, num]}>
-                {mode === 'now'
-                  ? <>{liveCount}/{list.length} <Text style={s.faint}>tradeable at last check</Text></>
-                  : <>{avg.toFixed(0)}% <Text style={s.faint}>available</Text></>}
+                {mode === 'now' ? (
+                  <>
+                    {liveCount}/{list.length} <Text style={s.faint}>tradeable at last check</Text>
+                  </>
+                ) : (
+                  <>
+                    {avg.toFixed(0)}% <Text style={s.faint}>available</Text>
+                  </>
+                )}
               </Text>
             </View>
 
-            {mode === 'history' && <Text style={s.faint}>{totalN.toLocaleString()} measurements · {reliable}/{list.length} tokens reliable (80%+)</Text>}
+            {mode === 'history' && (
+              <Text style={s.faint}>
+                {totalN.toLocaleString()} measurements · {reliable}/{list.length} tokens reliable (80%+)
+              </Text>
+            )}
             <View style={s.grid}>
               {list.map((t) => {
                 const lv = latest?.[t.symbol]
-                const liveOk = mode === 'now' ? lv !== undefined && !!lv.quotable && Date.now() / 1000 - lv.ts < 5400 : null
+                const liveOk =
+                  mode === 'now' ? lv !== undefined && !!lv.quotable && Date.now() / 1000 - lv.ts < 5400 : null
                 const c = band(liveOk === null ? t.availability : liveOk ? 100 : 0)
                 return (
                   <Pressable
                     key={t.symbol}
                     style={[s.tile, { backgroundColor: c.bg }]}
-                    onPress={() => router.push(`/passport?symbol=${t.symbol}`)}>
+                    onPress={() => router.push(`/passport?symbol=${t.symbol}`)}
+                  >
                     <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>
                       {t.ticker ?? t.symbol}
                     </Text>
@@ -103,10 +118,26 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
       })}
 
       <View style={s.legend}>
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#6BEF92' }]} /><Text style={s.faint}>{mode === 'now' ? 'live quote' : '80%+'}</Text></View>
-        {mode === 'history' && <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#F5C451' }]} /><Text style={s.faint}>40–80%</Text></View>}
-        {mode === 'history' && <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#FB8A5C' }]} /><Text style={s.faint}>under 40%</Text></View>}
-        <View style={s.legendItem}><View style={[s.ldot, { backgroundColor: '#7A8078' }]} /><Text style={s.faint}>{mode === 'now' ? 'no fresh quote' : 'never quotable'}</Text></View>
+        <View style={s.legendItem}>
+          <View style={[s.ldot, { backgroundColor: '#6BEF92' }]} />
+          <Text style={s.faint}>{mode === 'now' ? 'live quote' : '80%+'}</Text>
+        </View>
+        {mode === 'history' && (
+          <View style={s.legendItem}>
+            <View style={[s.ldot, { backgroundColor: '#F5C451' }]} />
+            <Text style={s.faint}>40–80%</Text>
+          </View>
+        )}
+        {mode === 'history' && (
+          <View style={s.legendItem}>
+            <View style={[s.ldot, { backgroundColor: '#FB8A5C' }]} />
+            <Text style={s.faint}>under 40%</Text>
+          </View>
+        )}
+        <View style={s.legendItem}>
+          <View style={[s.ldot, { backgroundColor: '#7A8078' }]} />
+          <Text style={s.faint}>{mode === 'now' ? 'no fresh quote' : 'never quotable'}</Text>
+        </View>
       </View>
     </View>
   )
@@ -114,7 +145,14 @@ export function ReliabilityMap({ latest }: { latest?: Record<string, Latest> }) 
 
 const s = StyleSheet.create({
   intro: { gap: 5 },
-  toggle: { flexDirection: 'row', backgroundColor: T.surface, borderRadius: 14, padding: 4, borderWidth: 1, borderColor: T.border },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: T.surface,
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: T.border,
+  },
   toggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
   toggleOn: { backgroundColor: T.accent },
   toggleText: { color: T.dim, fontSize: 14, fontWeight: '600' },

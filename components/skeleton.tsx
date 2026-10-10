@@ -2,7 +2,12 @@
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native'
 import { T } from '@/constants/theme'
 
-export function Skeleton({ height = 16, width = '100%', radius = 8, style }: {
+export function Skeleton({
+  height = 16,
+  width = '100%',
+  radius = 8,
+  style,
+}: {
   height?: number
   width?: number | string
   radius?: number

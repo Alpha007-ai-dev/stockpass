@@ -12,9 +12,16 @@ export function AnomalyCard({ symbol }: { symbol: string }) {
 
   useEffect(() => {
     let live = true
-    setA(null); setOpen(false)
-    getAnomaly(symbol).then((r) => { if (live) setA(r) }).catch(() => {})
-    return () => { live = false }
+    setA(null)
+    setOpen(false)
+    getAnomaly(symbol)
+      .then((r) => {
+        if (live) setA(r)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
   }, [symbol])
 
   if (!a) return null
@@ -35,7 +42,9 @@ export function AnomalyCard({ symbol }: { symbol: string }) {
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={s.label}>USUAL</Text>
-          <Text style={[s.usual, num]}>{bps(e.typical_low_bps)} – {bps(e.typical_high_bps)}</Text>
+          <Text style={[s.usual, num]}>
+            {bps(e.typical_low_bps)} – {bps(e.typical_high_bps)}
+          </Text>
         </View>
       </View>
       <Pressable onPress={() => setOpen((v) => !v)}>

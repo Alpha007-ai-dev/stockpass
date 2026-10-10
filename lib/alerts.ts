@@ -28,6 +28,8 @@ export async function setAlert(owner: string, symbol: string, thresholdBps: numb
 }
 
 export async function removeAlert(owner: string, symbol: string): Promise<void> {
-  const res = await fetch(`${BASE}/alerts?owner=${encodeURIComponent(owner)}&symbol=${encodeURIComponent(symbol)}`, { method: 'DELETE' })
+  const res = await fetch(`${BASE}/alerts?owner=${encodeURIComponent(owner)}&symbol=${encodeURIComponent(symbol)}`, {
+    method: 'DELETE',
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }

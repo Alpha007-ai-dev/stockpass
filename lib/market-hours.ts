@@ -13,11 +13,16 @@ function lastWeekday(y: number, m: number, dow: number): number {
 
 // Anonymous Gregorian algorithm for Easter Sunday.
 function easter(y: number): { m: number; d: number } {
-  const a = y % 19, b = Math.floor(y / 100), c = y % 100
-  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25)
+  const a = y % 19,
+    b = Math.floor(y / 100),
+    c = y % 100
+  const d = Math.floor(b / 4),
+    e = b % 4,
+    f = Math.floor((b + 8) / 25)
   const g = Math.floor((b - f + 1) / 3)
   const h = (19 * a + b - d - g + 15) % 30
-  const i = Math.floor(c / 4), k = c % 4
+  const i = Math.floor(c / 4),
+    k = c % 4
   const l = (32 + 2 * e + 2 * i - h - k) % 7
   const mm = Math.floor((a + 11 * h + 22 * l) / 451)
   const month = Math.floor((h + l - 7 * mm + 114) / 31)
@@ -38,7 +43,9 @@ function observed(y: number, m: number, d: number, saturdayRollsBack = true): nu
 
 export function holidaysOf(y: number): Set<number> {
   const out = new Set<number>()
-  const add = (k: number | null) => { if (k !== null) out.add(k) }
+  const add = (k: number | null) => {
+    if (k !== null) out.add(k)
+  }
   add(observed(y, 0, 1, false)) // New Year's Day
   add(key(y, 0, nthWeekday(y, 0, 1, 3))) // Martin Luther King Jr. Day
   add(key(y, 1, nthWeekday(y, 1, 1, 3))) // Presidents' Day
@@ -57,8 +64,13 @@ export function holidaysOf(y: number): Set<number> {
 export function earlyClosesOf(y: number): Set<number> {
   const out = new Set<number>()
   const hol = holidaysOf(y)
-  const weekday = (k: number) => { const w = new Date(k).getUTCDay(); return w !== 0 && w !== 6 }
-  const add = (k: number) => { if (weekday(k) && !hol.has(k)) out.add(k) }
+  const weekday = (k: number) => {
+    const w = new Date(k).getUTCDay()
+    return w !== 0 && w !== 6
+  }
+  const add = (k: number) => {
+    if (weekday(k) && !hol.has(k)) out.add(k)
+  }
   add(key(y, 10, nthWeekday(y, 10, 4, 4) + 1)) // day after Thanksgiving
   add(key(y, 11, 24)) // Christmas Eve
   const jul4 = new Date(Date.UTC(y, 6, 4)).getUTCDay()
@@ -72,7 +84,8 @@ function nthSunday(y: number, m: number, n: number): number {
 
 export function getMarketState(now: Date = new Date()): MarketState {
   const y = now.getUTCFullYear()
-  const dst = now.getTime() >= Date.UTC(y, 2, nthSunday(y, 2, 2), 7) && now.getTime() < Date.UTC(y, 10, nthSunday(y, 10, 1), 6)
+  const dst =
+    now.getTime() >= Date.UTC(y, 2, nthSunday(y, 2, 2), 7) && now.getTime() < Date.UTC(y, 10, nthSunday(y, 10, 1), 6)
   const ny = new Date(now.getTime() + (dst ? -4 : -5) * 3600000)
   const dow = ny.getUTCDay()
   const mins = ny.getUTCHours() * 60 + ny.getUTCMinutes()
@@ -94,4 +107,3 @@ export const MARKET_LABEL: Record<MarketState, { title: string; subtitle: string
   closed: { title: 'US MARKET CLOSED', subtitle: 'Wall Street is closed - tokenized stocks are still moving' },
   weekend: { title: 'WEEKEND', subtitle: 'Wall Street is closed all weekend - tokens keep trading' },
 }
-

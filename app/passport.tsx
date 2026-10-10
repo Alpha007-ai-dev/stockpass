@@ -17,13 +17,30 @@ import { issuerColor, num, T } from '@/constants/theme'
 import { bpsLabel, isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
-import { compact, getCollateral, getHoldings, getStats, getReliability, getUnderlying, History, Latest, TokenReliability, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
+import {
+  compact,
+  getCollateral,
+  getHoldings,
+  getStats,
+  getReliability,
+  getUnderlying,
+  History,
+  Latest,
+  TokenReliability,
+  TokenRow,
+  UnderlyingEvent,
+  UnderlyingProfile,
+} from '@/lib/stats'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 
 type Tab = 'overview' | 'costs' | 'details'
 
 const STATE_LABEL: Record<string, string> = {
-  open: 'Market open', pre: 'Pre-market', after: 'After hours', closed: 'Overnight', weekend: 'Weekend',
+  open: 'Market open',
+  pre: 'Pre-market',
+  after: 'After hours',
+  closed: 'Overnight',
+  weekend: 'Weekend',
 }
 
 export default function PassportScreen() {
@@ -43,7 +60,10 @@ export default function PassportScreen() {
   const [balance, setBalance] = useState<number | null>(null)
   const [markets, setMarkets] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [under, setUnder] = useState<{ profile: UnderlyingProfile | null; events: UnderlyingEvent[] }>({ profile: null, events: [] })
+  const [under, setUnder] = useState<{ profile: UnderlyingProfile | null; events: UnderlyingEvent[] }>({
+    profile: null,
+    events: [],
+  })
   const [rel, setRel] = useState<TokenReliability | null>(null)
 
   const isOndo = sym.endsWith('on')
@@ -60,7 +80,9 @@ export default function PassportScreen() {
         const others = s.latest.filter((r) => r.ticker === ticker && r.symbol !== sym && r.buy_px)
         const pool = others.filter((r) => isUsable(r.entry_bps, r.quotable))
         const choices = pool.length ? pool : others
-        setPeer(choices.length ? choices.reduce((x, y) => ((x.buy_px as number) <= (y.buy_px as number) ? x : y)) : null)
+        setPeer(
+          choices.length ? choices.reduce((x, y) => ((x.buy_px as number) <= (y.buy_px as number) ? x : y)) : null,
+        )
         setTokenCount(others.length + 1)
         setHist(s.history.filter((r) => r.symbol === sym))
         setReference((s as any).reference?.find((r: any) => r.ticker === ticker) ?? null)
@@ -75,8 +97,12 @@ export default function PassportScreen() {
       .then((c) => setMarkets(c.filter((m) => m.symbol === sym).length))
       .catch(() => {})
 
-    getUnderlying(ticker).then(setUnder).catch(() => {})
-    getReliability(sym).then(setRel).catch(() => {})
+    getUnderlying(ticker)
+      .then(setUnder)
+      .catch(() => {})
+    getReliability(sym)
+      .then(setRel)
+      .catch(() => {})
   }, [sym, ticker])
 
   useEffect(() => {
@@ -98,14 +124,19 @@ export default function PassportScreen() {
   const ok = mine ? isUsable(mine.entry_bps, mine.quotable) : false
   // Deviation is measured on the token's mid price (between buy and sell), so it does not contain the entry cost; the total below uses the buy price.
   const tokenMid = mine && mine.buy_px && mine.sell_px ? (mine.buy_px + mine.sell_px) / 2 : (mine?.buy_px ?? 0)
-  const devBps = reference && tokenMid && Number(reference.mid) > 0 ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
+  const devBps =
+    reference && tokenMid && Number(reference.mid) > 0 ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
   const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
   const maxAvg = Math.max(1, ...valid.map((h) => h.avg_entry))
   const shares = balance !== null && mine ? balance * mine.multiplier : null
 
-  const tabs: [Tab, string][] = [['overview', 'Overview'], ['costs', 'Costs'], ['details', 'Details']]
+  const tabs: [Tab, string][] = [
+    ['overview', 'Overview'],
+    ['costs', 'Costs'],
+    ['details', 'Details'],
+  ]
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
@@ -118,7 +149,8 @@ export default function PassportScreen() {
         <View style={{ flex: 1 }}>
           <Text style={s.symbol}>{sym}</Text>
           <Text style={[s.issuer, { color: issuerColor(issuerName) }]} numberOfLines={1}>
-            {issuerName}{token?.name ? ` · ${token.name}` : ''}
+            {issuerName}
+            {token?.name ? ` · ${token.name}` : ''}
           </Text>
         </View>
       </View>
@@ -138,19 +170,34 @@ export default function PassportScreen() {
           <AnomalyCard symbol={sym} />
 
           {peer && mine.buy_px && peer.buy_px && (
-            <NormalizationHero symbol={sym} mine={mine} peer={peer} reference={reference} total={tokenCount} ticker={ticker} />
+            <NormalizationHero
+              symbol={sym}
+              mine={mine}
+              peer={peer}
+              reference={reference}
+              total={tokenCount}
+              ticker={ticker}
+            />
           )}
 
           <View style={s.pairRow}>
             <View style={[s.card, { flex: 1 }]}>
               <Text style={s.kicker}>COST TO BUY</Text>
-              <Text style={[s.metric, num, { color: T.accent }]}>{!ok ? '—' : (mine.entry_bps as number) < 0 ? '~0 bps' : `${mine.entry_bps} bps`}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}</Text>
+              <Text style={[s.metric, num, { color: T.accent }]}>
+                {!ok ? '—' : (mine.entry_bps as number) < 0 ? '~0 bps' : `${mine.entry_bps} bps`}
+              </Text>
+              <Text style={s.tiny}>
+                {ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}
+              </Text>
             </View>
             <View style={[s.card, { flex: 1 }]}>
               <Text style={s.kicker}>COST TO SELL</Text>
-              <Text style={[s.metric, num]}>{!ok ? '—' : (mine.exit_bps as number) < 0 ? '~0 bps' : `${mine.exit_bps} bps`}</Text>
-              <Text style={s.tiny}>{ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}</Text>
+              <Text style={[s.metric, num]}>
+                {!ok ? '—' : (mine.exit_bps as number) < 0 ? '~0 bps' : `${mine.exit_bps} bps`}
+              </Text>
+              <Text style={s.tiny}>
+                {ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}
+              </Text>
             </View>
           </View>
 
@@ -159,15 +206,24 @@ export default function PassportScreen() {
           {reference && mine.buy_px && (
             <View style={s.card}>
               <Text style={s.kicker}>TOKEN VS. WALL STREET</Text>
-              <View style={s.row}><Text style={s.label}>Stock price on Wall Street</Text><Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text></View>
-              <View style={s.row}><Text style={s.label}>Token mid price per share</Text><Text style={[s.value, num]}>${tokenMid.toFixed(2)}</Text></View>
+              <View style={s.row}>
+                <Text style={s.label}>Stock price on Wall Street</Text>
+                <Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Token mid price per share</Text>
+                <Text style={[s.value, num]}>${tokenMid.toFixed(2)}</Text>
+              </View>
               <View style={s.row}>
                 <Text style={s.label}>Token vs. Wall Street</Text>
                 <Text style={[s.value, num]}>
                   {reference.stale ? 'Wall Street closed' : `${devBps >= 0 ? '+' : ''}${devBps} bps`}
                 </Text>
               </View>
-              <View style={s.row}><Text style={s.label}>Trading cost to buy</Text><Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text></View>
+              <View style={s.row}>
+                <Text style={s.label}>Trading cost to buy</Text>
+                <Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text>
+              </View>
 
               {!reference.stale && ok && (
                 <View style={s.totalBox}>
@@ -177,7 +233,8 @@ export default function PassportScreen() {
                     {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps
                   </Text>
                   <Text style={s.tiny}>
-                    ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)) / 10).toFixed(2)} on $1,000. The price per share you pay already contains the trading cost.
+                    ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)) / 10).toFixed(2)} on
+                    $1,000. The price per share you pay already contains the trading cost.
                   </Text>
                 </View>
               )}
@@ -197,7 +254,9 @@ export default function PassportScreen() {
               {valid.map((h) => (
                 <View key={h.market_state} style={s.barRow}>
                   <Text style={s.barLabel}>{STATE_LABEL[h.market_state] ?? h.market_state}</Text>
-                  <View style={s.track}><View style={[s.fill, { width: `${Math.max(0, Math.round((h.avg_entry / maxAvg) * 100))}%` }]} /></View>
+                  <View style={s.track}>
+                    <View style={[s.fill, { width: `${Math.max(0, Math.round((h.avg_entry / maxAvg) * 100))}%` }]} />
+                  </View>
                   <Text style={[s.barValue, num]}>{h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)}</Text>
                 </View>
               ))}
@@ -209,7 +268,10 @@ export default function PassportScreen() {
                 if (hi.avg_entry - lo.avg_entry < 3) return null
                 return (
                   <Text style={s.tiny}>
-                    Cheapest on average during {(STATE_LABEL[lo.market_state] ?? lo.market_state).toLowerCase()} ({Math.round(Math.max(0, lo.avg_entry))} bps), most expensive during {(STATE_LABEL[hi.market_state] ?? hi.market_state).toLowerCase()} ({Math.round(hi.avg_entry)} bps). Historical pattern, not a forecast.
+                    Cheapest on average during {(STATE_LABEL[lo.market_state] ?? lo.market_state).toLowerCase()} (
+                    {Math.round(Math.max(0, lo.avg_entry))} bps), most expensive during{' '}
+                    {(STATE_LABEL[hi.market_state] ?? hi.market_state).toLowerCase()} ({Math.round(hi.avg_entry)} bps).
+                    Historical pattern, not a forecast.
                   </Text>
                 )
               })()}
@@ -219,13 +281,41 @@ export default function PassportScreen() {
           {(() => {
             const o = rel?.open
             const a = rel?.overall
-            const blocks: { label: string; now: number | null; tMin: number | null; tMax: number | null; oMin: number | null; oMax: number | null }[] = [
-              { label: 'ENTRY COST', now: ok && mine ? (mine.entry_bps as number) : null, tMin: o?.min_entry ?? null, tMax: o?.max_entry ?? null, oMin: a?.min_entry ?? null, oMax: a?.max_entry ?? null },
-              { label: 'EXIT COST', now: ok && mine ? (mine.exit_bps as number) : null, tMin: o?.min_exit ?? null, tMax: o?.max_exit ?? null, oMin: a?.min_exit ?? null, oMax: a?.max_exit ?? null },
+            const blocks: {
+              label: string
+              now: number | null
+              tMin: number | null
+              tMax: number | null
+              oMin: number | null
+              oMax: number | null
+            }[] = [
+              {
+                label: 'ENTRY COST',
+                now: ok && mine ? (mine.entry_bps as number) : null,
+                tMin: o?.min_entry ?? null,
+                tMax: o?.max_entry ?? null,
+                oMin: a?.min_entry ?? null,
+                oMax: a?.max_entry ?? null,
+              },
+              {
+                label: 'EXIT COST',
+                now: ok && mine ? (mine.exit_bps as number) : null,
+                tMin: o?.min_exit ?? null,
+                tMax: o?.max_exit ?? null,
+                oMin: a?.min_exit ?? null,
+                oMax: a?.max_exit ?? null,
+              },
             ]
-            const range = (lo0: number | null, hi0: number | null) => rawRange(lo0 === null ? null : Math.max(0, lo0), hi0 === null ? null : Math.max(0, hi0))
+            const range = (lo0: number | null, hi0: number | null) =>
+              rawRange(lo0 === null ? null : Math.max(0, lo0), hi0 === null ? null : Math.max(0, hi0))
             const rawRange = (lo: number | null, hi: number | null) =>
-              lo === null || hi === null ? '—' : hi === 0 ? '~0 bps' : lo === hi ? `${lo} bps` : `${lo === 0 ? '~0' : lo}–${hi} bps`
+              lo === null || hi === null
+                ? '—'
+                : hi === 0
+                  ? '~0 bps'
+                  : lo === hi
+                    ? `${lo} bps`
+                    : `${lo === 0 ? '~0' : lo}–${hi} bps`
             return (
               <>
                 {blocks.map((b) => (
@@ -258,14 +348,24 @@ export default function PassportScreen() {
                 <View style={s.card}>
                   <View style={s.row}>
                     <Text style={s.label}>Quote availability</Text>
-                    <Text style={[s.value, num, a?.availability !== null && a?.availability !== undefined && a.availability < 70 && { color: T.warn }]}>
+                    <Text
+                      style={[
+                        s.value,
+                        num,
+                        a?.availability !== null &&
+                          a?.availability !== undefined &&
+                          a.availability < 70 && { color: T.warn },
+                      ]}
+                    >
                       {a?.availability !== null && a?.availability !== undefined ? `${a.availability}%` : '—'}
                     </Text>
                   </View>
                   <Text style={s.tiny}>
                     {a?.samples ?? samples} observations
                     {o?.samples ? ` · ${o.samples} during open market` : ''}
-                    {o?.since ? `, since ${new Date(o.since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}` : ''}
+                    {o?.since
+                      ? `, since ${new Date(o.since * 1000).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`
+                      : ''}
                     . Measured at a $1,000 test size.
                   </Text>
                 </View>
@@ -286,8 +386,8 @@ export default function PassportScreen() {
               </Text>
             )}
             <Text style={s.tiny}>
-              Read on-chain from the Token-2022 multiplier. Reinvested dividends raise it over time, so the same
-              token represents more shares than it did at launch.
+              Read on-chain from the Token-2022 multiplier. Reinvested dividends raise it over time, so the same token
+              represents more shares than it did at launch.
             </Text>
             <Text style={s.tiny}>
               Divide the token price by this multiplier before comparing issuers. That gives the per-share price.
@@ -295,17 +395,30 @@ export default function PassportScreen() {
             {shares !== null && (
               <>
                 <View style={s.divider} />
-                <View style={s.row}><Text style={s.label}>Your balance</Text><Text style={[s.value, num]}>{balance!.toFixed(4)} {sym}</Text></View>
-                <View style={s.row}><Text style={s.label}>Real shares</Text><Text style={[s.value, num]}>{shares.toFixed(4)} {ticker}</Text></View>
+                <View style={s.row}>
+                  <Text style={s.label}>Your balance</Text>
+                  <Text style={[s.value, num]}>
+                    {balance!.toFixed(4)} {sym}
+                  </Text>
+                </View>
+                <View style={s.row}>
+                  <Text style={s.label}>Real shares</Text>
+                  <Text style={[s.value, num]}>
+                    {shares.toFixed(4)} {ticker}
+                  </Text>
+                </View>
               </>
             )}
           </View>
 
           <View style={s.card}>
             <Text style={s.kicker}>SUPPLY</Text>
-            <Text style={[s.metric, num]}>{compact(mine.supply)} {sym}</Text>
+            <Text style={[s.metric, num]}>
+              {compact(mine.supply)} {sym}
+            </Text>
             <Text style={s.tiny}>
-              ≈ {compact(mine.supply * mine.multiplier)} shares{mine.buy_px ? ` · ≈ $${compact(mine.supply * mine.multiplier * mine.buy_px)}` : ''}
+              ≈ {compact(mine.supply * mine.multiplier)} shares
+              {mine.buy_px ? ` · ≈ $${compact(mine.supply * mine.multiplier * mine.buy_px)}` : ''}
             </Text>
           </View>
 
@@ -325,14 +438,24 @@ export default function PassportScreen() {
           {(() => {
             const si = stockInfo(ticker)
             const p = under.profile
-            const earn = under.events.find((e) => e.kind === 'earnings' && e.event_date >= new Date().toISOString().slice(0, 10))
+            const earn = under.events.find(
+              (e) => e.kind === 'earnings' && e.event_date >= new Date().toISOString().slice(0, 10),
+            )
             if (!si && !p) return null
-            const cap = p?.market_cap ? (p.market_cap >= 1e6 ? `$${(p.market_cap / 1e6).toFixed(2)}T` : `$${(p.market_cap / 1e3).toFixed(1)}B`) : null
+            const cap = p?.market_cap
+              ? p.market_cap >= 1e6
+                ? `$${(p.market_cap / 1e6).toFixed(2)}T`
+                : `$${(p.market_cap / 1e3).toFixed(1)}B`
+              : null
             return (
               <View style={s.card}>
                 <Text style={s.kicker}>THE UNDERLYING</Text>
                 <Text style={s.underName}>{si?.name ?? p?.name}</Text>
-                {si && <Text style={s.underMeta}>{si.kind} · {si.exchange} · {si.sector}</Text>}
+                {si && (
+                  <Text style={s.underMeta}>
+                    {si.kind} · {si.exchange} · {si.sector}
+                  </Text>
+                )}
                 {si && <Text style={s.underText}>{si.summary}</Text>}
 
                 {p && (
@@ -365,7 +488,11 @@ export default function PassportScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={s.eventTitle}>Next earnings</Text>
                       <Text style={s.tiny}>
-                        {new Date(earn.event_date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {new Date(earn.event_date + 'T12:00:00Z').toLocaleDateString(undefined, {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
                         {earn.detail ? ` · ${earn.detail}` : ''}
                       </Text>
                     </View>
@@ -377,8 +504,14 @@ export default function PassportScreen() {
 
           <View style={s.card}>
             <Text style={s.kicker}>ABOUT</Text>
-            {[['Issuer', info.legalName], ['Backing', info.backing], ['Dividends', info.dividends],
-              ['Redemption', info.redemption], ['Eligibility', info.eligibility], ['Standard', info.standard]].map(([k, v]) => (
+            {[
+              ['Issuer', info.legalName],
+              ['Backing', info.backing],
+              ['Dividends', info.dividends],
+              ['Redemption', info.redemption],
+              ['Eligibility', info.eligibility],
+              ['Standard', info.standard],
+            ].map(([k, v]) => (
               <View key={k} style={s.aboutRow}>
                 <Text style={s.label}>{k}</Text>
                 <Text style={s.aboutValue}>{v}</Text>
@@ -402,7 +535,13 @@ export default function PassportScreen() {
       )}
 
       <Text style={s.tiny}>
-        {error ?? (mine ? `Measured ${(() => { const m = Math.max(0, Math.round((Date.now() / 1000 - mine.ts) / 60)); return m < 90 ? `${m} min ago` : `${Math.round(m / 60)} h ago` })()}` : 'Loading…')}
+        {error ??
+          (mine
+            ? `Measured ${(() => {
+                const m = Math.max(0, Math.round((Date.now() / 1000 - mine.ts) / 60))
+                return m < 90 ? `${m} min ago` : `${Math.round(m / 60)} h ago`
+              })()}`
+            : 'Loading…')}
       </Text>
     </ScrollView>
   )
@@ -414,7 +553,16 @@ const s = StyleSheet.create({
   back: { paddingVertical: 8, alignSelf: 'flex-start' },
   backText: { color: T.dim, fontSize: 15 },
 
-  idCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 16 },
+  idCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 16,
+  },
   symbol: { color: T.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5 },
   issuer: { fontSize: 14, fontWeight: '600', marginTop: 2 },
 
@@ -435,7 +583,14 @@ const s = StyleSheet.create({
   chev: { color: T.faint, fontSize: 18 },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 4 },
 
-  totalBox: { backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 14, alignItems: 'center', gap: 3, marginTop: 6 },
+  totalBox: {
+    backgroundColor: T.surfaceAlt,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 6,
+  },
   total: { color: T.accent, fontSize: 34, fontWeight: '800', letterSpacing: -1 },
 
   barRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -444,7 +599,15 @@ const s = StyleSheet.create({
   fill: { height: 7, borderRadius: 4, backgroundColor: T.accent },
   barValue: { color: T.text, fontSize: 13, width: 28, textAlign: 'right' },
 
-  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, marginTop: 6 },
+  eventRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: T.surfaceAlt,
+    borderRadius: 12,
+    padding: 13,
+    marginTop: 6,
+  },
   eventTitle: { color: T.text, fontSize: 15, fontWeight: '700' },
   estBox: { backgroundColor: T.surfaceAlt, borderRadius: 12, padding: 13, marginTop: 6, gap: 1 },
   estValue: { color: T.text, fontSize: 24, fontWeight: '800', letterSpacing: -0.5 },
@@ -457,9 +620,14 @@ const s = StyleSheet.create({
 
   ctaRow: { flexDirection: 'row', gap: 11, marginTop: 6 },
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
-  secondary: { borderWidth: 1, borderColor: T.borderBright, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center' },
+  secondary: {
+    borderWidth: 1,
+    borderColor: T.borderBright,
+    borderRadius: 14,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   secondaryText: { color: T.text, fontSize: 16, fontWeight: '700' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-

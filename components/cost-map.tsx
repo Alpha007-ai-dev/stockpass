@@ -12,7 +12,10 @@ type Tile = { ticker: string; cost: number | null; issuer: string | null; age: n
 const tint = costTint
 
 export function CostMap({
-  groups, latest, filter, onFilter,
+  groups,
+  latest,
+  filter,
+  onFilter,
 }: {
   groups: Group[]
   latest: Record<string, Latest>
@@ -37,7 +40,9 @@ export function CostMap({
   })
 
   const counts: Record<string, number> = { xStocks: 0, Ondo: 0, Backpack: 0 }
-  all.forEach((t) => { if (t.issuer) counts[t.issuer] = (counts[t.issuer] ?? 0) + 1 })
+  all.forEach((t) => {
+    if (t.issuer) counts[t.issuer] = (counts[t.issuer] ?? 0) + 1
+  })
   const noQuote = all.filter((t) => t.cost === null).length
 
   const tiles = all.filter((t) => (filter === 'all' ? true : filter === 'none' ? t.cost === null : t.issuer === filter))
@@ -84,10 +89,17 @@ export function CostMap({
         {tiles.map((t) => {
           const c = tint(t.cost)
           return (
-            <Pressable key={t.ticker} style={[s.tile, { backgroundColor: c.bg }, t.age > 5400 && s.stale]}
-              onPress={() => router.push(`/compare?ticker=${t.ticker}`)}>
-              <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>{t.ticker}</Text>
-              <Text style={[s.tileCost, num, { color: c.fg }]}>{t.cost === null ? '—' : t.cost < 0 ? '~0' : t.cost}</Text>
+            <Pressable
+              key={t.ticker}
+              style={[s.tile, { backgroundColor: c.bg }, t.age > 5400 && s.stale]}
+              onPress={() => router.push(`/compare?ticker=${t.ticker}`)}
+            >
+              <Text style={[s.tileTicker, { color: c.fg }]} numberOfLines={1}>
+                {t.ticker}
+              </Text>
+              <Text style={[s.tileCost, num, { color: c.fg }]}>
+                {t.cost === null ? '—' : t.cost < 0 ? '~0' : t.cost}
+              </Text>
               <Text style={[s.tileUnit, { color: c.fg }]}>{t.cost === null ? 'no quote' : `bps · ${t.count}`}</Text>
             </Pressable>
           )
@@ -95,13 +107,27 @@ export function CostMap({
       </View>
 
       <View style={s.legend}>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#5BE585' }]} /><Text style={s.legendText}>≤15 bps</Text></View>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#F5C451' }]} /><Text style={s.legendText}>16–30</Text></View>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#FB8A5C' }]} /><Text style={s.legendText}>&gt;30</Text></View>
-        <View style={s.legendItem}><View style={[s.dot, { backgroundColor: '#3A3A36' }]} /><Text style={s.legendText}>No quote</Text></View>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: '#5BE585' }]} />
+          <Text style={s.legendText}>≤15 bps</Text>
+        </View>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: '#F5C451' }]} />
+          <Text style={s.legendText}>16–30</Text>
+        </View>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: '#FB8A5C' }]} />
+          <Text style={s.legendText}>&gt;30</Text>
+        </View>
+        <View style={s.legendItem}>
+          <View style={[s.dot, { backgroundColor: '#3A3A36' }]} />
+          <Text style={s.legendText}>No quote</Text>
+        </View>
       </View>
 
-      <Text style={s.foot}>Cheapest entry cost at $1,000 across all issuers. The small number is how many issuers exist for that stock.</Text>
+      <Text style={s.foot}>
+        Cheapest entry cost at $1,000 across all issuers. The small number is how many issuers exist for that stock.
+      </Text>
     </View>
   )
 }
@@ -110,7 +136,16 @@ const s = StyleSheet.create({
   title: { color: T.text, fontSize: 20, fontWeight: '700', letterSpacing: -0.4 },
   sub: { color: T.dim, fontSize: 13, marginTop: 2 },
   stats: { flexDirection: 'row', gap: 8 },
-  stat: { flex: 1, backgroundColor: T.surface, borderRadius: 16, borderWidth: 1, borderColor: T.border, paddingVertical: 12, alignItems: 'center', gap: 2 },
+  stat: {
+    flex: 1,
+    backgroundColor: T.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: T.border,
+    paddingVertical: 12,
+    alignItems: 'center',
+    gap: 2,
+  },
   statNum: { color: T.text, fontSize: 26, fontWeight: '700' },
   statLabel: { color: T.faint, fontSize: 11, textAlign: 'center', lineHeight: 14 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -130,6 +165,3 @@ const s = StyleSheet.create({
   legendText: { color: T.faint, fontSize: 12 },
   foot: { color: T.faint, fontSize: 13, lineHeight: 19 },
 })
-
-
-

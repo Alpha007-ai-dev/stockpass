@@ -7,8 +7,12 @@ export function MultiplierNotice({ symbol }: { symbol: string }) {
   const [c, setC] = useState<MultiplierChange | null>(null)
   useEffect(() => {
     let live = true
-    getMultiplierChanges().then((all) => { if (live) setC(all.find((x) => x.symbol === symbol) ?? null) })
-    return () => { live = false }
+    getMultiplierChanges().then((all) => {
+      if (live) setC(all.find((x) => x.symbol === symbol) ?? null)
+    })
+    return () => {
+      live = false
+    }
   }, [symbol])
   if (!c) return null
   return (

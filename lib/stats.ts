@@ -4,7 +4,11 @@ const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev'
 
 // A Cloudflare error page is HTML: say the server is unavailable instead of a JSON parse error.
 async function readJson(res: Response): Promise<any> {
-  try { return await res.json() } catch { throw new Error(res.ok ? 'Server returned unreadable data' : 'Server unavailable, try again shortly') }
+  try {
+    return await res.json()
+  } catch {
+    throw new Error(res.ok ? 'Server returned unreadable data' : 'Server unavailable, try again shortly')
+  }
 }
 
 export type Latest = {
@@ -106,7 +110,6 @@ export async function getHoldings(owner: string): Promise<HoldingRow[]> {
   return Array.isArray(json) ? (json as HoldingRow[]) : ((json?.holdings ?? []) as HoldingRow[])
 }
 
-
 export type SeriesPoint = {
   ts: number
   symbol: string
@@ -146,14 +149,6 @@ export async function getCollateral(): Promise<Collateral[]> {
   collCache = (await res.json()) as Collateral[]
   return collCache
 }
-
-
-
-
-
-
-
-
 
 export async function getBalances(owner: string): Promise<{ usdc: number; skr: number }> {
   const res = await fetchT(`${BASE}/holdings?owner=${owner}`)
@@ -223,10 +218,7 @@ export async function getReliability(symbol: string): Promise<TokenReliability |
   const json: any = await res.json()
   return { open: json?.open ?? null, overall: json?.overall ?? null }
 }
-export async function getPricesAgo(
-  symbols: string[],
-  hours = 24
-): Promise<Record<string, { px: number; ts: number }>> {
+export async function getPricesAgo(symbols: string[], hours = 24): Promise<Record<string, { px: number; ts: number }>> {
   if (!symbols.length) return {}
   const res = await fetch(`${BASE}/prices?symbols=${symbols.join(',')}&hours=${hours}`)
   if (!res.ok) return {}

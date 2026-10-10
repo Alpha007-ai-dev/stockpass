@@ -10,7 +10,12 @@ function tokenLabel(row: Latest, fallback: string) {
 }
 
 export function NormalizationHero({
-  symbol, mine, peer, reference, total = 2, ticker,
+  symbol,
+  mine,
+  peer,
+  reference,
+  total = 2,
+  ticker,
 }: {
   symbol: string
   mine: Latest
@@ -55,22 +60,32 @@ export function NormalizationHero({
         {shrinks && <Text style={s.gapLabel}>PRICE DIFFERENCE AS LISTED</Text>}
         {shrinks && <Text style={s.arrow}>&#8595;</Text>}
         <Text style={[s.gapGood, num]}>{normGap} bps</Text>
-        <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>{shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} ({(normGap / 100).toFixed(2)}%)</Text>
+        <Text style={[s.gapLabel, { color: T.accent, textAlign: 'center' }]}>
+          {shrinks ? 'DIFFERENCE AFTER ADJUSTING FOR TOKEN SIZE' : 'PRICE DIFFERENCE BETWEEN THE TWO TOKENS'} (
+          {(normGap / 100).toFixed(2)}%)
+        </Text>
       </View>
 
       {peerCheaper && (
         <Pressable onPress={() => router.push(`/passport?symbol=${peer.symbol}`)}>
-          <Text style={s.cheaper}>{tokenLabel(peer, 'Other')} is {normGap} bps cheaper to buy right now, entry costs included. View it ›</Text>
+          <Text style={s.cheaper}>
+            {tokenLabel(peer, 'Other')} is {normGap} bps cheaper to buy right now, entry costs included. View it ›
+          </Text>
         </Pressable>
       )}
       {mineCheaper && (
-        <Text style={s.cheaper}>{symbol} is {normGap} bps cheaper to buy right now, entry costs included.</Text>
+        <Text style={s.cheaper}>
+          {symbol} is {normGap} bps cheaper to buy right now, entry costs included.
+        </Text>
       )}
 
       {shrinks && (
         <View style={s.why}>
           <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
-          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily mean a cheaper stock.</Text>
+          <Text style={s.whyBody}>
+            These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily
+            mean a cheaper stock.
+          </Text>
         </View>
       )}
 
@@ -80,7 +95,10 @@ export function NormalizationHero({
         </Pressable>
       )}
 
-      <Text style={s.tiny}>The difference is what you pay per share. The cost below is half the round-trip spread, measured on each token&apos;s own price.</Text>
+      <Text style={s.tiny}>
+        The difference is what you pay per share. The cost below is half the round-trip spread, measured on each
+        token&apos;s own price.
+      </Text>
 
       {closed && (
         <Text style={s.tiny}>Wall Street is closed, so these are the latest prices we measured on Solana.</Text>

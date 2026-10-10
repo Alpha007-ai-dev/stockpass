@@ -5,7 +5,9 @@ export type SizeCurve = { symbol: string; market_state: string; window_days: num
 
 export async function getSizeCurve(symbol: string, state: string): Promise<SizeCurve | null> {
   try {
-    const res = await fetch(`${BASE}/size-curve?symbol=${encodeURIComponent(symbol)}&state=${encodeURIComponent(state)}`)
+    const res = await fetch(
+      `${BASE}/size-curve?symbol=${encodeURIComponent(symbol)}&state=${encodeURIComponent(state)}`,
+    )
     if (!res.ok) return null
     return (await res.json()) as SizeCurve
   } catch {

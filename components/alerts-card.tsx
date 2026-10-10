@@ -10,12 +10,19 @@ export function AlertsCard({ owner }: { owner: string | undefined }) {
   const [hits, setHits] = useState<CostAlert[]>([])
   const at = useRef(0)
 
-  useFocusEffect(useCallback(() => {
-    if (!owner) { setHits([]); return }
-    if (Date.now() - at.current < 30000) return
-    at.current = Date.now()
-    getAlerts(owner).then((all) => setHits(all.filter((a) => a.triggered))).catch(() => {})
-  }, [owner]))
+  useFocusEffect(
+    useCallback(() => {
+      if (!owner) {
+        setHits([])
+        return
+      }
+      if (Date.now() - at.current < 30000) return
+      at.current = Date.now()
+      getAlerts(owner)
+        .then((all) => setHits(all.filter((a) => a.triggered)))
+        .catch(() => {})
+    }, [owner]),
+  )
 
   if (!owner || hits.length === 0) return null
   return (
@@ -24,7 +31,8 @@ export function AlertsCard({ owner }: { owner: string | undefined }) {
       {hits.map((a) => (
         <Pressable key={a.symbol} style={s.row} onPress={() => router.push(`/buy?symbol=${a.symbol}`)}>
           <Text style={s.text}>
-            <Text style={s.strong}>{a.symbol}</Text> now costs <Text style={[s.strong, num]}>{a.current_bps} bps</Text> to buy, under your {a.threshold_bps} bps
+            <Text style={s.strong}>{a.symbol}</Text> now costs <Text style={[s.strong, num]}>{a.current_bps} bps</Text>{' '}
+            to buy, under your {a.threshold_bps} bps
           </Text>
           <Text style={s.chev}>›</Text>
         </Pressable>
@@ -34,7 +42,15 @@ export function AlertsCard({ owner }: { owner: string | undefined }) {
 }
 
 const s = StyleSheet.create({
-  card: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.accent, borderRadius: 16, padding: 14, gap: 8, marginBottom: 12 },
+  card: {
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.accent,
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+    marginBottom: 12,
+  },
   kicker: { color: T.accent, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   text: { color: T.dim, fontSize: 15, flexShrink: 1, lineHeight: 21 },

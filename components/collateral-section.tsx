@@ -7,7 +7,11 @@ import { kaminoBorrowUrl } from '@/lib/kamino'
 export function CollateralSection({ symbol, otherSymbol }: { symbol: string; otherSymbol: string }) {
   const [rows, setRows] = useState<Collateral[] | null>(null)
 
-  useEffect(() => { getCollateral().then(setRows).catch(() => setRows([])) }, [])
+  useEffect(() => {
+    getCollateral()
+      .then(setRows)
+      .catch(() => setRows([]))
+  }, [])
   if (!rows) return null
 
   const mine = rows.filter((r) => r.symbol === symbol)
@@ -36,7 +40,9 @@ export function CollateralSection({ symbol, otherSymbol }: { symbol: string; oth
                 <Text style={s.statLabel}>max LTV</Text>
               </View>
               <View style={s.stats}>
-                <Text style={[s.stat, num, best?.market === r.market && s.accent]}>{(r.borrowApy * 100).toFixed(2)}%</Text>
+                <Text style={[s.stat, num, best?.market === r.market && s.accent]}>
+                  {(r.borrowApy * 100).toFixed(2)}%
+                </Text>
                 <Text style={s.statLabel}>borrow</Text>
               </View>
               <Text style={s.extLink}>&#8599;</Text>
@@ -48,15 +54,20 @@ export function CollateralSection({ symbol, otherSymbol }: { symbol: string; oth
               <Text style={s.noticeIcon}>&#9888;</Text>
               <Text style={s.noticeText}>
                 Same token. Different lending markets. The borrowing rate is{' '}
-                {(Math.max(...mine.map((r) => r.borrowApy)) / Math.max(0.0001, Math.min(...mine.map((r) => r.borrowApy)))).toFixed(1)}× higher
-                depending on the market.
+                {(
+                  Math.max(...mine.map((r) => r.borrowApy)) /
+                  Math.max(0.0001, Math.min(...mine.map((r) => r.borrowApy)))
+                ).toFixed(1)}
+                × higher depending on the market.
               </Text>
             </View>
           )}
 
           {other.length === 0 && (
             <View style={s.blocked}>
-              <Text style={s.blockedTitle}>&#8856;  Not accepted ({otherSymbol.endsWith('on') ? 'Ondo' : 'xStocks'})</Text>
+              <Text style={s.blockedTitle}>
+                &#8856; Not accepted ({otherSymbol.endsWith('on') ? 'Ondo' : 'xStocks'})
+              </Text>
               <Text style={s.faint}>{otherSymbol} is currently not accepted as collateral on Kamino markets.</Text>
             </View>
           )}
@@ -73,7 +84,15 @@ export function CollateralSection({ symbol, otherSymbol }: { symbol: string; oth
 const s = StyleSheet.create({
   card: { backgroundColor: T.surface, borderRadius: 20, borderWidth: 1, borderColor: T.border, padding: 16, gap: 10 },
   title: { color: T.text, fontSize: 15, fontWeight: '600' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, borderColor: T.border, padding: 12 },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: T.border,
+    padding: 12,
+  },
   rowBest: { borderColor: T.accent },
   market: { color: T.text, fontSize: 14, fontWeight: '600' },
   notice: { flexDirection: 'row', gap: 10, backgroundColor: '#2A2110', borderRadius: 14, padding: 12 },
@@ -89,6 +108,3 @@ const s = StyleSheet.create({
   link: { color: T.accent, fontSize: 13, fontWeight: '600' },
   extLink: { color: T.faint, fontSize: 16, marginLeft: 4 },
 })
-
-
-

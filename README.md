@@ -24,16 +24,16 @@ A tokenized stock looks simple. It is not.
 
 ## What the app does
 
-| Screen | Question it answers |
-|---|---|
-| **Home** | What should I know right now about what I own? |
-| **Markets** | What can I buy, and what does entry cost? |
-| **DeFi** | What can I do with what I own? |
-| **Wallet** | What exactly do I own? |
-| **Passport** | What exactly is this token? |
-| **Compare** | Which issuer is currently cheaper? |
-| **Buy / Sell** | What will this transaction actually cost me? |
-| **Portfolio Analytics** | What does my ownership actually cost me? |
+| Screen                  | Question it answers                            |
+| ----------------------- | ---------------------------------------------- |
+| **Home**                | What should I know right now about what I own? |
+| **Markets**             | What can I buy, and what does entry cost?      |
+| **DeFi**                | What can I do with what I own?                 |
+| **Wallet**              | What exactly do I own?                         |
+| **Passport**            | What exactly is this token?                    |
+| **Compare**             | Which issuer is currently cheaper?             |
+| **Buy / Sell**          | What will this transaction actually cost me?   |
+| **Portfolio Analytics** | What does my ownership actually cost me?       |
 
 ### Signature features
 
@@ -51,11 +51,11 @@ All numbers below come from our own collector, not from documentation.
 
 ### Execution cost by issuer (round trip, $1,000 size)
 
-| | Weekday (market open) | Weekend |
-|---|---|---|
-| xStocks | 22–26 bps | 22–27 bps |
-| Ondo | 32–37 bps | 41–53 bps |
-| Backpack | 25 bps | 25–30 bps |
+|          | Weekday (market open) | Weekend   |
+| -------- | --------------------- | --------- |
+| xStocks  | 22–26 bps             | 22–27 bps |
+| Ondo     | 32–37 bps             | 41–53 bps |
+| Backpack | 25 bps                | 25–30 bps |
 
 Ondo's cost roughly doubles when US markets are closed. xStocks stays flat.
 
@@ -75,10 +75,10 @@ Many smaller tokens return no quote at all, especially on weekends. One token (T
 
 NVDAx is accepted on two Kamino markets at the same time. What a holder pays is the rate of the stablecoin they borrow against it, so the table shows that rate (measured 2026-10-10):
 
-| Market | Max LTV | Borrow asset | Borrow APY |
-|---|---|---|---|
-| Kamino xStocks Market | 55% | USDC | 5.27% |
-| Kamino Sentora xStocks | 62% | PYUSD | 0.74% |
+| Market                 | Max LTV | Borrow asset | Borrow APY |
+| ---------------------- | ------- | ------------ | ---------- |
+| Kamino xStocks Market  | 55%     | USDC         | 5.27%      |
+| Kamino Sentora xStocks | 62%     | PYUSD        | 0.74%      |
 
 The rates are for **different assets**, so this is not a like-for-like comparison, and the Sentora market is smaller ($0.5M against $2.5M), so its rate may be less settled. Not every token accepted as collateral can itself be borrowed. Ondo tokens are not accepted as collateral in either market.
 
@@ -178,6 +178,7 @@ The fee is deliberately low. The real differences between issuers are often only
 What comes next, in the order we would build it. Nothing below is claimed as shipped.
 
 **Near term**
+
 - **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
 - **Safer v2 route.** Allow-list the programs in a Worker-built transaction (the fee-payer check already ships); sign alerts with a wallet message so only the owner can change them.
 - **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
@@ -186,6 +187,7 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 - **Plain-language notes on unusual costs.** The Worker already finds measurements outside a token's normal range; the written explanation needs a Claude API key and only ever describes the evidence, never a cause.
 
 **Later**
+
 - **Real-world assets (RWA) beyond stocks.** Tokenized stocks are the first market, not the last. The same measurement (what it costs to get in and out, by market state) applies to any tokenized real-world asset: treasuries, gold, funds. Same collector, new tickers, same cost-first view in the app.
 - **More issuers and routes** as they appear on Solana, measured the same way so they stay comparable.
 - **An open measurement API**, so other apps can show the cost before the trade.

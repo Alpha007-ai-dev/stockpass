@@ -34,9 +34,15 @@ export default function SellScreen() {
   const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [demo, setDemo] = useState(false)
-  useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
+  useEffect(() => {
+    isDemo()
+      .then(setDemo)
+      .catch(() => {})
+  }, [])
   const [status, setStatus] = useState<string | null>(null)
-  const [done, setDone] = useState<{ symbol: string; amount: number; receiveUsd: number; signature: string } | null>(null)
+  const [done, setDone] = useState<{ symbol: string; amount: number; receiveUsd: number; signature: string } | null>(
+    null,
+  )
 
   useEffect(() => {
     Promise.all([getStats(), getGroups()])
@@ -52,17 +58,27 @@ export default function SellScreen() {
       try {
         if (await isDemo()) {
           const d = DEMO_HOLDINGS.find((x) => x.symbol === sym)?.walletAmount ?? null
-          setBalance(d); setBalState(d !== null ? 'ready' : 'none')
+          setBalance(d)
+          setBalState(d !== null ? 'ready' : 'none')
           return
         }
         const addr = account?.address
-        if (!addr) { setBalance(null); setBalState('noWallet'); return }
+        if (!addr) {
+          setBalance(null)
+          setBalState('noWallet')
+          return
+        }
         setBalState('loading')
         const rows = await getHoldings(String(addr))
         const held = rows.find((r) => r.symbol === sym)?.walletAmount ?? null
-        setBalance(held); setBalState(held !== null ? 'ready' : 'none')
-        getBalances(String(addr)).then((b) => setSkr(b.skr)).catch(() => {})
-      } catch { setBalState('error') }
+        setBalance(held)
+        setBalState(held !== null ? 'ready' : 'none')
+        getBalances(String(addr))
+          .then((b) => setSkr(b.skr))
+          .catch(() => {})
+      } catch {
+        setBalState('error')
+      }
     })()
   }, [sym, account, balTry])
 
@@ -75,7 +91,9 @@ export default function SellScreen() {
   const exitCostUsd = grossUsd !== null && ok ? (grossUsd / (1 - exitFrac)) * exitFrac : null
   const feeBps = feeBpsFor(skr)
   // The SKR balance can arrive after a quote was fetched: a quote made with the old fee must not stay on screen.
-  useEffect(() => { setQuote(null) }, [feeBps])
+  useEffect(() => {
+    setQuote(null)
+  }, [feeBps])
   const inflight = useRef(false)
   const feeRef = useRef(feeBps)
   feeRef.current = feeBps
@@ -84,18 +102,24 @@ export default function SellScreen() {
   const isV2 = quote?.route === 'v2'
   const chargedBps = isV2 ? quote!.feeBps : feeBps
   const feeUsd = grossUsd !== null ? (grossUsd * chargedBps) / 10000 : null
-  const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
-    ? grossUsd - feeUsd
-    : null
+  const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null ? grossUsd - feeUsd : null
 
   const prepare = useCallback(async () => {
     if (!token || amount === null || amount <= 0 || inflight.current) return
     inflight.current = true
-    setBusy(true); setStatus(null); setQuote(null)
+    setBusy(true)
+    setStatus(null)
+    setQuote(null)
     try {
       const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
       const q = await getBestQuote(
-        { key: token.symbol, mint: token.mint, decimals: token.decimals, symbol: token.symbol, feeAccount: usdc.feeAccount } as any,
+        {
+          key: token.symbol,
+          mint: token.mint,
+          decimals: token.decimals,
+          symbol: token.symbol,
+          feeAccount: usdc.feeAccount,
+        } as any,
         amount,
         usdc.mint,
         usdc.decimals,
@@ -106,20 +130,24 @@ export default function SellScreen() {
       // The SKR balance may have arrived while the quote was loading: a quote made with the old fee must not be shown.
       if (feeRef.current !== feeBps) throw new Error('Your fee tier just changed. Review again.')
       setQuote(q)
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      setStatus((e as Error).message)
+    }
     inflight.current = false
     setBusy(false)
   }, [token, amount, feeBps])
 
   // On the v2 route Jupiter takes its own fee instead of the StockPass fee, so compare the quote against that estimate.
   const baselineUsd = quote?.route === 'v2' && grossUsd !== null ? grossUsd * (1 - quote.feeBps / 10000) : netUsd
-  const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || (baselineUsd !== null && quote.outUi < baselineUsd * 0.9))
+  const blocked =
+    quote !== null && (quote.priceImpactPct * 100 > 5 || (baselineUsd !== null && quote.outUi < baselineUsd * 0.9))
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote || inflight.current) return
     inflight.current = true
     let attempted = false
-    setBusy(true); setStatus(null)
+    setBusy(true)
+    setStatus(null)
     try {
       if (await isDemo()) throw new Error('Demo mode cannot trade. Connect a real wallet.')
       const addr = account?.address ?? (await connect())?.address
@@ -133,7 +161,9 @@ export default function SellScreen() {
       // After a signing attempt the sale may have gone through even though an error came back: drop the quote so the
       // button cannot sign a second sale, and send the user to the wallet history first.
       if (attempted) setQuote(null)
-      setStatus(attempted ? `${(e as Error).message} Check your wallet history before trying again.` : (e as Error).message)
+      setStatus(
+        attempted ? `${(e as Error).message} Check your wallet history before trying again.` : (e as Error).message,
+      )
     }
     inflight.current = false
     setBusy(false)
@@ -151,7 +181,8 @@ export default function SellScreen() {
           <Text style={s.title}>Sell {sym}</Text>
           {token && (
             <Text style={[s.subtitle, { color: issuerColor(token.issuer) }]} numberOfLines={1}>
-              {token.issuer}{token.name ? ` · ${token.name}` : ''}
+              {token.issuer}
+              {token.name ? ` · ${token.name}` : ''}
             </Text>
           )}
         </View>
@@ -180,12 +211,21 @@ export default function SellScreen() {
 
             <View style={s.pctRow}>
               {PCTS.map((p) => (
-                <Pressable key={p} onPress={() => { setPct(p); setQuote(null) }} style={[s.pct, pct === p && s.pctOn]}>
+                <Pressable
+                  key={p}
+                  onPress={() => {
+                    setPct(p)
+                    setQuote(null)
+                  }}
+                  style={[s.pct, pct === p && s.pctOn]}
+                >
                   <Text style={[s.pctText, pct === p && s.pctTextOn]}>{p === 100 ? 'Max' : `${p}%`}</Text>
                 </Pressable>
               ))}
             </View>
-            <Text style={s.tiny}>Balance {balance.toFixed(4)} {sym}</Text>
+            <Text style={s.tiny}>
+              Balance {balance.toFixed(4)} {sym}
+            </Text>
           </View>
 
           {grossUsd !== null && (
@@ -196,16 +236,25 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>${grossUsd.toFixed(2)}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)</Text>
+                <Text style={s.label}>
+                  Included exit cost ({!ok ? '—' : (latest!.exit_bps as number) < 0 ? '~0' : latest!.exit_bps} bps)
+                </Text>
                 <Text style={[s.value, num]}>{exitCostUsd !== null ? `~${fmtUsd(exitCostUsd)}` : '—'}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>{isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}</Text>
-                <Text style={[s.value, num]}>{feeUsd! > 0 ? '-' : ''}{fmtUsd(feeUsd!)}</Text>
+                <Text style={s.label}>
+                  {isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}
+                </Text>
+                <Text style={[s.value, num]}>
+                  {feeUsd! > 0 ? '-' : ''}
+                  {fmtUsd(feeUsd!)}
+                </Text>
               </View>
               {isV2 ? null : skrDiscount ? (
                 <View style={s.skrRow}>
-                  <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
+                  <Text style={s.skrText}>
+                    SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}
+                  </Text>
                   <Text style={s.skrText}>✓</Text>
                 </View>
               ) : (
@@ -214,7 +263,10 @@ export default function SellScreen() {
               <View style={s.divider} />
               <View style={s.row}>
                 <Text style={s.totalLabel}>Est. receive</Text>
-                <Text style={[s.totalValue, num]}>{netUsd!.toFixed(2)}<Text style={s.tiny}> USDC</Text></Text>
+                <Text style={[s.totalValue, num]}>
+                  {netUsd!.toFixed(2)}
+                  <Text style={s.tiny}> USDC</Text>
+                </Text>
               </View>
               <View style={s.row}>
                 <Text style={s.tiny}>Network fee, paid in SOL (est.)</Text>
@@ -226,22 +278,78 @@ export default function SellScreen() {
           {quote && (
             <View style={s.card}>
               <Text style={s.kicker}>ROUTE DETAILS</Text>
-              <View style={s.row}><Text style={s.label}>You receive</Text><Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text></View>
-              <View style={s.row}><Text style={s.label}>Route</Text><Text style={s.small}>{quote.routeLabel ?? '-'}</Text></View>
-              {quote.altOutUi !== undefined && (<View style={s.row}><Text style={s.label}>Other route ({quote.altLabel})</Text><Text style={[s.small, num]}>{quote.altOutUi.toFixed(2)} USDC</Text></View>)}
-              {quote.route === 'v2' && (<View style={s.row}><Text style={s.label}>StockPass fee</Text><Text style={s.small}>none on this route</Text></View>)}
-              {baselineUsd !== null && (<View style={s.row}><Text style={s.label}>vs. estimate</Text><Text style={[s.small, num]}>{quote.outUi - baselineUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - baselineUsd).toFixed(2)}</Text></View>)}
-              {quote.impactKnown !== false && (<View style={s.row}><Text style={s.label}>Price impact</Text><Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text></View>)}
-              <View style={s.row}><Text style={s.label}>Slippage limit</Text><Text style={[s.small, num]}>{quote.slippageBps} bps</Text></View>
-              {netUsd !== null && quote.outUi < netUsd * 0.99 && (<Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we measured. Compare it with the other route above before signing.</Text>)}
+              <View style={s.row}>
+                <Text style={s.label}>You receive</Text>
+                <Text style={[s.small, num]}>{quote.outUi.toFixed(2)} USDC</Text>
+              </View>
+              <View style={s.row}>
+                <Text style={s.label}>Route</Text>
+                <Text style={s.small}>{quote.routeLabel ?? '-'}</Text>
+              </View>
+              {quote.altOutUi !== undefined && (
+                <View style={s.row}>
+                  <Text style={s.label}>Other route ({quote.altLabel})</Text>
+                  <Text style={[s.small, num]}>{quote.altOutUi.toFixed(2)} USDC</Text>
+                </View>
+              )}
+              {quote.route === 'v2' && (
+                <View style={s.row}>
+                  <Text style={s.label}>StockPass fee</Text>
+                  <Text style={s.small}>none on this route</Text>
+                </View>
+              )}
+              {baselineUsd !== null && (
+                <View style={s.row}>
+                  <Text style={s.label}>vs. estimate</Text>
+                  <Text style={[s.small, num]}>
+                    {quote.outUi - baselineUsd >= 0 ? '+' : '-'}${Math.abs(quote.outUi - baselineUsd).toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              {quote.impactKnown !== false && (
+                <View style={s.row}>
+                  <Text style={s.label}>Price impact</Text>
+                  <Text style={[s.small, num]}>{(quote.priceImpactPct * 100).toFixed(3)}%</Text>
+                </View>
+              )}
+              <View style={s.row}>
+                <Text style={s.label}>Slippage limit</Text>
+                <Text style={[s.small, num]}>{quote.slippageBps} bps</Text>
+              </View>
+              {netUsd !== null && quote.outUi < netUsd * 0.99 && (
+                <Text style={{ color: T.warn, fontSize: 13, lineHeight: 19 }}>
+                  The live route returns {(((netUsd - quote.outUi) / netUsd) * 100).toFixed(1)}% less than the price we
+                  measured. Compare it with the other route above before signing.
+                </Text>
+              )}
             </View>
           )}
 
-          <Pressable style={[s.primary, (blocked || demo) && { opacity: 0.35 }]} onPress={quote ? sign : prepare} disabled={busy || !ok || blocked || demo}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: selling is disabled' : quote ? (blocked ? 'Blocked: route loses too much' : 'Review and sign') : 'Review Sale'}</Text>}
+          <Pressable
+            style={[s.primary, (blocked || demo) && { opacity: 0.35 }]}
+            onPress={quote ? sign : prepare}
+            disabled={busy || !ok || blocked || demo}
+          >
+            {busy ? (
+              <ActivityIndicator color={T.bg} />
+            ) : (
+              <Text style={s.primaryText}>
+                {demo
+                  ? 'Demo mode: selling is disabled'
+                  : quote
+                    ? blocked
+                      ? 'Blocked: route loses too much'
+                      : 'Review and sign'
+                    : 'Review Sale'}
+              </Text>
+            )}
           </Pressable>
           {!ok && <Text style={s.tiny}>No executable quote right now, so this position cannot be priced.</Text>}
-          {blocked && <Text style={[s.tiny, { color: T.down }]}>This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.</Text>}
+          {blocked && (
+            <Text style={[s.tiny, { color: T.down }]}>
+              This route would return far less than the price we measured, so signing is disabled. Try a smaller amount.
+            </Text>
+          )}
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>
         </>
       )}
@@ -250,8 +358,13 @@ export default function SellScreen() {
         <>
           <View style={s.card}>
             <Text style={s.kicker}>SALE SENT</Text>
-            <Text style={[s.tiny, { color: T.text, fontSize: 15 }]}>{done.symbol} · {done.amount.toFixed(4)} sold</Text>
-            <Text style={s.tiny}>Expected to receive about {done.receiveUsd.toFixed(2)} USDC, based on the reviewed quote, not the final fill.</Text>
+            <Text style={[s.tiny, { color: T.text, fontSize: 15 }]}>
+              {done.symbol} · {done.amount.toFixed(4)} sold
+            </Text>
+            <Text style={s.tiny}>
+              Expected to receive about {done.receiveUsd.toFixed(2)} USDC, based on the reviewed quote, not the final
+              fill.
+            </Text>
             <Pressable onPress={() => Linking.openURL(`https://solscan.io/tx/${done.signature}`)}>
               <Text style={[s.tiny, { color: T.accent }]}>View on Solscan ›</Text>
             </Pressable>
@@ -284,7 +397,15 @@ const s = StyleSheet.create({
   pctText: { color: T.dim, fontSize: 14, fontWeight: '600' },
   pctTextOn: { color: T.bg, fontWeight: '700' },
   divider: { height: 1, backgroundColor: T.border, marginVertical: 6 },
-  skrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1A2410', borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8 },
+  skrRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#1A2410',
+    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+  },
   skrText: { color: T.accent, fontSize: 13, fontWeight: '600' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 },
   label: { color: T.dim, fontSize: 15 },
@@ -293,8 +414,13 @@ const s = StyleSheet.create({
   totalLabel: { color: T.text, fontSize: 16, fontWeight: '700' },
   totalValue: { color: T.accent, fontSize: 20, fontWeight: '800', letterSpacing: -0.6 },
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },
-  primary: { backgroundColor: T.accent, borderRadius: 14, height: 54, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  primary: {
+    backgroundColor: T.accent,
+    borderRadius: 14,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-

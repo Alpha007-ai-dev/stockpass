@@ -26,7 +26,7 @@ export default function DefiScreen() {
   const [error, setError] = useState<string | null>(null)
   const modeRef = useRef<boolean | null>(null)
   const scrollRef = useScrollReset()
-
+
   const insets = useSafeAreaInsets()
   const load = useCallback(async () => {
     setBusy(true)
@@ -48,42 +48,58 @@ export default function DefiScreen() {
         holdings = await getHoldings(String(addr))
       }
 
-      setRows(holdings.map((token) => {
-        const l = latest.get(token.symbol)
-        const shares = token.walletAmount * (l?.multiplier ?? 1)
-        const markets = collateral.filter((c) => c.symbol === token.symbol)
-        const peers = groups.find((g) => g.ticker === token.ticker)?.tokens ?? []
-        const accepted = peers.find((p) => p.symbol !== token.symbol && collateral.some((c) => c.symbol === p.symbol))
-        return {
-          token,
-          value: l?.sell_px ? shares * l.sell_px : null,
-          markets,
-          peerAccepted: accepted ? accepted.symbol : null,
-        }
-      }).sort((a, b) => b.markets.length - a.markets.length))
+      setRows(
+        holdings
+          .map((token) => {
+            const l = latest.get(token.symbol)
+            const shares = token.walletAmount * (l?.multiplier ?? 1)
+            const markets = collateral.filter((c) => c.symbol === token.symbol)
+            const peers = groups.find((g) => g.ticker === token.ticker)?.tokens ?? []
+            const accepted = peers.find(
+              (p) => p.symbol !== token.symbol && collateral.some((c) => c.symbol === p.symbol),
+            )
+            return {
+              token,
+              value: l?.sell_px ? shares * l.sell_px : null,
+              markets,
+              peerAccepted: accepted ? accepted.symbol : null,
+            }
+          })
+          .sort((a, b) => b.markets.length - a.markets.length),
+      )
     } catch (e) {
       setError((e as Error).message)
     }
     setBusy(false)
   }, [account, connect])
 
-  useEffect(() => { isDemo().then((d) => { modeRef.current = d; if (d) load() }) }, [load])
+  useEffect(() => {
+    isDemo().then((d) => {
+      modeRef.current = d
+      if (d) load()
+    })
+  }, [load])
 
   // Connecting on any tab connects the whole app, so load the holdings as soon as the wallet is there.
   useEffect(() => {
     if (!account?.address) return
-    isDemo().then((d) => { if (!d) load() })
+    isDemo().then((d) => {
+      if (!d) load()
+    })
   }, [account?.address])
 
   // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
-  useFocusEffect(useCallback(() => {
-    isDemo().then((d) => {
-      if (modeRef.current === null || d === modeRef.current) return
-      modeRef.current = d
-      setRows(null); setError(null)
-      if (d || account?.address) load()
-    })
-  }, [account, load]))
+  useFocusEffect(
+    useCallback(() => {
+      isDemo().then((d) => {
+        if (modeRef.current === null || d === modeRef.current) return
+        modeRef.current = d
+        setRows(null)
+        setError(null)
+        if (d || account?.address) load()
+      })
+    }, [account, load]),
+  )
 
   const supported = rows?.filter((r) => r.markets.length > 0) ?? []
   const blocked = rows?.filter((r) => r.markets.length === 0) ?? []
@@ -92,9 +108,12 @@ export default function DefiScreen() {
   const collateralValue = supported.reduce((n, r) => n + (r.value ?? 0), 0)
 
   return (
-    <ScrollView ref={scrollRef as any} style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
-      refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}>
-
+    <ScrollView
+      ref={scrollRef as any}
+      style={s.screen}
+      contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
+      refreshControl={<RefreshControl refreshing={busy} onRefresh={load} tintColor={T.dim} />}
+    >
       <View style={s.header}>
         <Text style={s.title}>DeFi</Text>
         <Text style={s.sub}>What you can do with what you own</Text>
@@ -111,7 +130,11 @@ export default function DefiScreen() {
           </View>
           {account?.address ? (
             <View style={{ paddingVertical: 12, alignItems: 'center' }}>
-              {busy ? <ActivityIndicator color={T.accent} /> : <Text style={s.tiny}>Pull down to load your holdings.</Text>}
+              {busy ? (
+                <ActivityIndicator color={T.accent} />
+              ) : (
+                <Text style={s.tiny}>Pull down to load your holdings.</Text>
+              )}
             </View>
           ) : (
             <Pressable style={s.primary} onPress={load} disabled={busy}>
@@ -150,22 +173,33 @@ export default function DefiScreen() {
 
           {supported.map((r) => {
             const best = r.markets.reduce((a, b) => (a.borrowApy <= b.borrowApy ? a : b))
-            const ratio = Math.max(...r.markets.map((m) => m.borrowApy)) / Math.max(0.0001, Math.min(...r.markets.map((m) => m.borrowApy)))
+            const ratio =
+              Math.max(...r.markets.map((m) => m.borrowApy)) /
+              Math.max(0.0001, Math.min(...r.markets.map((m) => m.borrowApy)))
             return (
               <View key={r.token.symbol} style={s.card}>
                 <View style={s.assetHead}>
-                  <TokenIcon icon={r.token.icon} symbol={r.token.symbol} label={r.token.ticker} issuer={r.token.issuer} size={40} />
+                  <TokenIcon
+                    icon={r.token.icon}
+                    symbol={r.token.symbol}
+                    label={r.token.ticker}
+                    issuer={r.token.issuer}
+                    size={40}
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={s.symbol}>{r.token.symbol}</Text>
                     <Text style={[s.issuer, { color: issuerColor(r.token.issuer) }]}>{r.token.issuer}</Text>
                   </View>
-                  <Text style={s.tiny}>{r.markets.length} market{r.markets.length === 1 ? '' : 's'}</Text>
+                  <Text style={s.tiny}>
+                    {r.markets.length} market{r.markets.length === 1 ? '' : 's'}
+                  </Text>
                 </View>
 
                 {r.markets.map((m) => {
                   const biggest = r.markets.reduce((a, b) => (a.marketUsd >= b.marketUsd ? a : b))
                   const isBest = r.markets.length > 1 && best.market === m.market
-                  const isBiggest = r.markets.length > 1 && biggest.market === m.market && biggest.market !== best.market
+                  const isBiggest =
+                    r.markets.length > 1 && biggest.market === m.market && biggest.market !== best.market
                   const solo = r.markets.length === 1
                   if (isBest || isBiggest || solo) {
                     return (
@@ -181,11 +215,17 @@ export default function DefiScreen() {
                             <Text style={s.tinyLabel}>max LTV</Text>
                           </View>
                           <View>
-                            <Text style={[s.apy, num, isBest && { color: T.accent }]}>{(m.borrowApy * 100).toFixed(2)}%</Text>
-                            <Text style={s.tinyLabel}>{m.debtSymbol ? `${m.debtSymbol} borrow APY` : 'borrow APY'}</Text>
+                            <Text style={[s.apy, num, isBest && { color: T.accent }]}>
+                              {(m.borrowApy * 100).toFixed(2)}%
+                            </Text>
+                            <Text style={s.tinyLabel}>
+                              {m.debtSymbol ? `${m.debtSymbol} borrow APY` : 'borrow APY'}
+                            </Text>
                           </View>
                           <View>
-                            <Text style={[s.apy, num, { color: m.supplyApy >= 0.005 ? T.accent : T.dim }]}>{(m.supplyApy * 100).toFixed(2)}%</Text>
+                            <Text style={[s.apy, num, { color: m.supplyApy >= 0.005 ? T.accent : T.dim }]}>
+                              {(m.supplyApy * 100).toFixed(2)}%
+                            </Text>
                             <Text style={s.tinyLabel}>supply APY</Text>
                           </View>
                           <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -195,16 +235,21 @@ export default function DefiScreen() {
                         </View>
                         <View style={s.tagRow}>
                           <Text style={s.tag}>Collateral ✓</Text>
-                          {m.debt && m.debt.length > 0 && <Text style={s.tag}>Borrow {m.debt.map((d) => d.symbol).join(' · ')}</Text>}
+                          {m.debt && m.debt.length > 0 && (
+                            <Text style={s.tag}>Borrow {m.debt.map((d) => d.symbol).join(' · ')}</Text>
+                          )}
                         </View>
                       </View>
                     )
                   }
                   return (
                     <View key={m.market} style={s.marketRow}>
-                      <Text style={s.marketRowName} numberOfLines={1}>{m.market}</Text>
+                      <Text style={s.marketRowName} numberOfLines={1}>
+                        {m.market}
+                      </Text>
                       <Text style={[s.marketRowDetail, num]}>
-                        {Math.round(m.maxLtv * 100)}% LTV · {(m.borrowApy * 100).toFixed(2)}% {m.debtSymbol ?? ''} borrow · {(m.supplyApy * 100).toFixed(2)}% supply · ${(m.marketUsd / 1e6).toFixed(1)}M
+                        {Math.round(m.maxLtv * 100)}% LTV · {(m.borrowApy * 100).toFixed(2)}% {m.debtSymbol ?? ''}{' '}
+                        borrow · {(m.supplyApy * 100).toFixed(2)}% supply · ${(m.marketUsd / 1e6).toFixed(1)}M
                       </Text>
                     </View>
                   )
@@ -212,20 +257,23 @@ export default function DefiScreen() {
 
                 {r.markets.length > 1 && (
                   <Text style={s.tiny}>
-                    Same collateral, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the expensive one.
+                    Same collateral, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the
+                    expensive one.
                   </Text>
                 )}
 
-                {r.markets.length > 1 && (() => {
-                  const biggest = r.markets.reduce((a, b) => (a.marketUsd >= b.marketUsd ? a : b))
-                  if (biggest.market === best.market) return null
-                  return (
-                    <Text style={s.tiny}>
-                      Rates move with how much of a market is borrowed. The cheaper one here is also the smaller one
-                      (${(best.marketUsd / 1e6).toFixed(1)}M against ${(biggest.marketUsd / 1e6).toFixed(1)}M), so its rate may be less settled.
-                    </Text>
-                  )
-                })()}
+                {r.markets.length > 1 &&
+                  (() => {
+                    const biggest = r.markets.reduce((a, b) => (a.marketUsd >= b.marketUsd ? a : b))
+                    if (biggest.market === best.market) return null
+                    return (
+                      <Text style={s.tiny}>
+                        Rates move with how much of a market is borrowed. The cheaper one here is also the smaller one
+                        (${(best.marketUsd / 1e6).toFixed(1)}M against ${(biggest.marketUsd / 1e6).toFixed(1)}M), so its
+                        rate may be less settled.
+                      </Text>
+                    )
+                  })()}
 
                 <Pressable onPress={() => Linking.openURL(kaminoBorrowUrl(r.token.mint))}>
                   <Text style={s.link}>Open in Kamino ›</Text>
@@ -239,7 +287,13 @@ export default function DefiScreen() {
           {blocked.map((r) => (
             <View key={r.token.symbol} style={s.blockedCard}>
               <View style={s.assetHead}>
-                <TokenIcon icon={r.token.icon} symbol={r.token.symbol} label={r.token.ticker} issuer={r.token.issuer} size={36} />
+                <TokenIcon
+                  icon={r.token.icon}
+                  symbol={r.token.symbol}
+                  label={r.token.ticker}
+                  issuer={r.token.issuer}
+                  size={36}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={s.symbol}>{r.token.symbol}</Text>
                   <Text style={[s.issuer, { color: issuerColor(r.token.issuer) }]}>{r.token.issuer}</Text>
@@ -256,7 +310,8 @@ export default function DefiScreen() {
             <Text style={s.cardTitle}>How it works</Text>
             <Text style={s.tiny}>
               Lending markets accept some tokenized stocks as collateral, letting you borrow against a position instead
-              of selling it. Loan-to-value sets how much you can borrow. What you borrow is a stablecoin such as USDC, and the borrow rate shown is that stablecoin&apos;s rate in each market.
+              of selling it. Loan-to-value sets how much you can borrow. What you borrow is a stablecoin such as USDC,
+              and the borrow rate shown is that stablecoin&apos;s rate in each market.
             </Text>
             <Text style={s.tiny}>
               Tokenized stocks currently earn close to nothing as collateral, because almost nobody borrows them. The
@@ -307,7 +362,16 @@ const s = StyleSheet.create({
   bestTag: { color: T.accent, fontSize: 10, fontWeight: '800', letterSpacing: 0.8 },
   lineRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   tagRow: { flexDirection: 'row', gap: 8, marginTop: 2 },
-  tag: { color: T.accent, fontSize: 12, fontWeight: '600', backgroundColor: '#1A2410', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, overflow: 'hidden' },
+  tag: {
+    color: T.accent,
+    fontSize: 12,
+    fontWeight: '600',
+    backgroundColor: '#1A2410',
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    overflow: 'hidden',
+  },
   marketRow: { gap: 3, paddingVertical: 11, borderTopWidth: 1, borderTopColor: T.border },
   marketRowName: { color: T.text, fontSize: 14, fontWeight: '600' },
   marketRowDetail: { color: T.dim, fontSize: 13 },
@@ -319,7 +383,14 @@ const s = StyleSheet.create({
   size: { color: T.dim, fontSize: 16, fontWeight: '600' },
   tinyLabel: { color: T.faint, fontSize: 11, marginTop: 1 },
 
-  blockedCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: '#3A2020', borderRadius: 16, padding: 16, gap: 9 },
+  blockedCard: {
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: '#3A2020',
+    borderRadius: 16,
+    padding: 16,
+    gap: 9,
+  },
   blockedText: { color: '#F8A0A0', fontSize: 13, lineHeight: 18 },
 
   tiny: { color: T.faint, fontSize: 13, lineHeight: 18 },
@@ -328,6 +399,3 @@ const s = StyleSheet.create({
   primary: { backgroundColor: T.accent, borderRadius: 14, height: 52, alignItems: 'center', justifyContent: 'center' },
   primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
 })
-
-
-

@@ -21,14 +21,21 @@ function inlineClasses(xml: string): string {
     }
   }
   if (rules.size === 0) return xml
-  return xml.replace(/<(?!\/)([a-zA-Z][\w:-]*)([^>]*?)\sclass\s*=\s*["']([^"']*)["']([^>]*)>/g, (all, tag, a, cls, b) => {
-    const have = `${a} ${b}`
-    const picked = String(cls).split(/\s+/).flatMap((c) => rules.get(c) ?? [])
-      .filter(([k]) => /^[a-z-]+$/.test(k) && !new RegExp(`\\s${k}\\s*=`).test(have) && !/^enable-background$/.test(k))
-      .reduce((m, [k, v]) => m.set(k, v), new Map<string, string>())
-    const add = [...picked].map(([k, v]) => ` ${k}="${v.replace(/"/g, '')}"`).join('')
-    return `<${tag}${a}${add}${b}>`
-  })
+  return xml.replace(
+    /<(?!\/)([a-zA-Z][\w:-]*)([^>]*?)\sclass\s*=\s*["']([^"']*)["']([^>]*)>/g,
+    (all, tag, a, cls, b) => {
+      const have = `${a} ${b}`
+      const picked = String(cls)
+        .split(/\s+/)
+        .flatMap((c) => rules.get(c) ?? [])
+        .filter(
+          ([k]) => /^[a-z-]+$/.test(k) && !new RegExp(`\\s${k}\\s*=`).test(have) && !/^enable-background$/.test(k),
+        )
+        .reduce((m, [k, v]) => m.set(k, v), new Map<string, string>())
+      const add = [...picked].map(([k, v]) => ` ${k}="${v.replace(/"/g, '')}"`).join('')
+      return `<${tag}${a}${add}${b}>`
+    },
+  )
 }
 
 /** Backpack logos come as SVG files of varying size; make sure they scale to the box instead of being cropped. */
@@ -56,13 +63,19 @@ function isDarkOnly(xml: string): boolean {
 }
 
 function useSvg(uri: string | null | undefined) {
-  const [xml, setXml] = useState<string | null>(uri ? svgCache.get(uri) ?? null : null)
+  const [xml, setXml] = useState<string | null>(uri ? (svgCache.get(uri) ?? null) : null)
   const [bad, setBad] = useState(false)
   useEffect(() => {
     setBad(false)
-    if (!uri) { setXml(null); return }
+    if (!uri) {
+      setXml(null)
+      return
+    }
     const hit = svgCache.get(uri)
-    if (hit) { setXml(hit); return }
+    if (hit) {
+      setXml(hit)
+      return
+    }
     setXml(null)
     let live = true
     fetch(uri)
@@ -73,13 +86,23 @@ function useSvg(uri: string | null | undefined) {
         svgCache.set(uri, fixed)
         if (live) setXml(fixed)
       })
-      .catch(() => { if (live) setBad(true) })
-    return () => { live = false }
+      .catch(() => {
+        if (live) setBad(true)
+      })
+    return () => {
+      live = false
+    }
   }, [uri])
   return { xml, bad }
 }
 
-export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
+export function TokenIcon({
+  icon,
+  label,
+  issuer,
+  symbol,
+  size = 40,
+}: {
   symbol?: string
   icon?: string | null
   label: string
@@ -95,28 +118,43 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
   // Issuer icons that the Image component cannot decode (typically SVG) are fetched through our proxy and drawn as SVG instead.
   const svgUri = isBp ? src : failed && symbol ? PROXY + symbol : null
   const svg = useSvg(svgUri)
-  useEffect(() => { setStage(0) }, [src])
+  useEffect(() => {
+    setStage(0)
+  }, [src])
   const color = issuerColor(issuer)
   const inner = size - 8
   return (
-    <View style={[s.wrap, { width: size, height: size, borderRadius: size / 2, borderColor: color }, svg.xml && isDarkOnly(svg.xml) && { backgroundColor: '#F2F2F2' }]}>
+    <View
+      style={[
+        s.wrap,
+        { width: size, height: size, borderRadius: size / 2, borderColor: color },
+        svg.xml && isDarkOnly(svg.xml) && { backgroundColor: '#F2F2F2' },
+      ]}
+    >
       {svg.xml && !svg.bad ? (
         <SvgXml xml={svg.xml} width={inner} height={inner} />
       ) : !isBp && src && !failed ? (
-        <Image source={{ uri: stage === 0 || !symbol ? src : PROXY + symbol }} onError={() => setStage((n) => (n === 0 && symbol ? 1 : 2))} style={{ width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }} />
+        <Image
+          source={{ uri: stage === 0 || !symbol ? src : PROXY + symbol }}
+          onError={() => setStage((n) => (n === 0 && symbol ? 1 : 2))}
+          style={{ width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }}
+        />
       ) : (
-        <Text style={[s.text, { color, fontSize: size * 0.28 }]} numberOfLines={1}>{label.slice(0, 4)}</Text>
+        <Text style={[s.text, { color, fontSize: size * 0.28 }]} numberOfLines={1}>
+          {label.slice(0, 4)}
+        </Text>
       )}
     </View>
   )
 }
 
 const s = StyleSheet.create({
-  wrap: { borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: T.surfaceAlt, overflow: 'hidden' },
+  wrap: {
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: T.surfaceAlt,
+    overflow: 'hidden',
+  },
   text: { fontWeight: '800' },
 })
-
-
-
-
-

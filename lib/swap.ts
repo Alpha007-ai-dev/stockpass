@@ -1,45 +1,57 @@
-import { fetchT } from './http';
-import { getTransactionDecoder } from '@solana/transactions';
-import { getBase64Encoder } from '@solana/codecs-strings';
+import { fetchT } from './http'
+import { getTransactionDecoder } from '@solana/transactions'
+import { getBase64Encoder } from '@solana/codecs-strings'
 
-export const PLATFORM_FEE_BPS = 5;
+export const PLATFORM_FEE_BPS = 5
 
 export type PayToken = {
-  key: string;
-  symbol: string;
-  mint: string;
-  decimals: number;
-  feeAccount?: string;
-};
+  key: string
+  symbol: string
+  mint: string
+  decimals: number
+  feeAccount?: string
+}
 
 export const PAY_TOKENS: PayToken[] = [
-  { key: 'usdc', symbol: 'USDC', mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', decimals: 6, feeAccount: '7oUXJtg1zdvqRFSAaKHsbisaWBDjEywBzQiueqpCLgkY' },
-  { key: 'sol',  symbol: 'SOL',  mint: 'So11111111111111111111111111111111111111112', decimals: 9, feeAccount: '' },
-  { key: 'skr',  symbol: 'SKR',  mint: 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3', decimals: 6, feeAccount: 'DK1CsYJf9ZnQ4WmLeqZLccdZRMKdvNd1351jECQBeEMJ' },
-];
+  {
+    key: 'usdc',
+    symbol: 'USDC',
+    mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+    decimals: 6,
+    feeAccount: '7oUXJtg1zdvqRFSAaKHsbisaWBDjEywBzQiueqpCLgkY',
+  },
+  { key: 'sol', symbol: 'SOL', mint: 'So11111111111111111111111111111111111111112', decimals: 9, feeAccount: '' },
+  {
+    key: 'skr',
+    symbol: 'SKR',
+    mint: 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3',
+    decimals: 6,
+    feeAccount: 'DK1CsYJf9ZnQ4WmLeqZLccdZRMKdvNd1351jECQBeEMJ',
+  },
+]
 
 export type Quote = {
-  raw: any;
-  outUi: number;
-  feeUi: number;
-  feeBps: number;
-  feeSymbol: string;
-  priceImpactPct: number;
-  slippageBps: number;
-  contextSlot: number;
-  outSymbol?: string;
-  paySymbol: string;
-  feeAccount?: string;
+  raw: any
+  outUi: number
+  feeUi: number
+  feeBps: number
+  feeSymbol: string
+  priceImpactPct: number
+  slippageBps: number
+  contextSlot: number
+  outSymbol?: string
+  paySymbol: string
+  feeAccount?: string
   /** 'v1' = standard Jupiter router (StockPass fee applies); 'v2' = Swap V2 (market makers etc., no StockPass fee). */
-  route?: 'v1' | 'v2';
-  routeLabel?: string;
+  route?: 'v1' | 'v2'
+  routeLabel?: string
   /** False when the route does not report a price impact (Swap V2). */
-  impactKnown?: boolean;
+  impactKnown?: boolean
   /** What the other route would have returned, when both were available. */
-  altOutUi?: number;
-  altLabel?: string;
-  payToken?: PayToken;
-};
+  altOutUi?: number
+  altLabel?: string
+  payToken?: PayToken
+}
 
 export async function getQuote(
   pay: PayToken,
@@ -50,23 +62,26 @@ export async function getQuote(
   feeBps?: number,
 ): Promise<Quote | null> {
   try {
-    if (pay.mint === outputMint) return null;
-    const amount = Math.round(payAmount * Math.pow(10, pay.decimals));
-    const useFee = !!pay.feeAccount;
+    if (pay.mint === outputMint) return null
+    const amount = Math.round(payAmount * Math.pow(10, pay.decimals))
+    const useFee = !!pay.feeAccount
 
     const url =
       'https://lite-api.jup.ag/swap/v1/quote' +
-      '?inputMint=' + pay.mint +
-      '&outputMint=' + outputMint +
-      '&amount=' + amount +
+      '?inputMint=' +
+      pay.mint +
+      '&outputMint=' +
+      outputMint +
+      '&amount=' +
+      amount +
       '&slippageBps=50' +
-      (useFee ? '&platformFeeBps=' + Math.max(0, Math.floor(feeBps ?? PLATFORM_FEE_BPS)) : '');
-    const r = await fetchT(url);
-    const q = await r.json();
-    if (!q || q.error || !q.outAmount) return null;
+      (useFee ? '&platformFeeBps=' + Math.max(0, Math.floor(feeBps ?? PLATFORM_FEE_BPS)) : '')
+    const r = await fetchT(url)
+    const q = await r.json()
+    if (!q || q.error || !q.outAmount) return null
 
-    const feeRaw = Number(q.platformFee?.amount ?? 0);
-    const feeUi = feeRaw / Math.pow(10, outDecimals);
+    const feeRaw = Number(q.platformFee?.amount ?? 0)
+    const feeUi = feeRaw / Math.pow(10, outDecimals)
 
     return {
       raw: q,
@@ -83,9 +98,9 @@ export async function getQuote(
       route: 'v1',
       routeLabel: q.routePlan?.[0]?.swapInfo?.label ?? 'Jupiter',
       impactKnown: true,
-    };
+    }
   } catch {
-    return null;
+    return null
   }
 }
 
@@ -95,44 +110,42 @@ export async function buildSwapTx(quote: Quote, userPublicKey: string): Promise<
     userPublicKey,
     wrapAndUnwrapSol: true,
     dynamicComputeUnitLimit: true,
-  };
-  if (quote.feeAccount) body.feeAccount = quote.feeAccount;
+  }
+  if (quote.feeAccount) body.feeAccount = quote.feeAccount
 
   // One retry: the keyless endpoint rate-limits (429) right after a quote, and that passes a moment later.
-  let reason = 'no transaction returned';
+  let reason = 'no transaction returned'
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const r = await fetchT('https://lite-api.jup.ag/swap/v1/swap', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      });
-      const j: any = await r.json().catch(() => null);
-      if (j?.swapTransaction) return j.swapTransaction as string;
-      reason = j?.error ? String(j.error).slice(0, 120) : `HTTP ${r.status}`;
+      })
+      const j: any = await r.json().catch(() => null)
+      if (j?.swapTransaction) return j.swapTransaction as string
+      reason = j?.error ? String(j.error).slice(0, 120) : `HTTP ${r.status}`
     } catch (e) {
-      reason = (e as Error)?.message ?? 'network error';
+      reason = (e as Error)?.message ?? 'network error'
     }
-    if (attempt === 0) await new Promise((res) => setTimeout(res, 1200));
+    if (attempt === 0) await new Promise((res) => setTimeout(res, 1200))
   }
-  throw new Error(`Could not build transaction (${reason}). Try again.`);
+  throw new Error(`Could not build transaction (${reason}). Try again.`)
 }
 
 export function decodeTx(base64: string) {
-  const bytes = getBase64Encoder().encode(base64);
-  return getTransactionDecoder().decode(bytes);
+  const bytes = getBase64Encoder().encode(base64)
+  return getTransactionDecoder().decode(bytes)
 }
 
 export function fmtAmount(n: number): string {
-  if (!isFinite(n)) return '--';
-  if (n === 0) return '0';
-  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if (n >= 1) return n.toFixed(4);
-  if (n >= 0.0001) return n.toFixed(6);
-  return n.toExponential(3);
+  if (!isFinite(n)) return '--'
+  if (n === 0) return '0'
+  if (n >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  if (n >= 1) return n.toFixed(4)
+  if (n >= 0.0001) return n.toFixed(6)
+  return n.toExponential(3)
 }
-
-
 
 /** StockPass charges 5 bps, reduced to 2 for wallets holding at least 100 SKR.
  *  Eligibility is based on the wallet's own SKR token balance, not its value. */

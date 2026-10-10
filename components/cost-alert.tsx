@@ -23,18 +23,31 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
   const [custom, setCustom] = useState('')
 
   const load = useCallback(async () => {
-    if (!owner) { setAlertState(null); return }
+    if (!owner) {
+      setAlertState(null)
+      return
+    }
     try {
       const all = await getAlerts(owner)
       setAlertState(all.find((a) => a.symbol === symbol) ?? null)
-    } catch { /* the row stays hidden state; setting an alert will report errors */ }
+    } catch {
+      /* the row stays hidden state; setting an alert will report errors */
+    }
   }, [owner, symbol])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   const act = async (fn: () => Promise<void>) => {
-    setBusy(true); setError(null)
-    try { await fn(); await load() } catch (e) { setError('Could not save the alert, try again.') }
+    setBusy(true)
+    setError(null)
+    try {
+      await fn()
+      await load()
+    } catch (e) {
+      setError('Could not save the alert, try again.')
+    }
     setBusy(false)
   }
 
@@ -58,12 +71,16 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
       {alert ? (
         <>
           <View style={s.row}>
-            <Text style={s.text}>Tell me when buying costs ≤ <Text style={[s.strong, num]}>{alert.threshold_bps} bps</Text></Text>
+            <Text style={s.text}>
+              Tell me when buying costs ≤ <Text style={[s.strong, num]}>{alert.threshold_bps} bps</Text>
+            </Text>
             <Pressable onPress={() => act(() => removeAlert(owner, symbol))} disabled={busy}>
               <Text style={s.remove}>Remove</Text>
             </Pressable>
           </View>
-          {alert.triggered && <Text style={[s.tiny, { color: T.accent }]}>Triggered: it costs {alert.current_bps} bps right now.</Text>}
+          {alert.triggered && (
+            <Text style={[s.tiny, { color: T.accent }]}>Triggered: it costs {alert.current_bps} bps right now.</Text>
+          )}
         </>
       ) : (
         <>
@@ -90,15 +107,26 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
             <Pressable
               style={[s.chip, (!valid || busy) && { opacity: 0.4 }]}
               disabled={!valid || busy}
-              onPress={() => act(async () => { await setAlert(owner, symbol, customBps); setCustom('') })}>
+              onPress={() =>
+                act(async () => {
+                  await setAlert(owner, symbol, customBps)
+                  setCustom('')
+                })
+              }
+            >
               <Text style={s.chipText}>Set alert</Text>
             </Pressable>
           </View>
           {valid && currentBps !== null && customBps >= currentBps && (
             <Text style={s.tiny}>It costs {currentBps} bps now, so this alert will show as triggered right away.</Text>
           )}
-          {currentBps === null && <Text style={s.tiny}>There is no executable quote right now; the alert still works once there is one.</Text>}
-          <Text style={s.tiny}>Checked when you open the app. No push notification. Your wallet address and this alert are stored on the StockPass server.</Text>
+          {currentBps === null && (
+            <Text style={s.tiny}>There is no executable quote right now; the alert still works once there is one.</Text>
+          )}
+          <Text style={s.tiny}>
+            Checked when you open the app. No push notification. Your wallet address and this alert are stored on the
+            StockPass server.
+          </Text>
         </>
       )}
       {error && <Text style={[s.tiny, { color: T.down }]}>{error}</Text>}
@@ -115,7 +143,16 @@ const s = StyleSheet.create({
   remove: { color: T.faint, fontSize: 14, fontWeight: '600' },
   chips: { flexDirection: 'row', gap: 8 },
   customRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  input: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, color: T.text, fontSize: 15 },
+  input: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: T.border,
+    paddingHorizontal: 12,
+    color: T.text,
+    fontSize: 15,
+  },
   chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: T.accent },
   chipText: { color: T.accent, fontSize: 14, fontWeight: '700' },
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },

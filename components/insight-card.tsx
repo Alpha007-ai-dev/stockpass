@@ -22,15 +22,26 @@ function usd(n: number) {
   return `$${n.toFixed(2)}`
 }
 
-export function buildInsight(i: InsightItem, hist: History | undefined, availability?: number | null): { text: string; tone: 'accent' | 'warn' | 'muted'; rank: number } | null {
+export function buildInsight(
+  i: InsightItem,
+  hist: History | undefined,
+  availability?: number | null,
+): { text: string; tone: 'accent' | 'warn' | 'muted'; rank: number } | null {
   if (i.entryBps === null || i.exitBps === null) {
     return { text: 'No executable quote right now.', tone: 'warn', rank: 5 }
   }
   if (availability !== null && availability !== undefined && availability < 50) {
-    return { text: `Available now, but quotable only ${Math.round(availability)}% of the time over 30 days.`, tone: 'warn', rank: 2 }
+    return {
+      text: `Available now, but quotable only ${Math.round(availability)}% of the time over 30 days.`,
+      tone: 'warn',
+      rank: 2,
+    }
   }
   const value = i.value
-  const usual = hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < NO_MARKET_BPS ? hist.avg_entry : null
+  const usual =
+    hist && hist.samples * hist.availability >= 10 && hist.avg_entry !== null && hist.avg_entry < NO_MARKET_BPS
+      ? hist.avg_entry
+      : null
   if (value && usual !== null) {
     const delta = i.exitBps - usual
     if (Math.abs(delta) >= 3) {
@@ -46,12 +57,18 @@ export function buildInsight(i: InsightItem, hist: History | undefined, availabi
 }
 
 const STATE_WORD: Record<string, string> = {
-  open: 'market hours', pre: 'pre-market', after: 'after hours', closed: 'overnight', weekend: 'the weekend',
+  open: 'market hours',
+  pre: 'pre-market',
+  after: 'after hours',
+  closed: 'overnight',
+  weekend: 'the weekend',
 }
 
 /** When this token has historically been cheapest to sell (the exit cost mirrors the measured entry cost). */
 export function exitTip(states: History[] | undefined, currentState: string | undefined): string | null {
-  const solid = (states ?? []).filter((h) => h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
+  const solid = (states ?? []).filter(
+    (h) => h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS,
+  )
   if (solid.length < 2) return null
   const lo = solid.reduce((a, b) => (a.avg_entry <= b.avg_entry ? a : b))
   const now = solid.find((h) => h.market_state === currentState)
@@ -59,7 +76,19 @@ export function exitTip(states: History[] | undefined, currentState: string | un
   return `Over 30 days, selling has been cheapest during ${STATE_WORD[lo.market_state] ?? lo.market_state} (about ${Math.round(Math.max(0, lo.avg_entry))} bps, against ${Math.round(Math.max(0, now.avg_entry))} bps now). Historical pattern, not a forecast.`
 }
 
-export function InsightCard({ item, hist, availability, states, state }: { item: InsightItem; hist: History | undefined; availability?: number | null; states?: History[]; state?: string }) {
+export function InsightCard({
+  item,
+  hist,
+  availability,
+  states,
+  state,
+}: {
+  item: InsightItem
+  hist: History | undefined
+  availability?: number | null
+  states?: History[]
+  state?: string
+}) {
   const router = useRouter()
   const insight = buildInsight(item, hist, availability)
   if (!insight) return null
@@ -74,9 +103,7 @@ export function InsightCard({ item, hist, availability, states, state }: { item:
           <Text style={[s.issuer, { color: issuerColor(item.issuer) }]}>{item.issuer}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={[s.entry, num, item.entryBps === null && { color: T.faint }]}>
-            {bpsLabel(item.entryBps)}
-          </Text>
+          <Text style={[s.entry, num, item.entryBps === null && { color: T.faint }]}>{bpsLabel(item.entryBps)}</Text>
           <Text style={s.entryLabel}>entry</Text>
         </View>
         <Text style={s.chev}>›</Text>
