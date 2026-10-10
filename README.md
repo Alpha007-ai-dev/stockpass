@@ -73,14 +73,14 @@ Many smaller tokens return no quote at all, especially on weekends. One token (T
 
 ### Collateral: same token, different terms
 
-SPYx is accepted on two Kamino markets at the same time:
+NVDAx is accepted on two Kamino markets at the same time. What a holder pays is the rate of the stablecoin they borrow against it, so the table shows that rate (measured 2026-10-10):
 
-| Market | Max LTV | Borrow APY |
-|---|---|---|
-| Kamino xStocks Market | 73% | 4.44% |
-| Kamino Sentora xStocks | 72% | 1.01% |
+| Market | Max LTV | Borrow asset | Borrow APY |
+|---|---|---|---|
+| Kamino xStocks Market | 55% | USDC | 5.27% |
+| Kamino Sentora xStocks | 62% | PYUSD | 0.74% |
 
-A **4.4× difference** in borrowing cost for the identical token. Ondo tokens are not accepted as collateral in either market.
+The rates are for **different assets**, so this is not a like-for-like comparison, and the Sentora market is smaller ($0.5M against $2.5M), so its rate may be less settled. Not every token accepted as collateral can itself be borrowed. Ondo tokens are not accepted as collateral in either market.
 
 ---
 
@@ -133,7 +133,9 @@ Tap **Explore with a demo portfolio** on Home. This loads four real tokens with 
 
 ## Fee
 
-StockPass takes **5 bps** on swaps it routes through the standard Jupiter router, charged on the USDC side. Wallets holding at least 100 SKR pay **2 bps**. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
+**Buying carries no StockPass fee.** Jupiter takes its platform fee in the token that is received, which would need a separate fee account for every stock token, so for now buys are free of a StockPass fee.
+
+**Selling** through the standard Jupiter router carries a StockPass fee of **5 bps**, charged on the USDC side. Wallets holding at least 100 SKR pay **2 bps**. On the Swap v2 route there is no StockPass fee, only Jupiter's own. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
 
 The fee is deliberately low. The real differences between issuers are often only a few bps (see the normalized price difference above), so a higher fee would erase the advantage the app is trying to find.
 
@@ -165,7 +167,8 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 
 **Near term**
 - **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
-- **Real SKR utility.** Today holding 100 SKR lowers the StockPass fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
+- **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
+- **Real SKR utility.** Today holding 100 SKR lowers the StockPass sell fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
 - **A selectable trade size** instead of the fixed $1,000 measurement size.
 - **Plain-language notes on unusual costs.** The Worker already finds measurements outside a token's normal range; the written explanation needs a Claude API key and only ever describes the evidence, never a cause.
 
