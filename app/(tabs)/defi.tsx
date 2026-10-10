@@ -182,7 +182,7 @@ export default function DefiScreen() {
                           </View>
                           <View>
                             <Text style={[s.apy, num, isBest && { color: T.accent }]}>{(m.borrowApy * 100).toFixed(2)}%</Text>
-                            <Text style={s.tinyLabel}>borrow APY</Text>
+                            <Text style={s.tinyLabel}>{m.debtSymbol ? `${m.debtSymbol} borrow APY` : 'borrow APY'}</Text>
                           </View>
                           <View>
                             <Text style={[s.apy, num, { color: m.supplyApy >= 0.005 ? T.accent : T.dim }]}>{(m.supplyApy * 100).toFixed(2)}%</Text>
@@ -195,7 +195,7 @@ export default function DefiScreen() {
                         </View>
                         <View style={s.tagRow}>
                           <Text style={s.tag}>Collateral ✓</Text>
-                          <Text style={s.tag}>Borrow ✓</Text>
+                          {m.debt && m.debt.length > 0 && <Text style={s.tag}>Borrow {m.debt.map((d) => d.symbol).join(' · ')}</Text>}
                         </View>
                       </View>
                     )
@@ -204,7 +204,7 @@ export default function DefiScreen() {
                     <View key={m.market} style={s.marketRow}>
                       <Text style={s.marketRowName} numberOfLines={1}>{m.market}</Text>
                       <Text style={[s.marketRowDetail, num]}>
-                        {Math.round(m.maxLtv * 100)}% LTV · {(m.borrowApy * 100).toFixed(2)}% borrow · {(m.supplyApy * 100).toFixed(2)}% supply · ${(m.marketUsd / 1e6).toFixed(1)}M
+                        {Math.round(m.maxLtv * 100)}% LTV · {(m.borrowApy * 100).toFixed(2)}% {m.debtSymbol ?? ''} borrow · {(m.supplyApy * 100).toFixed(2)}% supply · ${(m.marketUsd / 1e6).toFixed(1)}M
                       </Text>
                     </View>
                   )
@@ -212,7 +212,7 @@ export default function DefiScreen() {
 
                 {r.markets.length > 1 && (
                   <Text style={s.tiny}>
-                    Same token, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the expensive one.
+                    Same collateral, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the expensive one.
                   </Text>
                 )}
 
@@ -256,7 +256,7 @@ export default function DefiScreen() {
             <Text style={s.cardTitle}>How it works</Text>
             <Text style={s.tiny}>
               Lending markets accept some tokenized stocks as collateral, letting you borrow against a position instead
-              of selling it. Loan-to-value sets how much you can borrow; the borrow rate is what it costs.
+              of selling it. Loan-to-value sets how much you can borrow. What you borrow is a stablecoin such as USDC, and the borrow rate shown is that stablecoin's rate in each market.
             </Text>
             <Text style={s.tiny}>
               Tokenized stocks currently earn close to nothing as collateral, because almost nobody borrows them. The

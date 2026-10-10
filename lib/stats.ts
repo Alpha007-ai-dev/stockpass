@@ -122,7 +122,10 @@ export type Collateral = {
   mint: string
   market: string
   maxLtv: number
+  /** Cheapest stablecoin borrow rate in this market, which is what a holder of this collateral pays. */
   borrowApy: number
+  debtSymbol?: string
+  debt?: { symbol: string; borrowApy: number }[]
   supplyApy: number
   marketUsd: number
 }
