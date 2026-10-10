@@ -167,7 +167,8 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 
 **Near term**
 - **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
-- **Real SKR utility.** Today holding 100 SKR lowers the StockPass fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
+- **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
+- **Real SKR utility.** Today holding 100 SKR lowers the StockPass sell fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
 - **A selectable trade size** instead of the fixed $1,000 measurement size.
 - **Plain-language notes on unusual costs.** The Worker already finds measurements outside a token's normal range; the written explanation needs a Claude API key and only ever describes the evidence, never a cause.
 
