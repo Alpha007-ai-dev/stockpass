@@ -11,6 +11,7 @@ import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
 import { PAY_TOKENS, Quote } from '@/lib/swap'
 import { getBestQuote, submitSwap } from '@/lib/swap2'
+import { markTrade } from '@/lib/trade-signal'
 import { getBalances, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const DEFAULT_SIZE = 1000
@@ -123,6 +124,8 @@ export default function BuyScreen() {
         signature: String(sig),
         at: Date.now(),
       })
+      markTrade()
+      setStatus(null)
       setDone({
         symbol: selected.token.symbol,
         sizeUsd: SIZE_USD,
@@ -156,7 +159,7 @@ export default function BuyScreen() {
       {!options && <ActivityIndicator color={T.dim} style={{ marginTop: 30 }} />}
       {options?.length === 0 && <Text style={s.tiny}>No issuer has a usable quote for {tk} right now.</Text>}
 
-      {selected && (
+      {selected && !done && (
         <>
           <View style={s.card}>
             <Text style={s.kicker}>YOU PAY</Text>
@@ -291,7 +294,12 @@ export default function BuyScreen() {
           </Pressable>
         </View>
       )}
-      {status && <Text style={s.tiny}>{status}</Text>}
+      {done && (
+        <Pressable style={s.primary} onPress={() => router.replace('/wallet')}>
+          <Text style={s.primaryText}>Done</Text>
+        </Pressable>
+      )}
+      {status && !done && <Text style={s.tiny}>{status}</Text>}
     </ScrollView>
   )
 }

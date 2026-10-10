@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
@@ -10,6 +10,7 @@ import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
 import { getBestQuote, submitSwap } from '@/lib/swap2'
+import { markTrade } from '@/lib/trade-signal'
 import { getBalances, getHoldings, getStats, Latest, TokenRow } from '@/lib/stats'
 
 const NETWORK_FEE_USD = 0.01
@@ -31,6 +32,7 @@ export default function SellScreen() {
   const [demo, setDemo] = useState(false)
   useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
   const [status, setStatus] = useState<string | null>(null)
+  const [done, setDone] = useState<{ symbol: string; amount: number; receiveUsd: number; signature: string } | null>(null)
 
   useEffect(() => {
     Promise.all([getStats(), getGroups()])
@@ -104,10 +106,12 @@ export default function SellScreen() {
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
       const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
-      setStatus(`Sent: ${String(sig).slice(0, 20)}...`)
+      markTrade()
+      setStatus(null)
+      setDone({ symbol: sym, amount: amount ?? 0, receiveUsd: quote.outUi, signature: String(sig) })
     } catch (e) { setStatus((e as Error).message) }
     setBusy(false)
-  }, [quote, account, connect, signAndSendTransaction, signTransaction])
+  }, [quote, account, connect, signAndSendTransaction, signTransaction, sym, amount])
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}>
@@ -129,7 +133,7 @@ export default function SellScreen() {
 
       {balance === null && <Text style={s.tiny}>You do not hold {sym} in this wallet.</Text>}
 
-      {balance !== null && (
+      {balance !== null && !done && (
         <>
           <View style={s.card}>
             <Text style={s.kicker}>YOU SELL</Text>
@@ -209,7 +213,22 @@ export default function SellScreen() {
         </>
       )}
 
-      {status && <Text style={s.tiny}>{status}</Text>}
+      {done && (
+        <>
+          <View style={s.card}>
+            <Text style={s.kicker}>SALE SENT</Text>
+            <Text style={[s.tiny, { color: T.text, fontSize: 15 }]}>{done.symbol} · {done.amount.toFixed(4)} sold</Text>
+            <Text style={s.tiny}>Expected to receive about {done.receiveUsd.toFixed(2)} USDC, based on the reviewed quote, not the final fill.</Text>
+            <Pressable onPress={() => Linking.openURL(`https://solscan.io/tx/${done.signature}`)}>
+              <Text style={[s.tiny, { color: T.accent }]}>View on Solscan ›</Text>
+            </Pressable>
+          </View>
+          <Pressable style={s.primary} onPress={() => router.replace('/wallet')}>
+            <Text style={s.primaryText}>Done</Text>
+          </Pressable>
+        </>
+      )}
+      {status && !done && <Text style={s.tiny}>{status}</Text>}
     </ScrollView>
   )
 }

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRouter } from 'expo-router'
+import { tradedSince } from '@/lib/trade-signal'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
@@ -168,7 +169,7 @@ export default function HomeScreen() {
     isDemo().then((d) => {
       if (modeRef.current === null) return
       if (d === modeRef.current) {
-        if (lastScan.current > 0 && Date.now() - lastScan.current > 60000 && (d || account?.address)) scan(d)
+        if (lastScan.current > 0 && (Date.now() - lastScan.current > 60000 || tradedSince(lastScan.current)) && (d || account?.address)) scan(d)
         else if (Date.now() - statsAt.current > 60000) {
           // No portfolio to rescan: still keep the Daily Brief inputs current.
           statsAt.current = Date.now()
@@ -302,7 +303,7 @@ export default function HomeScreen() {
             )}
             {exitCostBps !== null && (
               <Text style={s.heroExit}>
-                Exit cost now <Text style={[s.heroExitStrong, num]}>${exitCostUsd.toFixed(2)} · {exitCostBps} bps</Text>
+                Exit cost now <Text style={[s.heroExitStrong, num]}>{exitCostUsd < 0.005 ? '<$0.01' : '$' + exitCostUsd.toFixed(2)} · {exitCostBps} bps</Text>
                 {exitRows.length < items!.length ? <Text style={s.heroChangeLabel}>  ({exitRows.length} of {items!.length} assets)</Text> : null}
               </Text>
             )}

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRouter } from 'expo-router'
+import { tradedSince } from '@/lib/trade-signal'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { TokenIcon } from '@/components/token-icon'
 import { PortfolioSpark } from '@/components/portfolio-spark'
@@ -91,7 +92,7 @@ export default function WalletScreen() {
     isDemo().then((d) => {
       if (modeRef.current === null) return
       if (d === modeRef.current) {
-        if (lastScan.current > 0 && Date.now() - lastScan.current > 60000 && (d || account?.address)) scan()
+        if (lastScan.current > 0 && (Date.now() - lastScan.current > 60000 || tradedSince(lastScan.current)) && (d || account?.address)) scan()
         return
       }
       modeRef.current = d
