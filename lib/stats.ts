@@ -146,18 +146,11 @@ export async function getCollateral(): Promise<Collateral[]> {
 
 
 export async function getBalances(owner: string): Promise<{ usdc: number; skr: number }> {
-  try {
-    const res = await fetch(
-`
-${BASE}/holdings?owner=${owner}
-`
-)
-    if (!res.ok) return { usdc: 0, skr: 0 }
-    const json: any = await res.json()
-    return { usdc: Number(json?.usdc ?? 0), skr: Number(json?.skr ?? 0) }
-  } catch {
-    return { usdc: 0, skr: 0 }
-  }
+  const res = await fetch(`${BASE}/holdings?owner=${owner}`)
+  const json: any = await res.json()
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`)
+  if (!json || Array.isArray(json) || typeof json.usdc !== 'number') throw new Error('Balance data unavailable')
+  return { usdc: json.usdc, skr: Number(json.skr ?? 0) }
 }
 
 export async function getUsdcBalance(owner: string): Promise<number> {
