@@ -77,6 +77,8 @@ export default function SellScreen() {
   // The SKR balance can arrive after a quote was fetched: a quote made with the old fee must not stay on screen.
   useEffect(() => { setQuote(null) }, [feeBps])
   const inflight = useRef(false)
+  const feeRef = useRef(feeBps)
+  feeRef.current = feeBps
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
   // On the v2 route Jupiter takes its own fee and StockPass takes none.
   const isV2 = quote?.route === 'v2'
@@ -101,6 +103,8 @@ export default function SellScreen() {
         feeBps,
       )
       if (!q) throw new Error('No route available for this amount right now.')
+      // The SKR balance may have arrived while the quote was loading: a quote made with the old fee must not be shown.
+      if (feeRef.current !== feeBps) throw new Error('Your fee tier just changed. Review again.')
       setQuote(q)
     } catch (e) { setStatus((e as Error).message) }
     inflight.current = false
@@ -114,16 +118,23 @@ export default function SellScreen() {
   const sign = useCallback(async () => {
     if (!quote || inflight.current) return
     inflight.current = true
+    let attempted = false
     setBusy(true); setStatus(null)
     try {
       if (await isDemo()) throw new Error('Demo mode cannot trade. Connect a real wallet.')
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
+      attempted = true
       const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
       markTrade()
       setStatus(null)
       setDone({ symbol: sym, amount: amount ?? 0, receiveUsd: quote.outUi, signature: String(sig) })
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      // After a signing attempt the sale may have gone through even though an error came back: drop the quote so the
+      // button cannot sign a second sale, and send the user to the wallet history first.
+      if (attempted) setQuote(null)
+      setStatus(attempted ? `${(e as Error).message} Check your wallet history before trying again.` : (e as Error).message)
+    }
     inflight.current = false
     setBusy(false)
   }, [quote, account, connect, signAndSendTransaction, signTransaction, sym, amount])

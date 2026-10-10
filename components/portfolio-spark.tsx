@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { T } from '@/constants/theme'
 import { NO_MARKET_BPS } from '@/lib/cost'
-import { getSeries } from '@/lib/stats'
+import { getSeries, type SeriesPoint } from '@/lib/stats'
 
 export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
   /** The held tokens: ticker + symbol to look up, value in USD as the weight. */
@@ -13,7 +13,7 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
   height?: number
 }) {
   const [points, setPoints] = useState<number[] | null>(null)
-  const key = items.map((i) => `${i.symbol}:${Math.round(i.value)}`).join(',')
+  const key = items.map((i) => i.symbol).join(',')
 
   useEffect(() => {
     let cancelled = false
@@ -22,7 +22,8 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
         const held = items.filter((i) => i.value > 0).slice(0, 8)
         const series = await Promise.all(
           held.map(async (i) => {
-            const rows = (await getSeries(i.ticker, 24))
+            // One failing ticker must not blank the whole chart.
+            const rows = (await getSeries(i.ticker, 24).catch((): SeriesPoint[] => []))
               .filter((p) => p.symbol === i.symbol && p.buy_px && p.quotable && p.entry_bps !== null && p.entry_bps < NO_MARKET_BPS)
               // Mid price: the buy price minus the entry cost, so a changing cost does not look like a price move.
               .map((p) => ({ ts: p.ts, px: (p.buy_px as number) / (1 + Math.max(0, p.entry_bps as number) / 10000) }))

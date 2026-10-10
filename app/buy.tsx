@@ -18,7 +18,7 @@ const DEFAULT_SIZE = 1000
 const NETWORK_FEE_USD = 0.01
 const MIN_SAVING_BPS = 5
 
-type Option = { token: TokenRow; entry: number; px: number; mult: number }
+type Option = { token: TokenRow; entry: number; px: number; mult: number; ts: number }
 
 export default function BuyScreen() {
   const router = useRouter()
@@ -47,7 +47,7 @@ export default function BuyScreen() {
         const opts = (g?.tokens ?? [])
           .map((token) => ({ token, l: map[token.symbol] }))
           .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable) && (o.l.buy_px ?? 0) > 0)
-          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number, px: o.l!.buy_px as number, mult: o.l!.multiplier || 1 }))
+          .map((o) => ({ token: o.token, entry: o.l!.entry_bps as number, px: o.l!.buy_px as number, mult: o.l!.multiplier || 1, ts: o.l!.ts }))
           // The cheapest issuer is the one with the lowest price per share (entry cost included); a tie goes to the lower entry cost.
           .sort((a, b) => (a.px - b.px) || (a.entry - b.entry))
         setOptions(opts)
@@ -109,22 +109,35 @@ export default function BuyScreen() {
   // receiving more than 10% fewer tokens than that price implies means the route is not usable.
   const expectedOut = selected && selected.px > 0 && SIZE_USD > 0 ? SIZE_USD / (selected.px * selected.mult) : 0
   const shortfall = quote && expectedOut > 0 ? 1 - quote.outUi / expectedOut : 0
-  const farOffPrice = shortfall > 0.1
+  // A measurement older than 90 minutes (or a stopped collector) is no basis for blocking a quote.
+  const priceFresh = !!selected && Date.now() / 1000 - selected.ts <= 5400
+  const farOffPrice = priceFresh && shortfall > 0.1
   const blocked = quote !== null && (quote.priceImpactPct * 100 > 5 || farOffPrice)
   const insets = useSafeAreaInsets()
   const sign = useCallback(async () => {
     if (!quote || !selected || inflight.current) return
     inflight.current = true
+    let attempted = false
     setBusy(true); setStatus(null)
     try {
       // Demo mode never signs, whatever the button state says.
       if (await isDemo()) throw new Error('Demo mode cannot trade. Connect a real wallet.')
       const addr = account?.address ?? (await connect())?.address
       if (!addr) throw new Error('Wallet not connected')
+      attempted = true
       const sig = await submitSwap(quote, String(addr), { signAndSendTransaction, signTransaction })
       // The trade is sent: show the result first, so a bookkeeping error can never leave the sign button active for a second buy.
       markTrade()
       setStatus(null)
+      setDone({
+        symbol: selected.token.symbol,
+        sizeUsd: SIZE_USD,
+        entryBps: selected.entry,
+        altBps: alternative?.entry ?? null,
+        altIssuer: alternative?.token.issuer ?? null,
+        savedBps: savingBps,
+        signature: String(sig),
+      })
       try {
         await savePurchase({
           ticker: tk,
@@ -139,16 +152,12 @@ export default function BuyScreen() {
           at: Date.now(),
         })
       } catch {}
-      setDone({
-        symbol: selected.token.symbol,
-        sizeUsd: SIZE_USD,
-        entryBps: selected.entry,
-        altBps: alternative?.entry ?? null,
-        altIssuer: alternative?.token.issuer ?? null,
-        savedBps: savingBps,
-        signature: String(sig),
-      })
-    } catch (e) { setStatus((e as Error).message) }
+    } catch (e) {
+      // After a signing attempt the trade may have gone through even though an error came back: drop the quote so the
+      // button cannot sign a second swap, and send the user to the wallet history first.
+      if (attempted) setQuote(null)
+      setStatus(attempted ? `${(e as Error).message} Check your wallet history before trying again.` : (e as Error).message)
+    }
     inflight.current = false
     setBusy(false)
   }, [quote, selected, alternative, savingBps, account, connect, signAndSendTransaction, signTransaction, tk, SIZE_USD])
@@ -292,7 +301,7 @@ export default function BuyScreen() {
 
           {blocked && <Text style={{ color: T.down, fontSize: 12, lineHeight: 17 }}>{farOffPrice ? 'This route would give you far fewer tokens than the measured price implies, so signing is disabled. Try again in a moment.' : 'This route has a very high price impact, so signing is disabled. Try a smaller amount.'}</Text>}
           <Pressable style={[s.primary, (SIZE_USD <= 0 || blocked || demo || overBalance) && { opacity: 0.4 }]} onPress={quote ? sign : prepare} disabled={busy || SIZE_USD <= 0 || blocked || demo || overBalance}>
-            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: buying is disabled' : quote ? (blocked ? 'Blocked: price impact too high' : 'Review and sign') : 'Review Purchase'}</Text>}
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>{demo ? 'Demo mode: buying is disabled' : quote ? (blocked ? 'Blocked: route not usable right now' : 'Review and sign') : 'Review Purchase'}</Text>}
           </Pressable>
           {overBalance && <Text style={{ color: T.down, fontSize: 12 }}>This is more than the USDC in your wallet.</Text>}
           <Text style={s.tiny}>You remain in control. The transaction requires wallet approval.</Text>

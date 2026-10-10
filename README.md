@@ -126,7 +126,8 @@ The app talks to a deployed collector. No API keys are needed on the client — 
 ### What leaves your device
 
 - **Your wallet address** goes to the StockPass collector to read your tokenized-stock holdings and USDC/SKR balance (`/holdings`), to store cost alerts (address + watched tokens + threshold), and as the taker when a Swap v2 route is requested.
-- **Signed swap transactions** are sent through the collector for Swap v2 routes. Jupiter v1 routes go straight to Jupiter.
+- **Signed swap transactions** are sent through the collector for Swap v2 routes. Jupiter v1 routes go straight to Jupiter, which therefore also sees your wallet address (as the transaction's user) and the amounts and tokens in your quote requests.
+- **Token icons** are loaded from the issuers' own hosts (or through the collector), so those hosts can see your IP address and which tokens you view.
 - **The collector's host logs requests** (Cloudflare observability), so wallet addresses in query strings appear in those logs. We do not link them to anything else and do not sell or share them.
 - **Alerts are not authenticated.** Anyone who knows a wallet address could read, delete or fill that wallet's alerts. Nothing else is stored per wallet.
 - **On the device only:** your last purchase, the demo/real mode choice and portfolio snapshots (local storage).
@@ -134,7 +135,7 @@ The app talks to a deployed collector. No API keys are needed on the client — 
 
 ### Trust and risk
 
-Swap v2 transactions are built by the StockPass Worker and signed in your wallet; the app does not yet verify the transaction's programs client-side (listed under roadmap). Jupiter v1 transactions come directly from Jupiter. This is hackathon software: unaudited, not financial advice. Review every transaction in your wallet before approving.
+Swap v2 transactions are built by the StockPass Worker and signed in your wallet; before signing, the app checks that you are the fee payer, but it does not verify the programs in the transaction (that is on the roadmap). Jupiter v1 transactions come directly from Jupiter. This is hackathon software: unaudited, not financial advice. Review every transaction in your wallet before approving.
 
 ### Demo mode
 
@@ -178,7 +179,7 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 
 **Near term**
 - **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
-- **Safer v2 route.** Check client-side that the fee payer is the user and allow-list the programs in a Worker-built transaction; sign alerts with a wallet message so only the owner can change them.
+- **Safer v2 route.** Allow-list the programs in a Worker-built transaction (the fee-payer check already ships); sign alerts with a wallet message so only the owner can change them.
 - **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
 - **Real SKR utility.** Today holding 100 SKR lowers the StockPass sell fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
 - **A selectable trade size** instead of the fixed $1,000 measurement size.

@@ -98,7 +98,7 @@ export default function PassportScreen() {
   const ok = mine ? isUsable(mine.entry_bps, mine.quotable) : false
   // Deviation is measured on the token's mid price (between buy and sell), so it does not contain the entry cost; the total below uses the buy price.
   const tokenMid = mine && mine.buy_px && mine.sell_px ? (mine.buy_px + mine.sell_px) / 2 : (mine?.buy_px ?? 0)
-  const devBps = reference && tokenMid ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
+  const devBps = reference && tokenMid && Number(reference.mid) > 0 ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
   const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
