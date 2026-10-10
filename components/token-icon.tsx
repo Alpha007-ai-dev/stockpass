@@ -86,13 +86,15 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
   issuer?: string
   size?: number
 }) {
-  const [failed, setFailed] = useState(false)
+  // 0 = icon URL directly, 1 = through our proxy (some icon hosts reject the phone), 2 = proxy as SVG, then initials.
+  const [stage, setStage] = useState(0)
+  const failed = stage >= 2
   const isBp = issuer === 'Backpack' && !!symbol
   const src = isBp ? PROXY + symbol : icon
   // Issuer icons that the Image component cannot decode (typically SVG) are fetched through our proxy and drawn as SVG instead.
   const svgUri = isBp ? src : failed && symbol ? PROXY + symbol : null
   const svg = useSvg(svgUri)
-  useEffect(() => { setFailed(false) }, [src])
+  useEffect(() => { setStage(0) }, [src])
   const color = issuerColor(issuer)
   const inner = size - 8
   return (
@@ -100,7 +102,7 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
       {svg.xml && !svg.bad ? (
         <SvgXml xml={svg.xml} width={inner} height={inner} />
       ) : !isBp && src && !failed ? (
-        <Image source={{ uri: src }} onError={() => setFailed(true)} style={{ width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }} />
+        <Image source={{ uri: stage === 0 || !symbol ? src : PROXY + symbol }} onError={() => setStage((n) => (n === 0 && symbol ? 1 : 2))} style={{ width: size - 6, height: size - 6, borderRadius: (size - 6) / 2 }} />
       ) : (
         <Text style={[s.text, { color, fontSize: size * 0.28 }]} numberOfLines={1}>{label.slice(0, 4)}</Text>
       )}
