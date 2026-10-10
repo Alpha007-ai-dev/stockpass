@@ -309,7 +309,7 @@ export default function HomeScreen() {
             )}
           </View>
           <PortfolioSpark
-            tickers={items!.map((i) => i.ticker)}
+            items={items!.map((i) => ({ ticker: i.ticker, symbol: i.symbol, value: i.buyValue ?? 0 }))}
             up={(() => {
               const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined

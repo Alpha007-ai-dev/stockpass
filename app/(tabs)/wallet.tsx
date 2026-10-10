@@ -140,7 +140,7 @@ export default function WalletScreen() {
           <Text style={s.tiny}>{items!.length} asset{items!.length === 1 ? '' : 's'} · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
           </View>
           <PortfolioSpark
-            tickers={items!.map((i) => i.ticker)}
+            items={items!.map((i) => ({ ticker: i.ticker, symbol: i.symbol, value: i.buyValue ?? 0 }))}
             up={(() => {
               const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined
