@@ -66,7 +66,10 @@ export default function SellScreen() {
   const exitCostUsd = grossUsd !== null && ok ? (grossUsd / (1 - exitFrac)) * exitFrac : null
   const feeBps = feeBpsFor(skr)
   const skrDiscount = feeBps < PLATFORM_FEE_BPS
-  const feeUsd = grossUsd !== null ? (grossUsd * feeBps) / 10000 : null
+  // On the v2 route Jupiter takes its own fee and StockPass takes none.
+  const isV2 = quote?.route === 'v2'
+  const chargedBps = isV2 ? quote!.feeBps : feeBps
+  const feeUsd = grossUsd !== null ? (grossUsd * chargedBps) / 10000 : null
   const netUsd = grossUsd !== null && exitCostUsd !== null && feeUsd !== null
     ? grossUsd - feeUsd
     : null
@@ -160,10 +163,10 @@ export default function SellScreen() {
                 <Text style={[s.value, num]}>{exitCostUsd !== null ? `~$${exitCostUsd.toFixed(2)}` : '—'}</Text>
               </View>
               <View style={s.row}>
-                <Text style={s.label}>StockPass fee ({feeBps} bps)</Text>
+                <Text style={s.label}>{isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}</Text>
                 <Text style={[s.value, num]}>-${feeUsd!.toFixed(2)}</Text>
               </View>
-              {skrDiscount ? (
+              {isV2 ? null : skrDiscount ? (
                 <View style={s.skrRow}>
                   <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
                   <Text style={s.skrText}>✓</Text>
