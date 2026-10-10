@@ -257,6 +257,11 @@ export default function BuyScreen() {
                   </Text>
                 </>
               )}
+              {options && options.length > 2 && (
+                <Pressable onPress={() => router.push(`/compare?ticker=${tk}`)}>
+                  <Text style={[s.tiny, { color: T.accent, fontSize: 14, fontWeight: '700', marginTop: 8 }]}>Compare all {options.length} issuers ›</Text>
+                </Pressable>
+              )}
             </View>
           )}
 
