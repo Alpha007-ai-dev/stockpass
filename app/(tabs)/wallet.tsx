@@ -209,7 +209,7 @@ export default function WalletScreen() {
             </Pressable>
           ))}
 
-          {hidden > 0.00001 && (
+          {hidden >= 0.00005 && (
             <View style={s.noteCard}>
               <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet does not show</Text>
               <Text style={s.tiny}>
