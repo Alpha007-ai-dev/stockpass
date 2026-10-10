@@ -9,7 +9,7 @@ import { isUsable } from '@/lib/cost'
 import { isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { savePurchase } from '@/lib/purchases'
-import { feeBpsFor, PAY_TOKENS, PLATFORM_FEE_BPS, Quote, SKR_THRESHOLD } from '@/lib/swap'
+import { PAY_TOKENS, Quote } from '@/lib/swap'
 import { getBestQuote, submitSwap } from '@/lib/swap2'
 import { getBalances, getStats, Latest, TokenRow } from '@/lib/stats'
 
@@ -29,7 +29,6 @@ export default function BuyScreen() {
   const [quote, setQuote] = useState<Quote | null>(null)
   const [sizeText, setSizeText] = useState(String(DEFAULT_SIZE))
   const [usdc, setUsdc] = useState<number | null>(null)
-  const [skr, setSkr] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const [demo, setDemo] = useState(false)
   useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
@@ -60,7 +59,7 @@ export default function BuyScreen() {
     const addr = account?.address
     if (addr) {
       getBalances(String(addr))
-        .then((b) => { setUsdc(b.usdc); setSkr(b.skr) })
+        .then((b) => { setUsdc(b.usdc) })
         .catch(() => {})
     }
   }, [account])
@@ -68,8 +67,8 @@ export default function BuyScreen() {
   const SIZE_USD = Math.max(0, Number(sizeText.replace(/[^0-9.]/g, '')) || 0)
   const alternative = options?.find((o) => o.token.symbol !== selected?.token.symbol) ?? null
   const issuerCostUsd = selected ? (Math.max(0, selected.entry) / 10000) * SIZE_USD : null
-  const feeBps = feeBpsFor(skr)
-  const skrDiscount = feeBps < PLATFORM_FEE_BPS
+  // Jupiter takes a platform fee in the output token, which needs a fee account per stock token; buys therefore carry no StockPass fee for now.
+  const feeBps = 0
   // On the v2 route Jupiter takes its own fee and StockPass takes none; before a quote exists the v1 StockPass fee is shown.
   const isV2 = quote?.route === 'v2'
   const chargedBps = isV2 ? quote!.feeBps : feeBps
@@ -85,7 +84,7 @@ export default function BuyScreen() {
     if (!selected) return
     setBusy(true); setStatus(null)
     try {
-      const usdc = PAY_TOKENS.find((t) => t.key === 'usdc')!
+      const usdc = { ...PAY_TOKENS.find((t) => t.key === 'usdc')!, feeAccount: '' }
       const q = await getBestQuote(usdc, SIZE_USD, selected.token.mint, selected.token.decimals, selected.token.symbol, feeBps)
       if (!q) throw new Error('No route available for this amount right now.')
       setQuote(q)
@@ -217,14 +216,6 @@ export default function BuyScreen() {
               <Text style={s.label}>{isV2 ? `Jupiter fee (${chargedBps} bps)` : `StockPass fee (${feeBps} bps)`}</Text>
               <Text style={[s.value, num]}>${feeUsd.toFixed(2)}</Text>
             </View>
-            {isV2 ? null : skrDiscount ? (
-              <View style={s.skrRow}>
-                <Text style={s.skrText}>SKR holder · {feeBps} bps instead of {PLATFORM_FEE_BPS}</Text>
-                <Text style={s.skrCheck}>✓</Text>
-              </View>
-            ) : (
-              <Text style={s.tiny}>Hold {SKR_THRESHOLD} SKR and this fee drops to 2 bps.</Text>
-            )}
             <View style={s.divider} />
             <View style={s.row}>
               <Text style={s.totalLabel}>Total cost</Text>
