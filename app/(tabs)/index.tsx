@@ -257,7 +257,10 @@ export default function MarketScreen() {
               })()}
               <View style={{ flex: 1, alignItems: 'flex-end' }}>
                 {spark ? (
-                  <Spark values={spark} color={issuerColor(token.issuer)} />
+                  <>
+                    <Spark values={spark} color={issuerColor(token.issuer)} />
+                    <Text style={s.sparkLabel}>cost, last 24 h</Text>
+                  </>
                 ) : ok ? (
                   <Text style={s.collecting}>collecting</Text>
                 ) : (
@@ -273,6 +276,7 @@ export default function MarketScreen() {
 }
 
 const s = StyleSheet.create({
+  sparkLabel: { color: T.faint, fontSize: 11, marginTop: 2 },
   screen: { flex: 1, backgroundColor: T.bg },
   content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
 
