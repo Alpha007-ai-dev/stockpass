@@ -34,7 +34,7 @@ export default function BuyScreen() {
   const [demo, setDemo] = useState(false)
   useEffect(() => { isDemo().then(setDemo).catch(() => {}) }, [])
   const [status, setStatus] = useState<string | null>(null)
-  const [done, setDone] = useState<{ symbol: string; sizeUsd: number; entryBps: number; altBps: number | null; savedBps: number | null; signature: string } | null>(null)
+  const [done, setDone] = useState<{ symbol: string; sizeUsd: number; entryBps: number; altBps: number | null; altIssuer: string | null; savedBps: number | null; signature: string } | null>(null)
 
   const tk = ticker ?? (symbol ? symbol.replace(/(x|on|bp)$/, '') : 'SPY')
 
@@ -131,6 +131,7 @@ export default function BuyScreen() {
         sizeUsd: SIZE_USD,
         entryBps: selected.entry,
         altBps: alternative?.entry ?? null,
+        altIssuer: alternative?.token.issuer ?? null,
         savedBps: savingBps,
         signature: String(sig),
       })
@@ -236,7 +237,10 @@ export default function BuyScreen() {
                   <Text style={s.kickerAccent}>YOU SAVE</Text>
                   <Text style={[s.savingValue, num]}>{savingBps} bps</Text>
                   <Text style={s.savingSub}>
-                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} vs {alternative.token.issuer}, by price per share
+                    ${((savingBps / 10000) * SIZE_USD).toFixed(2)} less than {alternative.token.issuer} for the same stock
+                  </Text>
+                  <Text style={s.tiny}>
+                    {selected!.token.symbol} ${selected!.px.toFixed(2)} vs {alternative.token.symbol} ${alternative.px.toFixed(2)} per share, entry cost included
                   </Text>
                 </>
               ) : (
@@ -285,7 +289,7 @@ export default function BuyScreen() {
           <Text style={s.tiny}>
             Cost at signing: {Math.max(0, done.entryBps)} bps (about ${((Math.max(0, done.entryBps) / 10000) * done.sizeUsd).toFixed(2)}).
             {done.savedBps !== null && done.savedBps > 0 && done.altBps !== null
-              ? ` The other issuer quoted ${Math.max(0, done.altBps)} bps, so this choice saved about ${done.savedBps} bps ($${((done.savedBps / 10000) * done.sizeUsd).toFixed(2)}).`
+              ? ` ${done.altIssuer ?? 'The other issuer'}'s token would have cost ${done.savedBps} bps more per share, entry cost included. That is about $${((done.savedBps / 10000) * done.sizeUsd).toFixed(2)} on this trade.`
               : ''}
           </Text>
           <Text style={s.tiny}>Based on the reviewed quote, not the final fill.</Text>
