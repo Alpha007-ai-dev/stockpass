@@ -14,7 +14,7 @@ import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
 import { EarningsIcon } from '@/components/event-icons'
 import { issuerColor, num, T } from '@/constants/theme'
-import { bpsLabel, isUsable } from '@/lib/cost'
+import { bpsLabel, isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { compact, getCollateral, getHoldings, getStats, getReliability, getUnderlying, History, Latest, TokenReliability, TokenRow, UnderlyingEvent, UnderlyingProfile } from '@/lib/stats'
@@ -96,9 +96,12 @@ export default function PassportScreen() {
   }, [sym, account])
 
   const ok = mine ? isUsable(mine.entry_bps, mine.quotable) : false
+  // Deviation is measured on the token's mid price (between buy and sell), so it does not contain the entry cost; the total below uses the buy price.
+  const tokenMid = mine && mine.buy_px && mine.sell_px ? (mine.buy_px + mine.sell_px) / 2 : (mine?.buy_px ?? 0)
+  const devBps = reference && tokenMid ? Math.round((tokenMid / Number(reference.mid) - 1) * 10000) : 0
   const samples = hist.reduce((n, h) => n + h.samples, 0)
   const avail = samples > 0 ? hist.reduce((n, h) => n + h.availability * h.samples, 0) / samples : null
-  const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < 200)
+  const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
   const maxAvg = Math.max(1, ...valid.map((h) => h.avg_entry))
   const shares = balance !== null && mine ? balance * mine.multiplier : null
 
@@ -157,11 +160,11 @@ export default function PassportScreen() {
             <View style={s.card}>
               <Text style={s.kicker}>TOKEN VS. WALL STREET</Text>
               <View style={s.row}><Text style={s.label}>Stock price on Wall Street</Text><Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text></View>
-              <View style={s.row}><Text style={s.label}>Token price per share</Text><Text style={[s.value, num]}>${mine.buy_px.toFixed(2)}</Text></View>
+              <View style={s.row}><Text style={s.label}>Token mid price per share</Text><Text style={[s.value, num]}>${tokenMid.toFixed(2)}</Text></View>
               <View style={s.row}>
                 <Text style={s.label}>Token vs. Wall Street</Text>
                 <Text style={[s.value, num]}>
-                  {reference.stale ? 'Wall Street closed' : `${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}${Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps`}
+                  {reference.stale ? 'Wall Street closed' : `${devBps >= 0 ? '+' : ''}${devBps} bps`}
                 </Text>
               </View>
               <View style={s.row}><Text style={s.label}>Trading cost to buy</Text><Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text></View>

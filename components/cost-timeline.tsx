@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native'
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg'
 import { issuerColor, num, T } from '@/constants/theme'
 import { getSeries, SeriesPoint } from '@/lib/stats'
+import { NO_MARKET_BPS } from '@/lib/cost'
 
 const W = 320
 const H = 150
@@ -19,7 +20,7 @@ export function CostTimeline({ ticker }: { ticker: string }) {
     getSeries(ticker, hours).then(setPoints).catch((e) => setError((e as Error).message))
   }, [ticker, hours])
 
-  const valid = points.filter((p) => p.quotable && p.entry_bps !== null && p.entry_bps < 200).map((p) => ({ ...p, entry_bps: Math.max(0, p.entry_bps as number) }))
+  const valid = points.filter((p) => p.quotable && p.entry_bps !== null && p.entry_bps < NO_MARKET_BPS).map((p) => ({ ...p, entry_bps: Math.max(0, p.entry_bps as number) }))
 
   if (valid.length < 2) {
     return (

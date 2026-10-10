@@ -71,7 +71,7 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
               </Pressable>
             ))}
           </View>
-          <Text style={s.tiny}>Checked when you open the app. No push notification.</Text>
+          <Text style={s.tiny}>Checked when you open the app. No push notification. Your wallet address and this alert are stored on the StockPass server.</Text>
         </>
       ) : (
         <Text style={s.tiny}>{currentBps === null ? 'No quote right now.' : 'It is already about as cheap as it gets.'}</Text>

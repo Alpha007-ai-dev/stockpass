@@ -1,3 +1,4 @@
+import { fetchT } from './http';
 import { getTransactionDecoder } from '@solana/transactions';
 import { getBase64Encoder } from '@solana/codecs-strings';
 
@@ -60,7 +61,7 @@ export async function getQuote(
       '&amount=' + amount +
       '&slippageBps=50' +
       (useFee ? '&platformFeeBps=' + Math.max(0, Math.floor(feeBps ?? PLATFORM_FEE_BPS)) : '');
-    const r = await fetch(url);
+    const r = await fetchT(url);
     const q = await r.json();
     if (!q || q.error || !q.outAmount) return null;
 
@@ -89,27 +90,32 @@ export async function getQuote(
 }
 
 export async function buildSwapTx(quote: Quote, userPublicKey: string): Promise<string | null> {
-  try {
-    const body: any = {
-      quoteResponse: quote.raw,
-      userPublicKey,
-      wrapAndUnwrapSol: true,
-      dynamicComputeUnitLimit: true,
-    };
-    if (quote.feeAccount) body.feeAccount = quote.feeAccount;
+  const body: any = {
+    quoteResponse: quote.raw,
+    userPublicKey,
+    wrapAndUnwrapSol: true,
+    dynamicComputeUnitLimit: true,
+  };
+  if (quote.feeAccount) body.feeAccount = quote.feeAccount;
 
-    const r = await fetch('https://lite-api.jup.ag/swap/v1/swap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json();
-    if (!j?.swapTransaction) { console.log('JUP SWAP ERROR', JSON.stringify(j)); return null; }
-    return j.swapTransaction as string;
-  } catch (e) {
-    console.log('JUP SWAP EXCEPTION', String(e));
-    return null;
+  // One retry: the keyless endpoint rate-limits (429) right after a quote, and that passes a moment later.
+  let reason = 'no transaction returned';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const r = await fetchT('https://lite-api.jup.ag/swap/v1/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j: any = await r.json().catch(() => null);
+      if (j?.swapTransaction) return j.swapTransaction as string;
+      reason = j?.error ? String(j.error).slice(0, 120) : `HTTP ${r.status}`;
+    } catch (e) {
+      reason = (e as Error)?.message ?? 'network error';
+    }
+    if (attempt === 0) await new Promise((res) => setTimeout(res, 1200));
   }
+  throw new Error(`Could not build transaction (${reason}). Try again.`);
 }
 
 export function decodeTx(base64: string) {

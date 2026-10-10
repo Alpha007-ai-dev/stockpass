@@ -2,6 +2,7 @@
 // automatic choice between the standard route (v1) and Swap V2: whichever returns more wins.
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions';
 import { getBase64Decoder, getBase64Encoder } from '@solana/codecs-strings';
+import { fetchT } from './http';
 import { buildSwapTx, decodeTx, getQuote, PayToken, Quote } from './swap';
 
 const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev';
@@ -22,7 +23,7 @@ async function fetchOrder(pay: PayToken, amountRaw: number, outputMint: string, 
   const q =
     `inputMint=${pay.mint}&outputMint=${outputMint}&amount=${amountRaw}&slippageBps=50` +
     (taker ? `&taker=${taker}` : '');
-  const r = await fetch(`${BASE}/swap/order?${q}`);
+  const r = await fetchT(`${BASE}/swap/order?${q}`);
   if (!r.ok) return null;
   const j = await r.json();
   if (!j || j.error || !j.outAmount) return null;
@@ -118,12 +119,20 @@ export async function submitSwap(quote: Quote, address: string, w: Wallet): Prom
     throw new Error(`The price moved: you would now receive ${(100 * (1 - fresh / quote.outUi)).toFixed(1)}% less than reviewed. Review again.`);
   }
   const tx = getTransactionDecoder().decode(getBase64Encoder().encode(j.transaction));
+  // The Worker builds this transaction, so check before signing that the user pays the fee (first required signer).
+  const feePayer = Object.keys((tx as any).signatures ?? {})[0];
+  if (feePayer !== address) throw new Error('This route returned an unexpected transaction. Nothing was signed.');
   const signed = await w.signTransaction(tx);
-  const res = await fetch(`${BASE}/swap/execute`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ signedTransaction: signedToBase64(signed), requestId: j.requestId }),
-  });
+  let res: Response;
+  try {
+    res = await fetchT(`${BASE}/swap/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signedTransaction: signedToBase64(signed), requestId: j.requestId }),
+    }, 30000);
+  } catch {
+    throw new Error('Could not confirm whether the swap went through. Check your wallet before trying again.');
+  }
   const out: any = await res.json().catch(() => ({}));
   if (!res.ok || (out?.status && out.status !== 'Success')) {
     throw new Error(out?.error ? String(out.error) : `Swap failed (${out?.status ?? res.status})`);

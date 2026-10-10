@@ -140,7 +140,7 @@ export default function WalletScreen() {
           <Text style={s.tiny}>{items!.length} asset{items!.length === 1 ? '' : 's'} · {issuers} issuer{issuers === 1 ? '' : 's'}{unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}</Text>
           </View>
           <PortfolioSpark
-            tickers={items!.map((i) => i.ticker)}
+            items={items!.map((i) => ({ ticker: i.ticker, symbol: i.symbol, value: i.buyValue ?? 0 }))}
             up={(() => {
               const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined
@@ -154,7 +154,7 @@ export default function WalletScreen() {
         <View style={s.heroCard}>
           <Text style={s.kicker}>YOUR HOLDINGS</Text>
           <Text style={s.tiny}>
-            Wallets show raw token counts. StockPass applies each issuer's multiplier to show what you really own.
+            Wallets show raw token counts. StockPass applies each issuer&apos;s multiplier to show what you really own.
           </Text>
           {account?.address && !demo ? (
             <View style={{ paddingVertical: 12 }}>
@@ -213,7 +213,7 @@ export default function WalletScreen() {
             <View style={s.noteCard}>
               <Text style={s.accent}>+{hidden.toFixed(4)} shares your wallet does not show</Text>
               <Text style={s.tiny}>
-                Wallets display raw token counts. Reinvested dividends live in each issuer's multiplier.
+                Wallets display raw token counts. Reinvested dividends live in each issuer&apos;s multiplier.
               </Text>
             </View>
           )}

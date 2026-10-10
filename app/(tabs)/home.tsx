@@ -9,7 +9,7 @@ import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
-import { isUsable } from '@/lib/cost'
+import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
 import { getGroups } from '@/lib/pairs'
@@ -233,7 +233,7 @@ export default function HomeScreen() {
   }
   const medianNow = median(freshEntries.map((l) => Math.max(0, l.entry_bps)))
   const medianUsual = median(
-    allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < 200).map((h) => Math.max(0, h.avg_entry))
+    allHist.filter((h) => h.market_state === state && h.samples * h.availability >= 10 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS).map((h) => Math.max(0, h.avg_entry))
   )
 
   // Holdings worth a look, most important first (unusual cost, rarely-tradable token, cheaper issuer).
@@ -309,7 +309,7 @@ export default function HomeScreen() {
             )}
           </View>
           <PortfolioSpark
-            tickers={items!.map((i) => i.ticker)}
+            items={items!.map((i) => ({ ticker: i.ticker, symbol: i.symbol, value: i.buyValue ?? 0 }))}
             up={(() => {
               const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
               if (!m.length) return undefined
@@ -339,6 +339,7 @@ export default function HomeScreen() {
           <Pressable style={s.secondary} onPress={startDemo} disabled={busy}>
             <Text style={s.secondaryText}>Explore with a demo portfolio</Text>
           </Pressable>
+          <Text style={s.privacyNote}>Connecting sends your wallet address to the StockPass server to read your holdings. Your keys stay in your wallet.</Text>
         </>
       )}
       {total === null && example && example.gap >= 1 && (
@@ -433,7 +434,7 @@ function DailyBrief({ latest, history }: { latest: Record<string, Latest>; histo
     b.n += h.samples
     b.q += q
     bySymbol.set(h.symbol, b)
-    if (q > 0 && h.avg_entry !== null && h.avg_entry < 200) {
+    if (q > 0 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS) {
       const v = Math.max(0, h.avg_entry) * q
       if (h.market_state === 'open') { openQ += q; openSum += v } else { offQ += q; offSum += v }
     }
@@ -477,6 +478,7 @@ function DailyBrief({ latest, history }: { latest: Record<string, Latest>; histo
   )
 }
 const s = StyleSheet.create({
+  privacyNote: { color: T.faint, fontSize: 11, textAlign: 'center', marginTop: 4 },
   screen: { flex: 1, backgroundColor: T.bg },
   briefCard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 8, marginBottom: 12 },
   briefKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },

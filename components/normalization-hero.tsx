@@ -70,7 +70,7 @@ export function NormalizationHero({
       {shrinks && (
         <View style={s.why}>
           <Text style={s.whyTitle}>Why is the difference smaller after adjusting?</Text>
-          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn't necessarily mean a cheaper stock.</Text>
+          <Text style={s.whyBody}>These tokens represent different amounts of the same stock. A lower token price doesn&apos;t necessarily mean a cheaper stock.</Text>
         </View>
       )}
 
@@ -80,7 +80,7 @@ export function NormalizationHero({
         </Pressable>
       )}
 
-      <Text style={s.tiny}>The difference is what you pay per share. The cost below is half the round-trip spread, measured on each token's own price.</Text>
+      <Text style={s.tiny}>The difference is what you pay per share. The cost below is half the round-trip spread, measured on each token&apos;s own price.</Text>
 
       {closed && (
         <Text style={s.tiny}>Wall Street is closed, so these are the latest prices we measured on Solana.</Text>

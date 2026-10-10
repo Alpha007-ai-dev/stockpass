@@ -256,7 +256,7 @@ export default function DefiScreen() {
             <Text style={s.cardTitle}>How it works</Text>
             <Text style={s.tiny}>
               Lending markets accept some tokenized stocks as collateral, letting you borrow against a position instead
-              of selling it. Loan-to-value sets how much you can borrow. What you borrow is a stablecoin such as USDC, and the borrow rate shown is that stablecoin's rate in each market.
+              of selling it. Loan-to-value sets how much you can borrow. What you borrow is a stablecoin such as USDC, and the borrow rate shown is that stablecoin&apos;s rate in each market.
             </Text>
             <Text style={s.tiny}>
               Tokenized stocks currently earn close to nothing as collateral, because almost nobody borrows them. The
@@ -264,7 +264,7 @@ export default function DefiScreen() {
             </Text>
             <Text style={s.tiny}>
               StockPass shows this information only. It does not deposit or borrow on your behalf, and the data comes
-              from Kamino's public API, which can change at any time.
+              from Kamino&apos;s public API, which can change at any time.
             </Text>
           </View>
         </>
