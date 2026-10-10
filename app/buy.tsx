@@ -248,12 +248,12 @@ export default function BuyScreen() {
                   <Text style={s.kicker}>{blocked ? 'TRY THIS ISSUER INSTEAD' : 'ALTERNATIVE ISSUER'}</Text>
                   <View style={s.row}>
                     <Text style={s.label}>{alternative.token.symbol} · {alternative.token.issuer}</Text>
-                    <Text style={[s.value, num]}>{alternative.entry} bps</Text>
+                    <Text style={[s.value, num]}>{alternative.entry} bps<Text style={s.tiny}> entry cost</Text></Text>
                   </View>
                   <Text style={s.tiny}>
                     {savingBps <= -MIN_SAVING_BPS
                       ? `${alternative.token.symbol} costs ${Math.abs(savingBps)} bps less per share than your choice. Choose on issuer, availability or utility if that matters more.`
-                      : `Only ${Math.abs(savingBps)} bps apart per share. Choose on issuer, availability or utility.`}
+                      : `${alternative.token.symbol} is ${Math.abs(savingBps)} bps ${savingBps >= 0 ? 'more expensive' : 'cheaper'} per share, entry cost included. That is within normal quote noise, so choose on issuer, availability or utility.`}
                   </Text>
                 </>
               )}
