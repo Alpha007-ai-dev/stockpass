@@ -90,7 +90,8 @@ export function TokenIcon({ icon, label, issuer, symbol, size = 40 }: {
   const [stage, setStage] = useState(0)
   const failed = stage >= 2
   const isBp = issuer === 'Backpack' && !!symbol
-  const src = isBp ? PROXY + symbol : icon
+  // The holdings endpoint returns no icon URL, so fall back to the logo proxy, which looks it up by symbol.
+  const src = isBp ? PROXY + symbol : icon || (symbol ? PROXY + symbol : null)
   // Issuer icons that the Image component cannot decode (typically SVG) are fetched through our proxy and drawn as SVG instead.
   const svgUri = isBp ? src : failed && symbol ? PROXY + symbol : null
   const svg = useSvg(svgUri)
