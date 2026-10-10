@@ -2,6 +2,7 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
 import { num, T } from '@/constants/theme'
 import { Collateral, getCollateral } from '@/lib/stats'
+import { kaminoBorrowUrl } from '@/lib/kamino'
 
 export function CollateralSection({ symbol, otherSymbol }: { symbol: string; otherSymbol: string }) {
   const [rows, setRows] = useState<Collateral[] | null>(null)
@@ -60,7 +61,7 @@ export function CollateralSection({ symbol, otherSymbol }: { symbol: string; oth
             </View>
           )}
 
-          <Pressable onPress={() => Linking.openURL('https://app.kamino.finance/')}>
+          <Pressable onPress={() => Linking.openURL(kaminoBorrowUrl())}>
             <Text style={s.link}>Open in Kamino ›</Text>
           </Pressable>
         </>

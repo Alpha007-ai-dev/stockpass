@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/error-state'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import { Collateral, getCollateral, getHoldings, getStats, HoldingRow, Latest } from '@/lib/stats'
+import { kaminoBorrowUrl } from '@/lib/kamino'
 
 type Row = {
   token: HoldingRow
@@ -226,7 +227,7 @@ export default function DefiScreen() {
                   )
                 })()}
 
-                <Pressable onPress={() => Linking.openURL('https://app.kamino.finance/')}>
+                <Pressable onPress={() => Linking.openURL(kaminoBorrowUrl(r.token.mint))}>
                   <Text style={s.link}>Open in Kamino ›</Text>
                 </Pressable>
               </View>
