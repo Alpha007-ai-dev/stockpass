@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { num, T } from '@/constants/theme'
 import { CostAlert as Alert, getAlerts, removeAlert, setAlert } from '@/lib/alerts'
@@ -20,6 +20,7 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
   const [alert, setAlertState] = useState<Alert | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [custom, setCustom] = useState('')
 
   const load = useCallback(async () => {
     if (!owner) { setAlertState(null); return }
@@ -47,6 +48,9 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
   }
 
   const opts = currentBps !== null ? options(currentBps) : []
+  const customBps = custom === '' ? NaN : Number(custom)
+  // The server accepts 0 to 200; 200 and above means 'no real market', so 0 to 199 are the useful values.
+  const valid = Number.isInteger(customBps) && customBps >= 0 && customBps <= 199
 
   return (
     <View style={s.card}>
@@ -61,20 +65,41 @@ export function CostAlert({ symbol, currentBps }: { symbol: string; currentBps: 
           </View>
           {alert.triggered && <Text style={[s.tiny, { color: T.accent }]}>Triggered: it costs {alert.current_bps} bps right now.</Text>}
         </>
-      ) : opts.length > 0 ? (
+      ) : (
         <>
           <Text style={s.tiny}>Tell me when buying {symbol} costs at most:</Text>
-          <View style={s.chips}>
-            {opts.map((v) => (
-              <Pressable key={v} style={s.chip} disabled={busy} onPress={() => act(() => setAlert(owner, symbol, v))}>
-                <Text style={[s.chipText, num]}>{v} bps</Text>
-              </Pressable>
-            ))}
+          {opts.length > 0 && (
+            <View style={s.chips}>
+              {opts.map((v) => (
+                <Pressable key={v} style={s.chip} disabled={busy} onPress={() => act(() => setAlert(owner, symbol, v))}>
+                  <Text style={[s.chipText, num]}>{v} bps</Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+          <View style={s.customRow}>
+            <TextInput
+              style={[s.input, num]}
+              value={custom}
+              onChangeText={(t) => setCustom(t.replace(/[^0-9]/g, '').slice(0, 3))}
+              keyboardType="number-pad"
+              placeholder="your own, in bps"
+              placeholderTextColor={T.faint}
+              maxLength={3}
+            />
+            <Pressable
+              style={[s.chip, (!valid || busy) && { opacity: 0.4 }]}
+              disabled={!valid || busy}
+              onPress={() => act(async () => { await setAlert(owner, symbol, customBps); setCustom('') })}>
+              <Text style={s.chipText}>Set alert</Text>
+            </Pressable>
           </View>
+          {valid && currentBps !== null && customBps >= currentBps && (
+            <Text style={s.tiny}>It costs {currentBps} bps now, so this alert will show as triggered right away.</Text>
+          )}
+          {currentBps === null && <Text style={s.tiny}>There is no executable quote right now; the alert still works once there is one.</Text>}
           <Text style={s.tiny}>Checked when you open the app. No push notification. Your wallet address and this alert are stored on the StockPass server.</Text>
         </>
-      ) : (
-        <Text style={s.tiny}>{currentBps === null ? 'No quote right now.' : 'It is already about as cheap as it gets.'}</Text>
       )}
       {error && <Text style={[s.tiny, { color: T.down }]}>{error}</Text>}
     </View>
@@ -89,6 +114,8 @@ const s = StyleSheet.create({
   strong: { color: T.text, fontWeight: '700' },
   remove: { color: T.faint, fontSize: 14, fontWeight: '600' },
   chips: { flexDirection: 'row', gap: 8 },
+  customRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  input: { flex: 1, minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: T.border, paddingHorizontal: 12, color: T.text, fontSize: 15 },
   chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 12, borderWidth: 1, borderColor: T.accent },
   chipText: { color: T.accent, fontSize: 14, fontWeight: '700' },
   tiny: { color: T.faint, fontSize: 12, lineHeight: 17 },
