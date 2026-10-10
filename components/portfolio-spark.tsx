@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg'
 import { T } from '@/constants/theme'
+import { NO_MARKET_BPS } from '@/lib/cost'
 import { getSeries } from '@/lib/stats'
 
 export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
@@ -22,7 +23,9 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
         const series = await Promise.all(
           held.map(async (i) => {
             const rows = (await getSeries(i.ticker, 24))
-              .filter((p) => p.symbol === i.symbol && p.buy_px && p.quotable)
+              .filter((p) => p.symbol === i.symbol && p.buy_px && p.quotable && p.entry_bps !== null && p.entry_bps < NO_MARKET_BPS)
+              // Mid price: the buy price minus the entry cost, so a changing cost does not look like a price move.
+              .map((p) => ({ ts: p.ts, px: (p.buy_px as number) / (1 + Math.max(0, p.entry_bps as number) / 10000) }))
               .sort((x, y) => x.ts - y.ts)
             return { weight: i.value, rows }
           }),
@@ -35,9 +38,9 @@ export function PortfolioSpark({ items, up: upProp, width = 96, height = 44 }: {
           let sum = 0
           let wsum = 0
           for (const x of usable) {
-            const base = x.rows[0].buy_px as number
-            let last = x.rows[0].buy_px as number
-            for (const r of x.rows) { if (r.ts <= end) last = r.buy_px as number; else break }
+            const base = x.rows[0].px
+            let last = x.rows[0].px
+            for (const r of x.rows) { if (r.ts <= end) last = r.px; else break }
             sum += x.weight * (last / base)
             wsum += x.weight
           }
