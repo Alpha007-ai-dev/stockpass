@@ -14,11 +14,11 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="index"
         options={{ title: 'Home', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>⌂</Text> }}
       />
       <Tabs.Screen
-        name="index"
+        name="markets"
         options={{ title: 'Markets', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 22 }}>▤</Text> }}
       />
       <Tabs.Screen

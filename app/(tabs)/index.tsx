@@ -1,399 +1,726 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useScrollReset } from '@/lib/use-scroll-reset'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useRouter } from 'expo-router'
-import Svg, { Path } from 'react-native-svg'
-import { CostMap, MapFilter } from '@/components/cost-map'
-import { ReliabilityMap } from '@/components/reliability-map'
+import { tradedSince } from '@/lib/trade-signal'
+import { useMobileWallet } from '@wallet-ui/react-native-kit'
+import { PortfolioSpark } from '@/components/portfolio-spark'
 import { TokenIcon } from '@/components/token-icon'
 import { issuerColor, num, T } from '@/constants/theme'
 import { ErrorState } from '@/components/error-state'
 import { isUsable, NO_MARKET_BPS } from '@/lib/cost'
+import { DEMO_HOLDINGS, isDemo, setDemo } from '@/lib/demo'
 import { getMarketState, MARKET_LABEL } from '@/lib/market-hours'
-import { getGroups, Group } from '@/lib/pairs'
-import { getSeries, getStats, History, Latest, SeriesPoint, TokenRow } from '@/lib/stats'
-import { EarningsIcon } from '@/components/event-icons'
+import { getGroups } from '@/lib/pairs'
+import { getLastPortfolio, savePortfolio, Snapshot } from '@/lib/portfolio'
+import { getLastPurchase, Purchase } from '@/lib/purchases'
+import { getBalances, getHoldings, getPricesAgo, getSeries, getStats, History, HoldingRow, Latest } from '@/lib/stats'
+import { buildInsight, InsightCard } from '@/components/insight-card'
+import { AlertsCard } from '@/components/alerts-card'
+import { describeChange, getMultiplierChanges, MultiplierChange } from '@/lib/insights'
 
-type Row = { token: TokenRow; l: Latest | undefined; spark: number[] | null }
-
-function Spark({ values, color }: { values: number[]; color: string }) {
-  if (values.length < 3) return <View style={{ width: 64, height: 24 }} />
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-  const span = Math.max(10, max - min)
-  const step = 64 / (values.length - 1)
-  const d = values
-    .map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * step).toFixed(1)},${(22 - ((v - min) / span) * 18).toFixed(1)}`)
-    .join(' ')
-  return (
-    <Svg width={64} height={24}>
-      <Path
-        d={d}
-        stroke={color}
-        strokeWidth={1.6}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity={0.85}
-      />
-    </Svg>
-  )
+type Item = HoldingRow & {
+  shares: number
+  value: number | null
+  buyValue: number | null
+  entryBps: number | null
+  exitBps: number | null
+  entryDelta: number | null
+  altSymbol: string | null
+  altIssuer: string | null
+  altEntryBps: number | null
 }
 
-export default function MarketScreen() {
+export default function HomeScreen() {
   const router = useRouter()
+  const { account, connect } = useMobileWallet() as any
+  const [items, setItems] = useState<Item[] | null>(null)
   const [latest, setLatest] = useState<Record<string, Latest>>({})
-  const [groups, setGroups] = useState<Group[]>([])
   const [hist, setHist] = useState<Record<string, History>>({})
-  const [events, setEvents] = useState<Record<string, { date: string; detail: string | null }>>({})
-  const [sparks, setSparks] = useState<Record<string, number[]>>({})
-  const [filter, setFilter] = useState<string>('all')
-  const [mapFilter, setMapFilter] = useState<MapFilter>('all')
-  const [query, setQuery] = useState('')
-  const [view, setView] = useState<'list' | 'map' | 'issuers'>('list')
-  const [loading, setLoading] = useState(false)
+  const [allHist, setAllHist] = useState<History[]>([])
+  const [ago, setAgo] = useState<Record<string, { px: number; ts: number }>>({})
+  const [last, setLast] = useState<Purchase | null>(null)
+  const [prev, setPrev] = useState<Snapshot | null>(null)
+  const [demo, setDemoState] = useState(false)
+  const modeRef = useRef<boolean | null>(null)
+  const [usdc, setUsdc] = useState<number | null>(null)
+  const scrollRef = useScrollReset()
+  const lastScan = useRef(0)
+  const statsAt = useRef(Date.now())
+  const [busy, setBusy] = useState(false)
+  const [mchanges, setMchanges] = useState<MultiplierChange[]>([])
   const [error, setError] = useState<string | null>(null)
+  const insets = useSafeAreaInsets()
   const state = getMarketState()
   const market = MARKET_LABEL[state]
   const open = state === 'open'
 
-  const insets = useSafeAreaInsets()
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [stats, allGroups] = await Promise.all([getStats(), getGroups()])
-      const l: Record<string, Latest> = {}
-      stats.latest.forEach((r) => {
-        l[r.symbol] = r
-      })
-      setLatest(l)
-      const h: Record<string, History> = {}
-      stats.history
-        .filter((r) => r.market_state === state)
-        .forEach((r) => {
-          h[r.symbol] = r
+  const scan = useCallback(
+    async (useDemo?: boolean) => {
+      lastScan.current = Date.now()
+      setBusy(true)
+      setError(null)
+      try {
+        const asDemo = useDemo ?? (await isDemo())
+        const stats = await getStats()
+        const map: Record<string, Latest> = {}
+        stats.latest.forEach((r) => {
+          map[r.symbol] = r
         })
-      setHist(h)
-      setGroups(allGroups)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-    setLoading(false)
-  }, [state])
-
-  useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    fetch('https://stockpass-collector.stockpass-dev.workers.dev/underlying')
-      .then((r) => r.json())
-      .then((j: any) => {
-        const m: Record<string, { date: string; detail: string | null }> = {}
-        for (const e of j?.upcoming ?? []) {
-          if (e.kind !== 'earnings') continue
-          if (!m[e.ticker]) m[e.ticker] = { date: e.event_date, detail: e.detail ?? null }
-        }
-        setEvents(m)
-      })
-      .catch(() => {})
-  }, [])
-
-  const rows = useMemo(() => {
-    const q = query.trim().toUpperCase()
-    const all: Row[] = groups.flatMap((g) =>
-      g.tokens.map((token) => ({ token, l: latest[token.symbol], spark: sparks[token.symbol] ?? null })),
-    )
-    const byFilter = filter === 'all' ? all : all.filter((r) => r.token.issuer === filter)
-    const byQuery = q ? byFilter.filter((r) => r.token.ticker.includes(q)) : byFilter
-    return byQuery.sort((a, b) => {
-      const av = isUsable(a.l?.entry_bps, a.l?.quotable) ? (a.l!.entry_bps as number) : 9999
-      const bv = isUsable(b.l?.entry_bps, b.l?.quotable) ? (b.l!.entry_bps as number) : 9999
-      return av - bv
-    })
-  }, [groups, latest, sparks, filter, query])
-
-  useEffect(() => {
-    let cancelled = false
-    const wanted = rows.filter((r) => !sparks[r.token.symbol]).map((r) => r.token)
-    if (!wanted.length) return
-
-    // One request per ticker, not per token — the series covers every issuer.
-    const tickers = [...new Set(wanted.map((t) => t.ticker))]
-
-    ;(async () => {
-      for (let i = 0; i < tickers.length; i += 8) {
-        if (cancelled) return
-        const batch = tickers.slice(i, i + 8)
-        const results = await Promise.all(batch.map((tk) => getSeries(tk, 48).catch(() => [] as SeriesPoint[])))
-        if (cancelled) return
-        setSparks((prev) => {
-          const next = { ...prev }
-          results.forEach((pts) => {
-            const bySymbol: Record<string, number[]> = {}
-            ;(pts as SeriesPoint[]).forEach((p) => {
-              if (!p.quotable || p.entry_bps === null || p.entry_bps >= NO_MARKET_BPS) return
-              ;(bySymbol[p.symbol] ??= []).push(Math.max(0, p.entry_bps as number))
-            })
-            Object.entries(bySymbol).forEach(([sym, vals]) => {
-              if (vals.length >= 3) next[sym] = vals.slice(-14)
-            })
+        setLatest(map)
+        const h: Record<string, History> = {}
+        stats.history
+          .filter((r) => r.market_state === state)
+          .forEach((r) => {
+            h[r.symbol] = r
           })
-          return next
-        })
-        await new Promise((r) => setTimeout(r, 150))
+        setHist(h)
+        setAllHist(stats.history)
+
+        let rows: HoldingRow[]
+        if (asDemo) {
+          const groups = await getGroups()
+          const all = groups.flatMap((g) => g.tokens)
+          rows = DEMO_HOLDINGS.map((d) => {
+            const t = all.find((x) => x.symbol === d.symbol)
+            return t ? { ...t, walletAmount: d.walletAmount } : null
+          }).filter(Boolean) as HoldingRow[]
+        } else {
+          const addr = account?.address ?? (await connect())?.address
+          if (!addr) throw new Error('Wallet not connected')
+          rows = await getHoldings(String(addr))
+          getBalances(String(addr))
+            .then((b) => setUsdc(b.usdc))
+            .catch(() => {})
+        }
+        if (asDemo) setUsdc(null)
+
+        const groupsForAlt = await getGroups()
+        const base: Item[] = rows
+          .map((r) => {
+            const l = map[r.symbol]
+            const shares = r.walletAmount * (l?.multiplier ?? 1)
+            const peers = (groupsForAlt.find((g) => g.ticker === r.ticker)?.tokens ?? [])
+              .filter((p) => p.symbol !== r.symbol)
+              .map((p) => ({ token: p, l: map[p.symbol] }))
+              .filter((o) => o.l && isUsable(o.l.entry_bps, o.l.quotable))
+            const cheapest = peers.length
+              ? peers.reduce((a, b) => ((a.l!.entry_bps as number) <= (b.l!.entry_bps as number) ? a : b))
+              : null
+            return {
+              ...r,
+              shares,
+              value: l?.sell_px ? shares * l.sell_px : null,
+              buyValue: l?.buy_px ? shares * l.buy_px : null,
+              entryBps: l && isUsable(l.entry_bps, l.quotable) ? (l.entry_bps as number) : null,
+              exitBps: l && isUsable(l.exit_bps, l.quotable) ? (l.exit_bps as number) : null,
+              entryDelta: null,
+              altSymbol: cheapest ? cheapest.token.symbol : null,
+              altIssuer: cheapest ? cheapest.token.issuer : null,
+              altEntryBps: cheapest ? (cheapest.l!.entry_bps as number) : null,
+            }
+          })
+          .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+        setItems(base)
+
+        const withDelta = await Promise.all(
+          base.map(async (i) => {
+            try {
+              const pts = (await getSeries(i.ticker, 24)).filter(
+                (p) => p.symbol === i.symbol && p.quotable && p.entry_bps !== null,
+              )
+              if (pts.length < 2 || i.entryBps === null) return i
+              return { ...i, entryDelta: i.entryBps - (pts[0].entry_bps as number) }
+            } catch {
+              return i
+            }
+          }),
+        )
+        setItems(withDelta)
+        getPricesAgo(
+          base.map((i) => i.symbol),
+          24,
+        )
+          .then(setAgo)
+          .catch(() => {})
+      } catch (e) {
+        setError((e as Error).message)
       }
-    })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [rows.length, filter])
-
-  const statusFor = (l: Latest | undefined) => {
-    if (!l || !l.quotable) return { label: 'NO MARKET', color: T.faint, dot: false }
-    if ((l.entry_bps as number) >= NO_MARKET_BPS) return { label: 'NO MARKET', color: T.faint, dot: false }
-    if ((l.entry_bps as number) > 30) return { label: 'LIMITED', color: T.warn, dot: true }
-    return { label: 'LIVE', color: T.accent, dot: true }
-  }
-
-  const filters: [string, string][] = [
-    ['all', 'All'],
-    ['xStocks', 'xStocks'],
-    ['Ondo', 'Ondo'],
-    ['Backpack', 'Backpack'],
-  ]
-
-  // Tabs stay mounted, so the list would otherwise keep its scroll position when you come back from another tab.
-  const listRef = useRef<FlatList<any>>(null)
-  useFocusEffect(
-    useCallback(
-      () => () => {
-        listRef.current?.scrollToOffset({ offset: 0, animated: false })
-      },
-      [],
-    ),
+      setBusy(false)
+    },
+    [account, connect],
   )
 
+  // Connecting on any tab connects the whole app, so load the portfolio as soon as the wallet is there.
+  useEffect(() => {
+    if (!account?.address) return
+    isDemo().then((d) => {
+      if (!d) scan(false)
+    })
+  }, [account?.address])
+
+  useEffect(() => {
+    getMultiplierChanges().then(setMchanges)
+    getLastPortfolio().then(setPrev)
+    getLastPurchase().then(setLast)
+    isDemo().then((d) => {
+      modeRef.current = d
+      setDemoState(d)
+      if (d) scan(true)
+    })
+    getStats()
+      .then((s) => {
+        const map: Record<string, Latest> = {}
+        s.latest.forEach((r) => {
+          map[r.symbol] = r
+        })
+        setLatest(map)
+      })
+      .catch(() => {})
+  }, [scan])
+
+  const total = items?.reduce((n, i) => n + (i.value ?? 0), 0) ?? null
+  // Only compare against a snapshot taken in the same mode, so switching between
+  // the demo portfolio and a real wallet never shows a fabricated change.
+  const change = total !== null && prev && prev.demo === demo && prev.total > 0 ? total - prev.total : null
+  const issuers = new Set(items?.map((i) => i.issuer)).size
+  const unpriced = items?.filter((i) => i.value === null).length ?? 0
+  // A 24h comparison is only meaningful when the earlier price really is about a day old.
+  const agoOk = (sym: string) => !!ago[sym] && Date.now() / 1000 - ago[sym].ts <= 30 * 3600
+
+  useEffect(() => {
+    if (total === null || total <= 0 || unpriced > 0) return
+    if (prev && prev.demo === demo && Date.now() - prev.at < 60 * 60 * 1000) return
+    savePortfolio(total, demo).then(() => getLastPortfolio().then(setPrev))
+  }, [total, prev, demo])
+
+  const startDemo = async () => {
+    await setDemo(true)
+    modeRef.current = true
+    setDemoState(true)
+    scan(true)
+  }
+  // Tabs stay mounted, so re-sync the demo/wallet mode whenever this tab gains focus.
+  useFocusEffect(
+    useCallback(() => {
+      isDemo().then((d) => {
+        if (modeRef.current === null) return
+        if (d === modeRef.current) {
+          if (
+            lastScan.current > 0 &&
+            (Date.now() - lastScan.current > 60000 || tradedSince(lastScan.current)) &&
+            (d || account?.address)
+          )
+            scan(d)
+          else if (Date.now() - statsAt.current > 60000) {
+            // No portfolio to rescan: still keep the Daily Brief inputs current.
+            statsAt.current = Date.now()
+            getStats()
+              .then((st) => {
+                const map: Record<string, Latest> = {}
+                st.latest.forEach((r) => {
+                  map[r.symbol] = r
+                })
+                setLatest(map)
+                setAllHist(st.history)
+              })
+              .catch(() => {})
+          }
+          return
+        }
+        modeRef.current = d
+        setDemoState(d)
+        setItems(null)
+        setAgo({})
+        getLastPortfolio().then(setPrev)
+        if (d || account?.address) scan(d)
+      })
+    }, [account, scan]),
+  )
+  const exitDemo = async () => {
+    await setDemo(false)
+    modeRef.current = false
+    setDemoState(false)
+    setItems(null)
+    setPrev(null)
+  }
+
+  // The collector measures each token about every 50 minutes, so anything older than 90 minutes is not a current reading.
+  const isFresh = (l?: Latest) => !!l && Date.now() / 1000 - l.ts <= 5400
+  const allLatest = Object.values(latest)
+  const entries = allLatest
+    .filter((l) => isUsable(l.entry_bps, l.quotable))
+    .map((l) => l.entry_bps as number)
+    .sort((a, b) => a - b)
+  const tracked = new Set(allLatest.map((l) => l.ticker)).size
+
+  // 30-day share of measurements that were quotable, per token (needs a meaningful sample).
+  const availability: Record<string, number> = {}
+  const tally = new Map<string, { n: number; q: number }>()
+  allHist.forEach((h) => {
+    const b = tally.get(h.symbol) ?? { n: 0, q: 0 }
+    b.n += h.samples
+    b.q += h.samples * h.availability
+    tally.set(h.symbol, b)
+  })
+  tally.forEach((b, symbol) => {
+    if (b.n >= 50) availability[symbol] = Math.round((b.q / b.n) * 100)
+  })
+
+  // What it would cost to sell everything right now, from the latest exit quotes.
+  const exitRows = (items ?? []).filter((i) => i.value !== null && i.exitBps !== null && isFresh(latest[i.symbol]))
+  const exitValue = exitRows.reduce((n, i) => n + (i.value as number), 0)
+  const exitCostUsd = exitRows.reduce((n, i) => n + ((i.value as number) * Math.max(0, i.exitBps as number)) / 10000, 0)
+  const exitCostBps = exitValue > 0 ? Math.round((exitCostUsd / exitValue) * 10000) : null
+
+  // Median entry cost across fresh, quotable tokens now, against the median usual cost in the same market state.
+  const median = (xs: number[]) => {
+    if (!xs.length) return null
+    const a = [...xs].sort((x, y) => x - y)
+    const m = Math.floor(a.length / 2)
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2
+  }
+  const freshEntries = allLatest.filter((l) => isFresh(l) && isUsable(l.entry_bps, l.quotable))
+  const cheapest = freshEntries.length ? freshEntries.reduce((a, b) => (a.entry_bps <= b.entry_bps ? a : b)) : null
+  // The stock where the issuers differ most right now, as a concrete example for a visitor without a wallet.
+  let example: { ticker: string; rows: Latest[]; gap: number } | null = null
+  const byTicker = new Map<string, Latest[]>()
+  freshEntries.forEach((l) => byTicker.set(l.ticker, [...(byTicker.get(l.ticker) ?? []), l]))
+  for (const [ticker, rows] of Array.from(byTicker.entries())) {
+    if (rows.length < 2) continue
+    const v = rows.map((r) => Math.max(0, r.entry_bps))
+    const gap = Math.max(...v) - Math.min(...v)
+    if (!example || gap > example.gap)
+      example = { ticker, rows: [...rows].sort((a, b) => a.entry_bps - b.entry_bps), gap }
+  }
+  const medianNow = median(freshEntries.map((l) => Math.max(0, l.entry_bps)))
+  const medianUsual = median(
+    allHist
+      .filter(
+        (h) =>
+          h.market_state === state &&
+          h.samples * h.availability >= 10 &&
+          h.avg_entry !== null &&
+          h.avg_entry < NO_MARKET_BPS,
+      )
+      .map((h) => Math.max(0, h.avg_entry)),
+  )
+
+  // Holdings worth a look, most important first (unusual cost, rarely-tradable token, cheaper issuer).
+  const ranked = (items ?? [])
+    .filter((i) => i.entryBps !== null && isFresh(latest[i.symbol]))
+    .map((i) => ({ i, ins: buildInsight(i, hist[i.symbol], availability[i.symbol] ?? null) }))
+    .filter((x) => x.ins !== null)
+    .sort((a, b) => (a.ins as any).rank - (b.ins as any).rank)
+    .slice(0, 4)
+
   return (
-    <FlatList
-      ref={listRef}
+    <ScrollView
+      ref={scrollRef as any}
       style={s.screen}
       contentContainerStyle={[s.content, { paddingTop: insets.top + 8 }]}
-      data={view === 'list' ? rows : []}
-      keyExtractor={(r) => r.token.symbol}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={T.dim} />}
-      ListHeaderComponent={
-        <View style={{ gap: 11 }}>
-          <View style={s.header}>
-            <View>
-              <Text style={s.title}>Markets</Text>
-              <Text style={s.sub}>Tokenized equities · {rows.length} tokens</Text>
-            </View>
-            <View style={s.live}>
-              <View style={[s.dot, { backgroundColor: open ? T.accent : T.warn }]} />
-              <Text style={s.liveText}>{open ? 'LIVE' : 'CLOSED'}</Text>
-            </View>
-          </View>
+      refreshControl={<RefreshControl refreshing={busy} onRefresh={() => scan()} tintColor={T.dim} />}
+    >
+      {demo && (
+        <Pressable style={s.demoBar} onPress={exitDemo}>
+          <Text style={s.demoText}>DEMO PORTFOLIO · real prices, sample amounts</Text>
+          <Text style={s.demoExit}>Exit</Text>
+        </Pressable>
+      )}
 
-          <View style={s.toggle}>
-            {(['list', 'map', 'issuers'] as const).map((v) => (
-              <Pressable key={v} onPress={() => setView(v)} style={[s.toggleBtn, view === v && s.toggleOn]}>
-                <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
-                  {v === 'list' ? 'Assets' : v === 'map' ? 'Cost map' : 'Issuers'}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {view === 'list' ? (
-            <>
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search ticker"
-                placeholderTextColor={T.faint}
-                autoCapitalize="characters"
-                style={s.search}
-              />
-              <View style={s.filters}>
-                {filters.map(([key, label]) => (
-                  <Pressable key={key} onPress={() => setFilter(key)} style={[s.chip, filter === key && s.chipOn]}>
-                    <Text style={[s.chipText, filter === key && s.chipTextOn]}>{label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </>
-          ) : view === 'map' ? (
-            <CostMap groups={groups} latest={latest} filter={mapFilter} onFilter={setMapFilter} />
-          ) : (
-            <ReliabilityMap latest={latest} />
-          )}
-
-          {error && <ErrorState message={error} onRetry={load} />}
+      <View style={s.header}>
+        <Text style={s.brand}>StockPass</Text>
+        <View style={s.live}>
+          <View style={[s.dot, { backgroundColor: open ? T.accent : T.warn }]} />
+          <Text style={s.liveText}>{open ? 'LIVE' : 'CLOSED'}</Text>
         </View>
-      }
-      renderItem={({ item }) => {
-        const { token, l, spark } = item
-        const st = statusFor(l)
-        const ok = isUsable(l?.entry_bps, l?.quotable)
-        return (
-          <Pressable style={s.card} onPress={() => router.push(`/passport?symbol=${token.symbol}`)}>
-            <View style={s.cardTop}>
-              <TokenIcon icon={token.icon} symbol={token.symbol} label={token.ticker} issuer={token.issuer} size={36} />
-              <View style={{ flex: 1 }}>
-                <Text style={s.symbol}>{token.symbol}</Text>
-                <Text style={[s.issuer, { color: issuerColor(token.issuer) }]}>{token.issuer}</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                <Text style={[s.price, num]}>
-                  {l?.buy_px ? `$${l.buy_px.toFixed(2)}` : '—'}
-                  {l?.buy_px ? <Text style={s.perShare}> /share</Text> : null}
-                </Text>
-                <Text style={[s.status, { color: st.color }]}>
-                  {st.dot ? '● ' : '○ '}
-                  {st.label}
-                </Text>
-              </View>
-            </View>
+      </View>
 
+      {total !== null ? (
+        <View style={s.heroCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.kicker}>YOUR PORTFOLIO</Text>
+            <Text style={[s.heroValue, num]}>
+              ${total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </Text>
             {(() => {
-              const ev = events[token.ticker]
-              if (!ev) return null
-              const days = Math.round((new Date(ev.date + 'T12:00:00Z').getTime() - Date.now()) / 86400000)
-              if (days < 0 || days > 30) return null
-              return (
-                <View style={s.eventBadge}>
-                  <EarningsIcon size={15} color="#A78BFA" />
-                  <Text style={s.eventText}>
-                    Earnings{' '}
-                    {new Date(ev.date + 'T12:00:00Z').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                    {days <= 7 ? ` · in ${days}d` : ''}
-                  </Text>
-                </View>
-              )
-            })()}
-
-            <View style={s.cardBottom}>
-              <View style={s.metric}>
-                <Text style={s.metricLabel}>entry/exit</Text>
-                <Text style={[s.metricValue, num, !ok && { color: T.faint }]}>
-                  {!ok
-                    ? '—'
-                    : l!.entry_bps < 0
-                      ? '~0 bps'
-                      : l!.entry_bps === l!.exit_bps
-                        ? `${l!.entry_bps} bps`
-                        : `${l!.entry_bps} / ${l!.exit_bps} bps`}
-                </Text>
-              </View>
-              {(() => {
-                const h = hist[token.symbol]
-                if (!h || h.avg_entry === null || h.avg_entry >= NO_MARKET_BPS || h.samples * h.availability < 10)
-                  return null
+              const matched = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
+              if (matched.length) {
+                const nowVal = matched.reduce((n, i) => n + (i.buyValue as number), 0)
+                const thenVal = matched.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
+                const d = nowVal - thenVal
+                const pct = thenVal > 0 ? (d / thenVal) * 100 : 0
                 return (
-                  <View style={s.metric}>
-                    <Text style={s.metricLabel}>usual</Text>
-                    <Text style={[s.metricValue, num, { color: T.dim }]}>
-                      {h.avg_entry < 0.5 ? '~0' : h.avg_entry.toFixed(0)} bps
-                    </Text>
-                  </View>
+                  <Text style={[s.heroChange, num, { color: d >= 0 ? T.accent : T.down }]}>
+                    {d >= 0 ? '+' : '-'}${Math.abs(d).toFixed(2)} ({d >= 0 ? '+' : ''}
+                    {pct.toFixed(2)}%)
+                    <Text style={s.heroChangeLabel}> 24h price change</Text>
+                  </Text>
                 )
-              })()}
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                {spark ? (
-                  <>
-                    <Spark values={spark} color={issuerColor(token.issuer)} />
-                    <Text style={s.sparkLabel}>cost, last 24 h</Text>
-                  </>
-                ) : ok ? (
-                  <Text style={s.collecting}>collecting</Text>
-                ) : (
-                  <Text style={s.noQuote}>No executable quote</Text>
-                )}
-              </View>
-            </View>
+              }
+              if (change !== null) {
+                return (
+                  <Text style={[s.heroChange, num, { color: change >= 0 ? T.accent : T.down }]}>
+                    {change >= 0 ? '+' : '-'}${Math.abs(change).toFixed(2)}
+                    <Text style={s.heroChangeLabel}> since last snapshot</Text>
+                  </Text>
+                )
+              }
+              return null
+            })()}
+            <Text style={s.heroMeta}>
+              {items!.length} asset{items!.length === 1 ? '' : 's'} · {issuers} issuer{issuers === 1 ? '' : 's'}
+              {unpriced > 0 ? ` · ${unpriced} without a price right now, not counted` : ''}
+            </Text>
+            {usdc !== null && !demo && (
+              <Text style={s.heroExit}>
+                USDC balance{' '}
+                <Text style={[s.heroExitStrong, num]}>
+                  ${usdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+                <Text style={s.heroChangeLabel}> available to buy</Text>
+              </Text>
+            )}
+            {exitCostBps !== null && (
+              <Text style={s.heroExit}>
+                Exit cost now{' '}
+                <Text style={[s.heroExitStrong, num]}>
+                  {exitCostUsd < 0.005 ? '<$0.01' : '$' + exitCostUsd.toFixed(2)} · {exitCostBps} bps
+                </Text>
+                {exitRows.length < items!.length ? (
+                  <Text style={s.heroChangeLabel}>
+                    {' '}
+                    ({exitRows.length} of {items!.length} assets)
+                  </Text>
+                ) : null}
+              </Text>
+            )}
+          </View>
+          <PortfolioSpark
+            items={items!.map((i) => ({ ticker: i.ticker, symbol: i.symbol, value: i.buyValue ?? 0 }))}
+            up={(() => {
+              const m = items!.filter((i) => i.buyValue !== null && agoOk(i.symbol))
+              if (!m.length) return undefined
+              const now = m.reduce((n, i) => n + (i.buyValue as number), 0)
+              const then = m.reduce((n, i) => n + i.shares * ago[i.symbol].px, 0)
+              return now - then >= 0
+            })()}
+          />
+        </View>
+      ) : (
+        <View style={s.heroCard}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.kicker}>TOKENIZED EQUITIES</Text>
+            <Text style={[s.heroValue, num]}>{tracked || '—'}</Text>
+            <Text style={s.heroMeta}>
+              tracked · {entries.length ? `cheapest entry ${entries[0]} bps` : 'measuring'}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {total === null && (
+        <>
+          <Pressable style={s.primary} onPress={() => scan(false)} disabled={busy}>
+            {busy ? <ActivityIndicator color={T.bg} /> : <Text style={s.primaryText}>Connect wallet</Text>}
           </Pressable>
-        )
-      }}
-    />
+          <Pressable style={s.secondary} onPress={startDemo} disabled={busy}>
+            <Text style={s.secondaryText}>Explore with a demo portfolio</Text>
+          </Pressable>
+          <Text style={s.privacyNote}>
+            Connecting sends your wallet address to the StockPass server to read your holdings. Your keys stay in your
+            wallet.
+          </Text>
+        </>
+      )}
+      {total === null && example && example.gap >= 1 && (
+        <View style={s.card2}>
+          <Text style={s.kicker}>LIVE EXAMPLE</Text>
+          <Text style={s.lastTitle}>Buying {example.ticker} right now</Text>
+          {example.rows.map((r, idx) => (
+            <View key={r.symbol} style={s.line}>
+              <Text style={s.lineLabel}>
+                {r.symbol} · {r.issuer}
+              </Text>
+              <Text style={[s.lineValue, num, idx === 0 && { color: T.accent }]}>{Math.max(0, r.entry_bps)} bps</Text>
+            </View>
+          ))}
+          <Text style={s.stateSub}>
+            Same stock, different issuer. On $100 the difference is ${(example.gap / 100).toFixed(2)}.
+          </Text>
+        </View>
+      )}
+      {demo && (
+        <Pressable
+          style={s.secondary}
+          onPress={async () => {
+            await exitDemo()
+            scan(false)
+          }}
+          disabled={busy}
+        >
+          <Text style={s.secondaryText}>Connect real wallet</Text>
+        </Pressable>
+      )}
+      {!demo && <AlertsCard owner={account?.address ? String(account.address) : undefined} />}
+
+      {error && <ErrorState message={error} onRetry={() => scan()} />}
+
+      <Text style={s.sectionLabel}>FOR YOU</Text>
+      {(items ?? [])
+        .flatMap((i) => mchanges.filter((c) => c.symbol === i.symbol))
+        .map((c) => (
+          <Pressable key={`mc-${c.symbol}`} style={s.mcard} onPress={() => router.push(`/passport?symbol=${c.symbol}`)}>
+            <Text style={s.mkicker}>{c.symbol}</Text>
+            <Text style={s.mtext}>{describeChange(c)}</Text>
+          </Pressable>
+        ))}
+      <DailyBrief latest={latest} history={allHist} />
+      {ranked.map(({ i }) => (
+        <InsightCard
+          key={i.symbol}
+          item={i}
+          hist={hist[i.symbol]}
+          availability={availability[i.symbol] ?? null}
+          states={allHist.filter((h) => h.symbol === i.symbol)}
+          state={state}
+        />
+      ))}
+
+      <View style={s.card2}>
+        <View style={s.live}>
+          <View style={[s.dot, { backgroundColor: open ? T.accent : T.warn }]} />
+          <Text style={[s.stateTitle, { color: open ? T.accent : T.warn }]}>{market.title}</Text>
+          <Text style={s.stateSub}> {open ? 'US equities trading' : 'US equities closed'}</Text>
+        </View>
+        {cheapest && (
+          <View style={s.line}>
+            <Text style={s.lineLabel}>Cheapest entry now</Text>
+            <Text style={[s.lineValue, num]}>
+              {cheapest.symbol} · {Math.max(0, cheapest.entry_bps)} bps
+            </Text>
+          </View>
+        )}
+        {medianNow !== null && (
+          <View style={s.line}>
+            <Text style={s.lineLabel}>Median across tokens</Text>
+            <Text style={[s.lineValue, num]}>
+              {Math.round(medianNow)} bps{medianUsual !== null ? ` · usual ${Math.round(medianUsual)}` : ''}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {last && !demo ? (
+        <Pressable style={s.card2} onPress={() => Linking.openURL(`https://solscan.io/tx/${last.signature}`)}>
+          <Text style={s.kicker}>LAST PURCHASE</Text>
+          <Text style={s.lastTitle}>
+            {last.symbol} · {last.issuer} · ${last.sizeUsd.toFixed(2)}
+          </Text>
+          <Text style={s.stateSub}>{new Date(last.at).toLocaleString()}</Text>
+          {last.savedBps !== null && last.savedBps > 0 && (
+            <Text style={s.saved}>
+              Saved {last.savedBps} bps · ${((last.savedBps / 10000) * last.sizeUsd).toFixed(2)}
+            </Text>
+          )}
+        </Pressable>
+      ) : null}
+
+      {items && items.length > 0 && (
+        <Pressable style={s.analyticsCard} onPress={() => router.push('/analytics')}>
+          <Text style={s.analyticsIcon}>▥</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={s.analyticsText}>Portfolio Analytics</Text>
+            <Text style={s.stateSub}>Cost per asset, cheaper issuers, timing</Text>
+          </View>
+          <Text style={s.chev}>›</Text>
+        </Pressable>
+      )}
+    </ScrollView>
   )
 }
 
+function DailyBrief({ latest, history }: { latest: Record<string, Latest>; history: History[] }) {
+  const nowTs = Date.now() / 1000
+  const bySymbol = new Map<string, { n: number; q: number }>()
+  let openQ = 0,
+    openSum = 0,
+    offQ = 0,
+    offSum = 0
+  history.forEach((h) => {
+    const q = h.samples * h.availability
+    const b = bySymbol.get(h.symbol) ?? { n: 0, q: 0 }
+    b.n += h.samples
+    b.q += q
+    bySymbol.set(h.symbol, b)
+    if (q > 0 && h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS) {
+      const v = Math.max(0, h.avg_entry) * q
+      if (h.market_state === 'open') {
+        openQ += q
+        openSum += v
+      } else {
+        offQ += q
+        offSum += v
+      }
+    }
+  })
+
+  let turnaround: { symbol: string; pct: number } | null = null
+  for (const [symbol, b] of Array.from(bySymbol.entries())) {
+    const l = latest[symbol]
+    if (!l || b.n < 50 || !isUsable(l.entry_bps, l.quotable) || nowTs - l.ts > 5400) continue
+    const pct = Math.round((b.q / b.n) * 100)
+    if (pct < 50 && (turnaround === null || pct < turnaround.pct)) turnaround = { symbol, pct }
+  }
+
+  const bps = (v: number) => (v < 0.5 ? '~0 bps' : `${Math.round(v)} bps`)
+  let regime: { openBps: number; offBps: number; pct: number; higher: boolean } | null = null
+  if (openQ >= 50 && offQ >= 50) {
+    const openBps = openSum / openQ
+    const offBps = offSum / offQ
+    if (openBps > 0 && Math.abs(offBps - openBps) / openBps >= 0.2) {
+      regime = {
+        openBps,
+        offBps,
+        pct: Math.round((Math.abs(offBps - openBps) / openBps) * 100),
+        higher: offBps > openBps,
+      }
+    }
+  }
+
+  return (
+    <View style={s.briefCard}>
+      <Text style={s.briefKicker}>DAILY BRIEF</Text>
+      {turnaround && (
+        <Text style={s.briefText}>
+          {turnaround.symbol} has a quote right now, but over the last 30 days it was quotable only {turnaround.pct}% of
+          the time.
+          <Text style={s.briefNote}> Historical pattern, not a forecast.</Text>
+        </Text>
+      )}
+      {regime && (
+        <Text style={s.briefText}>
+          Outside US market hours entry costs have averaged {bps(regime.offBps)}, against {bps(regime.openBps)} during
+          the open session ({regime.pct}% {regime.higher ? 'higher' : 'lower'}).
+          <Text style={s.briefNote}> Historical pattern, not a forecast.</Text>
+        </Text>
+      )}
+      {!turnaround && !regime && <Text style={s.briefText}>Not enough observations yet.</Text>}
+    </View>
+  )
+}
 const s = StyleSheet.create({
-  sparkLabel: { color: T.faint, fontSize: 11, marginTop: 2 },
+  privacyNote: { color: T.faint, fontSize: 11, textAlign: 'center', marginTop: 4 },
   screen: { flex: 1, backgroundColor: T.bg },
-  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
-
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 8 },
-  title: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
-  sub: { color: T.faint, fontSize: 13, marginTop: 2 },
-  live: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  liveText: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
-
-  toggle: {
-    flexDirection: 'row',
-    backgroundColor: T.surface,
-    borderRadius: 14,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  toggleBtn: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 11 },
-  toggleOn: { backgroundColor: T.accent },
-  toggleText: { color: T.dim, fontSize: 14, fontWeight: '600' },
-  toggleTextOn: { color: T.bg, fontWeight: '700' },
-
-  search: {
-    backgroundColor: T.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: T.border,
-    color: T.text,
-    paddingHorizontal: 14,
-    height: 46,
-    fontSize: 15,
-  },
-  filters: { flexDirection: 'row', gap: 8 },
-  chip: { borderRadius: 13, borderWidth: 1, borderColor: T.border, paddingHorizontal: 13, paddingVertical: 8 },
-  chipOn: { backgroundColor: T.accent, borderColor: T.accent },
-  chipText: { color: T.dim, fontSize: 13, fontWeight: '600' },
-  chipTextOn: { color: T.bg, fontWeight: '700' },
-
-  card: {
+  briefCard: {
     backgroundColor: T.surface,
     borderWidth: 1,
     borderColor: T.border,
     borderRadius: 16,
     padding: 14,
-    gap: 12,
-    marginBottom: 11,
+    gap: 8,
+    marginBottom: 12,
   },
-  cardTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
-  symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
-  issuer: { fontSize: 13, fontWeight: '600', marginTop: 1 },
-  price: { color: T.text, fontSize: 17, fontWeight: '700' },
-  perShare: { color: T.faint, fontSize: 11, fontWeight: '400' },
-  status: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
-  eventBadge: {
+  briefKicker: { color: T.accent, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  briefText: { color: T.text, fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  briefNote: { color: T.faint, fontSize: 13 },
+  content: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 40, gap: 11 },
+
+  demoBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: T.surfaceAlt,
+    borderWidth: 1,
+    borderColor: '#4A3A18',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  demoText: { color: T.warn, fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  demoExit: { color: T.warn, fontSize: 12, fontWeight: '700', paddingHorizontal: 8 },
+
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 },
+  brand: { color: T.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  live: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  liveText: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1 },
+
+  heroCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    alignSelf: 'flex-start',
-    backgroundColor: '#1E1A2E',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    gap: 12,
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 18,
   },
-  eventText: { color: '#A78BFA', fontSize: 13, fontWeight: '600' },
-  cardBottom: { flexDirection: 'row', alignItems: 'flex-end', gap: 22 },
-  metric: { gap: 1 },
-  metricLabel: { color: T.faint, fontSize: 12 },
-  metricValue: { color: T.text, fontSize: 19, fontWeight: '700' },
+  kicker: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  heroValue: { color: T.text, fontSize: 34, fontWeight: '800', letterSpacing: -1.2, marginTop: 5 },
+  heroChange: { fontSize: 16, fontWeight: '700', marginTop: 2 },
+  heroChangeLabel: { color: T.dim, fontSize: 14, fontWeight: '400' },
+  heroMeta: { color: T.faint, fontSize: 13, marginTop: 8 },
+  mcard: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.warn, borderRadius: 16, padding: 14, gap: 4 },
+  mkicker: { color: T.warn, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 },
+  mtext: { color: T.text, fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  heroExit: { color: T.dim, fontSize: 13, marginTop: 4 },
+  heroExitStrong: { color: T.text, fontWeight: '700' },
+  card2: { backgroundColor: T.surface, borderWidth: 1, borderColor: T.border, borderRadius: 16, padding: 14, gap: 6 },
+  line: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  lineLabel: { color: T.dim, fontSize: 14 },
+  lineValue: { color: T.text, fontSize: 14, fontWeight: '700' },
+
+  sectionLabel: { color: T.faint, fontSize: 12, fontWeight: '700', letterSpacing: 1.2, marginTop: 12, marginBottom: 1 },
+
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 14,
+  },
+  symbol: { color: T.text, fontSize: 17, fontWeight: '700' },
+  issuer: { color: T.dim, fontSize: 14 },
+  entry: { color: T.text, fontSize: 18, fontWeight: '700' },
+  exit: { color: T.dim, fontSize: 14 },
+  delta: { fontSize: 12, fontWeight: '600' },
   noQuote: { color: T.faint, fontSize: 12 },
-  collecting: { color: T.faint, fontSize: 11, fontStyle: 'italic' },
+  chev: { color: T.faint, fontSize: 18 },
+
+  stateTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.4 },
+  stateSub: { color: T.faint, fontSize: 13 },
+  lastTitle: { color: T.text, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  saved: { color: T.accent, fontSize: 13, fontWeight: '600', marginTop: 2 },
+
+  analyticsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: T.surface,
+    borderWidth: 1,
+    borderColor: T.border,
+    borderRadius: 16,
+    padding: 18,
+    marginTop: 4,
+  },
+  analyticsIcon: { color: T.accent, fontSize: 18 },
+  analyticsText: { color: T.text, fontSize: 16, fontWeight: '600' },
 
   warn: { color: T.warn, fontSize: 13 },
+  primary: { backgroundColor: T.accent, borderRadius: 14, height: 52, alignItems: 'center', justifyContent: 'center' },
+  primaryText: { color: T.bg, fontSize: 16, fontWeight: '700' },
+  secondary: {
+    borderWidth: 1,
+    borderColor: T.borderBright,
+    borderRadius: 14,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: { color: T.text, fontSize: 15, fontWeight: '600' },
 })
