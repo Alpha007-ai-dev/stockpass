@@ -1,4 +1,4 @@
-# StockPass
+﻿# StockPass
 
 **What you really pay to own a stock on-chain.**
 
@@ -48,6 +48,8 @@ A tokenized stock looks simple. It is not.
 ## What we measured
 
 All numbers below come from our own collector, not from documentation.
+
+> **Measurement note.** The round-trip costs in this table and the app's entry-cost metric use different definitions (the app's entry cost is half the round-trip spread, measured on each token's own price), so they should not be compared directly. This table was first added to this README on 7 October 2026 (the date of the commit, not of the measurement). The collector has kept running since, so newer figures elsewhere, such as in the pitch deck, may come from a later dataset.
 
 ### Execution cost by issuer (round trip, $1,000 size)
 
