@@ -1,4 +1,4 @@
-﻿# StockPass
+# StockPass
 
 **What you really pay to own a stock on-chain.**
 
