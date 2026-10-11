@@ -176,6 +176,8 @@ export default function DefiScreen() {
             const ratio =
               Math.max(...r.markets.map((m) => m.borrowApy)) /
               Math.max(0.0001, Math.min(...r.markets.map((m) => m.borrowApy)))
+            // A ratio only means something when every market quotes the same borrow asset.
+            const sameDebt = new Set(r.markets.map((m) => m.debtSymbol ?? '')).size === 1
             return (
               <View key={r.token.symbol} style={s.card}>
                 <View style={s.assetHead}>
@@ -255,12 +257,21 @@ export default function DefiScreen() {
                   )
                 })}
 
-                {r.markets.length > 1 && (
-                  <Text style={s.tiny}>
-                    Same collateral, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the
-                    expensive one.
-                  </Text>
-                )}
+                {r.markets.length > 1 &&
+                  (sameDebt ? (
+                    <Text style={s.tiny}>
+                      Same collateral, {r.markets.length} markets. Borrowing costs {ratio.toFixed(1)}× more on the
+                      expensive one.
+                    </Text>
+                  ) : (
+                    <Text style={s.tiny}>
+                      Same collateral, {r.markets.length} markets, different assets:{' '}
+                      {r.markets
+                        .map((m) => `${(m.borrowApy * 100).toFixed(2)}% ${m.debtSymbol ?? ''} on ${m.market}`)
+                        .join(', ')}
+                      . Rates for different assets are not directly comparable.
+                    </Text>
+                  ))}
 
                 {r.markets.length > 1 &&
                   (() => {

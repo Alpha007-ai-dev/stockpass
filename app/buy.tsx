@@ -87,7 +87,9 @@ export default function BuyScreen() {
     }
   }, [account])
 
-  const SIZE_USD = Math.max(0, Number(sizeText.replace(/[^0-9.]/g, '')) || 0)
+  // A decimal comma counts as a decimal point; more than one separator (e.g. "1.000,50") is invalid and means 0.
+  const sizeClean = sizeText.replace(/,/g, '.').replace(/[^0-9.]/g, '')
+  const SIZE_USD = (sizeClean.match(/\./g) ?? []).length > 1 ? 0 : Math.max(0, Number(sizeClean) || 0)
   const alternative = options?.find((o) => o.token.symbol !== selected?.token.symbol) ?? null
   const issuerCostUsd = selected ? (Math.max(0, selected.entry) / 10000) * SIZE_USD : null
   // Jupiter takes a platform fee in the output token, which needs a fee account per stock token; buys therefore carry no StockPass fee for now.
@@ -289,7 +291,7 @@ export default function BuyScreen() {
             </Text>
             <Text style={s.tiny}>
               {quote
-                ? `Est. price $${(SIZE_USD / quote.outUi).toFixed(2)} per token`
+                ? `≈ ${(quote.outUi * selected.mult).toFixed(4)} ${tk} shares · Est. price $${(SIZE_USD / (quote.outUi * selected.mult)).toFixed(2)} per share`
                 : 'Review the route to get a quote'}
             </Text>
           </View>

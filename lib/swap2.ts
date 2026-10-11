@@ -1,13 +1,13 @@
 // Jupiter Swap V2 through the StockPass Worker (the API key never ships in the app), plus the
-// automatic choice between the standard route (v1) and Swap V2: whichever returns more wins.
+// automatic choice between the standard route (v1) and Swap V2: whichever returns more wins; the standard route wins a near-tie.
 import { getBase64EncodedWireTransaction, getTransactionDecoder } from '@solana/transactions'
 import { getBase64Decoder, getBase64Encoder } from '@solana/codecs-strings'
 import { fetchT } from './http'
 import { buildSwapTx, decodeTx, getQuote, PayToken, Quote } from './swap'
 
 const BASE = 'https://stockpass-collector.stockpass-dev.workers.dev'
-/** Swap V2 must beat the standard route by this much to be chosen (it has no StockPass fee, but the standard route is the proven path). */
-const V2_EDGE = 0.002
+/** Tie-break only: Swap V2 is chosen when it returns more than 1 bp above the standard route; on a near-tie the standard route wins. */
+const V2_EDGE = 0.0001
 /** At signing time the fresh quote may be at most this much worse than the one the user reviewed. */
 const MAX_REQUOTE_DROP = 0.01
 
@@ -65,7 +65,7 @@ export async function getQuoteV2(
   }
 }
 
-/** Both routes in parallel; the one with the higher net output wins. A single available route is used as is. */
+/** Both routes in parallel; the one with the higher net output wins (a near-tie goes to the standard route). A single available route is used as is. */
 export async function getBestQuote(
   pay: PayToken,
   payAmount: number,

@@ -9,7 +9,7 @@ import { getGroups, Group } from '@/lib/pairs'
 import { useMobileWallet } from '@wallet-ui/react-native-kit'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getHoldings } from '@/lib/stats'
-import { PLATFORM_FEE_BPS } from '@/lib/swap'
+import { PLATFORM_FEE_BPS, SKR_FEE_BPS, SKR_THRESHOLD } from '@/lib/swap'
 import { compact, getCollateral, getStats, Latest, Collateral } from '@/lib/stats'
 
 const ISSUER_NOTE: Record<string, string> = {
@@ -230,7 +230,8 @@ export default function CompareScreen() {
             </View>
             {ok && (
               <Text style={s.body}>
-                Plus the StockPass fee of {PLATFORM_FEE_BPS} bps when you sell through the app.
+                Selling through the app carries a StockPass fee of up to {PLATFORM_FEE_BPS} bps ({SKR_FEE_BPS} bps with{' '}
+                {SKR_THRESHOLD}+ SKR; none on the Swap v2 route).
               </Text>
             )}
             {costUsd !== null && (

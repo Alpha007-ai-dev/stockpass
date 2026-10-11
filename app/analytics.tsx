@@ -339,7 +339,9 @@ export default function AnalyticsScreen() {
                   <Text style={s.tiny}>
                     {cheaper
                       ? 'No exit quote right now, so switching cannot be priced.'
-                      : 'You already hold the cheapest issuer for this stock.'}
+                      : i.altEntryBps !== null
+                        ? 'You already hold the cheapest issuer for this stock.'
+                        : 'No other issuer has a usable quote right now.'}
                   </Text>
                 )}
               </View>

@@ -228,7 +228,7 @@ export default function SellScreen() {
             </Text>
           </View>
 
-          {grossUsd !== null && (
+          {grossUsd !== null && netUsd !== null && (
             <View style={s.card}>
               <Text style={s.kicker}>COST BREAKDOWN</Text>
               <View style={s.row}>
