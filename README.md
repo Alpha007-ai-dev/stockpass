@@ -12,7 +12,7 @@ Built for the CLOCK IN hackathon (Radiants / Solana Mobile).
 
 A tokenized stock looks simple. It is not.
 
-**1. Your wallet lies.** Tokenized equities use the Token-2022 scaled-UI-amount extension. Your wallet shows the raw token count; the real share count is that number multiplied by an on-chain multiplier that changes when dividends are reinvested. Holding 10.56 SPYx is not holding 10.56 shares.
+**1. Your wallet lies.** Tokenized equities use the Token-2022 scaled-UI-amount extension. Depending on the wallet, the token count you see can be the raw on-chain amount; the real share count is that number multiplied by an on-chain multiplier that changes when dividends are reinvested. Holding 10.56 raw SPYx is not holding 10.56 shares.
 
 **2. Token prices are not comparable.** Two issuers of the same stock apply different multipliers. Raw prices can look ~41 bps apart when the real per-share difference is ~4 bps. The rest is token scaling, not market disagreement.
 
@@ -147,7 +147,7 @@ Tap **Explore with a demo portfolio** on Home. This loads four real tokens with 
 
 ## Fee
 
-**Buying carries no StockPass fee.** Jupiter takes its platform fee in the token that is received, which would need a separate fee account for every stock token, so for now buys are free of a StockPass fee.
+**Buying carries no StockPass fee.** In this implementation the platform fee is taken in the token that is received, which would need a separate fee account for every stock token, so for now buys are free of a StockPass fee.
 
 **Selling** through the standard Jupiter router carries a StockPass fee of **5 bps**, charged on the USDC side. Wallets holding at least 100 SKR pay **2 bps**. On the Swap v2 route there is no StockPass fee, only Jupiter's own. The fee is shown as a separate line in the cost breakdown, never folded into the issuer's execution cost.
 
@@ -158,7 +158,7 @@ The fee is deliberately low. The real differences between issuers are often only
 ## What we deliberately did not do
 
 - **No invented data.** Where a metric cannot be measured, the app shows `—` or "No executable quote" instead of a plausible-looking number.
-- **No purchase-relative P&L.** We keep only your last purchase, on the device, and never compute a profit from it. Portfolio change is labelled "since last snapshot".
+- **No purchase-relative P&L.** We keep only your last purchase, on the device, and never compute a profit from it. Portfolio change is labelled "24h price change" (or "since last snapshot" when no price from about 24 hours ago exists).
 - **No risk or health scores.** Every number shown is measured or derived from a measurement.
 - **No DeFi execution.** The DeFi tab is informational with outbound links. StockPass does not deposit or borrow on your behalf.
 - **Supply is not liquidity.** We show token supply as supply, and never imply it means tradability.
@@ -171,7 +171,13 @@ The fee is deliberately low. The real differences between issuers are often only
 - The traditional reference feed uses a free IEX-based tier, which does not cover the full US market. Stale or wide quotes are flagged and excluded rather than shown as a premium.
 - Market holidays and early closes follow the NYSE calendar through hard-coded rules, checked against nyse.com for 2026 and 2027. Pre-market and after-hours are not modelled on holidays: the whole day counts as closed.
 - Each token is measured roughly every 50 minutes, so the app shows recent, not real-time, historical context. Live quotes at the moment of trading come directly from Jupiter.
-- **Two routes.** The collector measures costs through Jupiter Ultra; the app executes through the standard Jupiter router and, where it returns more, Jupiter Swap v2 (market makers). On the Swap v2 route there is no StockPass fee, only Jupiter's own. Swap v2 does not report a price impact. On Sell, the app blocks any route that returns far less than the measured price; on Buy, a high price impact on the standard route blocks signing. If no route can fill an amount, the app says so instead of showing a number.
+- **Two routes.** The collector measures costs through Jupiter Ultra; the app executes through the standard Jupiter router and uses Jupiter Swap v2 (market makers) when it returns more; the standard route wins only a near-tie (1 bp or less). On the Swap v2 route there is no StockPass fee, only Jupiter's own. Swap v2 does not report a price impact. On Sell, the app blocks any route that returns far less than the measured price; on Buy, a high price impact on the standard route blocks signing. If no route can fill an amount, the app says so instead of showing a number.
+- **Measured cost vs executed cost.** Costs are measured through Jupiter Ultra, while swaps execute through the standard router or Swap v2, so the executed cost can differ from the measured one. On the Swap v2 route the Jupiter fee shown in the breakdown may partly overlap with the measured issuer cost; we have not verified how Ultra reports its fee.
+- **Swap v2 fills.** Before signing, the app re-quotes a Swap v2 order and refuses it if the output dropped by more than 1% from the reviewed quote. The final fill can still be lower than the amount reviewed (up to that drop plus the 50 bps slippage limit). Swap v2 reports no price impact, and the Buy-side check against the measured price only applies to measurements younger than 90 minutes.
+- **Availability.** "Quote availability" counts every measurement in which Jupiter returned a quote, including quotes at or above 200 bps that the app labels "no real market". Average and minimum entry costs exclude those samples, so a token can show high availability and still have no usable market.
+- **"Cheapest issuer".** Buy, Compare and Passport rank issuers by price per share, entry cost included. Home and Analytics rank by entry cost in bps. On the same data they can name different issuers.
+- **DeFi rates.** Borrow rates from different markets can be in different assets (for example USDC and PYUSD). The app lists them side by side and does not present them as a like-for-like ratio.
+- **No automated tests in the app.** The collector has a test suite; the app does not yet, so the cost, fee and multiplier math is covered by manual testing and code review only.
 
 ---
 
@@ -181,7 +187,7 @@ What comes next, in the order we would build it. Nothing below is claimed as shi
 
 **Near term**
 
-- **Push cost alerts.** Cost alerts already exist and are checked when the app opens. Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
+- **Push cost alerts.** Cost alerts already exist and are checked when you open Home with a wallet connected (not while the app is closed). Push notifications (so the app can bring you back when a token gets cheaper) need a notification service and a new native build.
 - **Safer v2 route.** Allow-list the programs in a Worker-built transaction (the fee-payer check already ships); sign alerts with a wallet message so only the owner can change them.
 - **Buy-side fee.** Charge the StockPass fee on buys again, either with a fee account per stock token or as a separate USDC transfer in the same transaction.
 - **Real SKR utility.** Today holding 100 SKR lowers the StockPass sell fee from 5 to 2 bps. Next: a holder view with extended history and more alerts.
