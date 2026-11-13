@@ -9,6 +9,10 @@ export type CostAlert = {
   current_bps: number | null
   measured_at: number | null
   triggered: boolean
+  /** "reference": buy price vs the stock's own price. "half_round_trip": no reference, half of buy-then-sell. */
+  basis?: 'reference' | 'half_round_trip' | null
+  round_trip_bps?: number | null
+  fee_bps?: number | null
 }
 
 export async function getAlerts(owner: string): Promise<CostAlert[]> {

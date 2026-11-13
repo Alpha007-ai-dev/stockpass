@@ -24,6 +24,14 @@ export type Latest = {
   supply: number
   ts: number
   market_state: string
+  /** Buy then sell back, all costs in (null when the row had no real market). From the collector since 2026-11-12. */
+  round_trip_bps?: number | null
+  /** Jupiter's fee over both legs, already inside round_trip_bps. Null when unknown. */
+  fee_bps?: number | null
+  /** Buy / sell price against the stock's own price; null when no reference existed at measurement time. */
+  entry_ref_bps?: number | null
+  exit_ref_bps?: number | null
+  ref_src?: string | null
 }
 
 export type History = {
@@ -36,6 +44,8 @@ export type History = {
   min_entry: number
   max_entry: number
   availability: number
+  avg_round_trip?: number | null
+  avg_fee?: number | null
 }
 
 export type Reference = {

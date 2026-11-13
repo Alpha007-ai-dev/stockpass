@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { AnomalyCard } from '@/components/anomaly-card'
+import { FairPrice } from '@/components/fair-price'
 import { CostAlert } from '@/components/cost-alert'
 import { CostTimeline } from '@/components/cost-timeline'
 import { NormalizationHero } from '@/components/normalization-hero'
@@ -14,7 +15,7 @@ import { ISSUERS } from '@/constants/issuers'
 import { stockInfo } from '@/constants/stock-info'
 import { EarningsIcon } from '@/components/event-icons'
 import { issuerColor, num, T } from '@/constants/theme'
-import { bpsLabel, isUsable, NO_MARKET_BPS } from '@/lib/cost'
+import { bpsLabel, entryCost, isUsable, NO_MARKET_BPS, roundTripBps } from '@/lib/cost'
 import { DEMO_HOLDINGS, isDemo } from '@/lib/demo'
 import { getGroups } from '@/lib/pairs'
 import {
@@ -131,6 +132,9 @@ export default function PassportScreen() {
   const valid = hist.filter((h) => h.avg_entry !== null && h.avg_entry < NO_MARKET_BPS)
   const maxAvg = Math.max(1, ...valid.map((h) => h.avg_entry))
   const shares = balance !== null && mine ? balance * mine.multiplier : null
+  const rt = ok ? roundTripBps(mine) : null
+  const entry = ok ? entryCost(mine) : null
+  const fee = ok && mine && mine.fee_bps != null ? mine.fee_bps : null
 
   const tabs: [Tab, string][] = [
     ['overview', 'Overview'],
@@ -183,63 +187,73 @@ export default function PassportScreen() {
           <View style={s.pairRow}>
             <View style={[s.card, { flex: 1 }]}>
               <Text style={s.kicker}>COST TO BUY</Text>
-              <Text style={[s.metric, num, { color: T.accent }]}>
-                {!ok ? '—' : (mine.entry_bps as number) < 0 ? '~0 bps' : `${mine.entry_bps} bps`}
-              </Text>
+              <Text style={[s.metric, num, { color: T.accent }]}>{entry ? `${entry.bps} bps` : '—'}</Text>
               <Text style={s.tiny}>
-                {ok ? `≈ $${(Math.max(0, mine.entry_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}
+                {!entry
+                  ? 'no quote'
+                  : entry.basis === 'reference'
+                    ? `above the stock price · ≈ $${(entry.bps / 10).toFixed(2)} per $1,000`
+                    : `half the round trip · ≈ $${(entry.bps / 10).toFixed(2)} per $1,000`}
               </Text>
             </View>
             <View style={[s.card, { flex: 1 }]}>
-              <Text style={s.kicker}>COST TO SELL</Text>
-              <Text style={[s.metric, num]}>
-                {!ok ? '—' : (mine.exit_bps as number) < 0 ? '~0 bps' : `${mine.exit_bps} bps`}
-              </Text>
+              <Text style={s.kicker}>BUY + SELL BACK</Text>
+              <Text style={[s.metric, num]}>{rt === null ? '—' : rt < 0 ? '~0 bps' : `${rt} bps`}</Text>
               <Text style={s.tiny}>
-                {ok ? `≈ $${(Math.max(0, mine.exit_bps as number) / 10).toFixed(2)} per $1,000` : 'no quote'}
+                {rt === null
+                  ? 'no quote'
+                  : fee !== null
+                    ? `incl. ${fee} bps Jupiter fee · market ${Math.max(0, Math.round((rt - fee) * 10) / 10)} bps`
+                    : `≈ $${(Math.max(0, rt) / 10).toFixed(2)} per $1,000`}
               </Text>
             </View>
           </View>
 
-          <CostAlert symbol={sym} currentBps={ok ? Math.max(0, mine.entry_bps as number) : null} />
+          <CostAlert symbol={sym} currentBps={entry ? entry.bps : null} />
 
-          {reference && mine.buy_px && (
-            <View style={s.card}>
-              <Text style={s.kicker}>TOKEN VS. WALL STREET</Text>
-              <View style={s.row}>
-                <Text style={s.label}>Stock price on Wall Street</Text>
-                <Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>Token mid price per share</Text>
-                <Text style={[s.value, num]}>${tokenMid.toFixed(2)}</Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>Token vs. Wall Street</Text>
-                <Text style={[s.value, num]}>
-                  {reference.stale ? 'Wall Street closed' : `${devBps >= 0 ? '+' : ''}${devBps} bps`}
-                </Text>
-              </View>
-              <View style={s.row}>
-                <Text style={s.label}>Trading cost to buy</Text>
-                <Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text>
-              </View>
+          <FairPrice
+            symbol={sym}
+            ticker={ticker}
+            fallback={
+              reference && mine.buy_px ? (
+                <View style={s.card}>
+                  <Text style={s.kicker}>TOKEN VS. WALL STREET</Text>
+                  <View style={s.row}>
+                    <Text style={s.label}>Stock price on Wall Street</Text>
+                    <Text style={[s.value, num]}>${Number(reference.mid).toFixed(2)}</Text>
+                  </View>
+                  <View style={s.row}>
+                    <Text style={s.label}>Token mid price per share</Text>
+                    <Text style={[s.value, num]}>${tokenMid.toFixed(2)}</Text>
+                  </View>
+                  <View style={s.row}>
+                    <Text style={s.label}>Token vs. Wall Street</Text>
+                    <Text style={[s.value, num]}>
+                      {reference.stale ? 'Wall Street closed' : `${devBps >= 0 ? '+' : ''}${devBps} bps`}
+                    </Text>
+                  </View>
+                  <View style={s.row}>
+                    <Text style={s.label}>Trading cost to buy</Text>
+                    <Text style={[s.value, num]}>{bpsLabel(mine.entry_bps, ok)}</Text>
+                  </View>
 
-              {!reference.stale && ok && (
-                <View style={s.totalBox}>
-                  <Text style={s.kicker}>PRICE VS. WALL STREET, TRADING COST INCLUDED</Text>
-                  <Text style={[s.total, num]}>
-                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}
-                    {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps
-                  </Text>
-                  <Text style={s.tiny}>
-                    ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)) / 10).toFixed(2)} on
-                    $1,000. The price per share you pay already contains the trading cost.
-                  </Text>
+                  {!reference.stale && ok && (
+                    <View style={s.totalBox}>
+                      <Text style={s.kicker}>PRICE VS. WALL STREET, TRADING COST INCLUDED</Text>
+                      <Text style={[s.total, num]}>
+                        {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000) >= 0 ? '+' : ''}
+                        {Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)} bps
+                      </Text>
+                      <Text style={s.tiny}>
+                        ≈ ${(Math.abs(Math.round((mine.buy_px / Number(reference.mid) - 1) * 10000)) / 10).toFixed(2)} on
+                        $1,000. The price per share you pay already contains the trading cost.
+                      </Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-          )}
+              ) : null
+            }
+          />
         </>
       )}
 

@@ -32,7 +32,7 @@ export function AlertsCard({ owner }: { owner: string | undefined }) {
         <Pressable key={a.symbol} style={s.row} onPress={() => router.push(`/buy?symbol=${a.symbol}`)}>
           <Text style={s.text}>
             <Text style={s.strong}>{a.symbol}</Text> now costs <Text style={[s.strong, num]}>{a.current_bps} bps</Text>{' '}
-            to buy, under your {a.threshold_bps} bps
+            to buy{a.basis === 'reference' ? ' (vs. the stock price)' : ''}, under your {a.threshold_bps} bps
           </Text>
           <Text style={s.chev}>›</Text>
         </Pressable>
